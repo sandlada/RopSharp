@@ -1,0 +1,21 @@
+bin/
+obj/
+*.user
+*.suo
+.vs/
+.idea/
+artifacts/
+TestResults/
+BenchmarkDotNet.Artifacts/
+*.nupkg
+*.snupkg
+
+# AI
+.codex
+.claude
+.opecode
+.teamwork
+.agy
+.gemini
+*superpower*
+!*/skill*/*

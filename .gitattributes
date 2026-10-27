@@ -1,0 +1,10 @@
+# Normalize text files; .editorconfig requires CRLF for the working tree.
+* text=auto eol=crlf
+
+*.nupkg binary
+*.snupkg binary
+*.dll binary
+*.pdb binary
+*.png binary
+*.jpg binary
+*.gif binary

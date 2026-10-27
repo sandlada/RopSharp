@@ -1,0 +1,17 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net11.0</TargetFramework>
+    <OutputType>Exe</OutputType>
+    <IsPackable>false</IsPackable>
+    <RestorePackagesWithLockFile>false</RestorePackagesWithLockFile>
+    <RootNamespace>Sandlada.RopSharp.Sample</RootNamespace>
+    <AssemblyName>Sandlada.RopSharp.Sample</AssemblyName>
+    <InvariantGlobalization>true</InvariantGlobalization>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Sandlada.RopSharp\Sandlada.RopSharp.csproj" />
+  </ItemGroup>
+
+</Project>

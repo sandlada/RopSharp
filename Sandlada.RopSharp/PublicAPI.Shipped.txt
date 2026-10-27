@@ -1,0 +1,253 @@
+#nullable enable
+Sandlada.RopSharp.Either
+Sandlada.RopSharp.Either<TLeft, TRight>
+Sandlada.RopSharp.Either<TLeft, TRight>.Either() -> void
+Sandlada.RopSharp.Either<TLeft, TRight>.Equals(Sandlada.RopSharp.Either<TLeft, TRight> other) -> bool
+Sandlada.RopSharp.Either<TLeft, TRight>.IsLeft.get -> bool
+Sandlada.RopSharp.Either<TLeft, TRight>.IsRight.get -> bool
+Sandlada.RopSharp.Either<TLeft, TRight>.MapLeft<TLeftOut>(System.Func<TLeft, TLeftOut>! mapper) -> Sandlada.RopSharp.Either<TLeftOut, TRight>
+Sandlada.RopSharp.Either<TLeft, TRight>.MapRight<TRightOut>(System.Func<TRight, TRightOut>! mapper) -> Sandlada.RopSharp.Either<TLeft, TRightOut>
+Sandlada.RopSharp.Either<TLeft, TRight>.Match<TResult>(System.Func<TLeft, TResult>! left, System.Func<TRight, TResult>! right) -> TResult
+Sandlada.RopSharp.Either<TLeft, TRight>.Swap() -> Sandlada.RopSharp.Either<TRight, TLeft>
+Sandlada.RopSharp.Either<TLeft, TRight>.ToResult(System.Func<TLeft, Sandlada.RopSharp.RopError!>! errorFactory) -> Sandlada.RopSharp.Result<TRight, Sandlada.RopSharp.RopError!>
+Sandlada.RopSharp.Either<TLeft, TRight>.TryGetLeft(out TLeft value) -> bool
+Sandlada.RopSharp.Either<TLeft, TRight>.TryGetRight(out TRight value) -> bool
+Sandlada.RopSharp.Opt
+Sandlada.RopSharp.Option<T>
+Sandlada.RopSharp.Option<T>.Equals(Sandlada.RopSharp.Option<T> other) -> bool
+Sandlada.RopSharp.Option<T>.IsNone.get -> bool
+Sandlada.RopSharp.Option<T>.IsSome.get -> bool
+Sandlada.RopSharp.Option<T>.Option() -> void
+Sandlada.RopSharp.Option<T>.TryGetValue(out T value) -> bool
+Sandlada.RopSharp.OptionAsyncExtensions
+Sandlada.RopSharp.OptionBridgeExtensions
+Sandlada.RopSharp.OptionEnumerableExtensions
+Sandlada.RopSharp.OptionExtensions
+Sandlada.RopSharp.OptionLinqExtensions
+Sandlada.RopSharp.OptionNullableExtensions
+Sandlada.RopSharp.OptionNullableValueExtensions
+Sandlada.RopSharp.Result<TOk, TErr>
+Sandlada.RopSharp.Result<TOk, TErr>.Equals(Sandlada.RopSharp.Result<TOk, TErr> other) -> bool
+Sandlada.RopSharp.Result<TOk, TErr>.IsErr.get -> bool
+Sandlada.RopSharp.Result<TOk, TErr>.IsOk.get -> bool
+Sandlada.RopSharp.Result<TOk, TErr>.OkOrDefault() -> TOk
+Sandlada.RopSharp.Result<TOk, TErr>.Result() -> void
+Sandlada.RopSharp.Result<TOk, TErr>.TryGetErr(out TErr error) -> bool
+Sandlada.RopSharp.Result<TOk, TErr>.TryGetOk(out TOk value) -> bool
+Sandlada.RopSharp.ResultAsyncExtensions
+Sandlada.RopSharp.ResultEnsureExtensions
+Sandlada.RopSharp.ResultExtensions
+Sandlada.RopSharp.ResultLinqExtensions
+Sandlada.RopSharp.ResultTerminalExtensions
+Sandlada.RopSharp.ResultValidationExtensions
+Sandlada.RopSharp.Rop
+Sandlada.RopSharp.RopError
+Sandlada.RopSharp.RopError.Cause.get -> System.Exception?
+Sandlada.RopSharp.RopError.Code.get -> string!
+Sandlada.RopSharp.RopError.Details.get -> string?
+Sandlada.RopSharp.RopError.Equals(Sandlada.RopSharp.RopError? other) -> bool
+Sandlada.RopSharp.RopError.Kind.get -> Sandlada.RopSharp.RopErrorKind
+Sandlada.RopSharp.RopError.Message.get -> string!
+Sandlada.RopSharp.RopError.WithCode(string! code) -> Sandlada.RopSharp.RopError!
+Sandlada.RopSharp.RopError.WithDetails(string? details) -> Sandlada.RopSharp.RopError!
+Sandlada.RopSharp.RopError.WithKind(Sandlada.RopSharp.RopErrorKind kind) -> Sandlada.RopSharp.RopError!
+Sandlada.RopSharp.RopError.WithMessage(string! message) -> Sandlada.RopSharp.RopError!
+Sandlada.RopSharp.RopErrorKind
+Sandlada.RopSharp.RopErrorKind.Conflict = 3 -> Sandlada.RopSharp.RopErrorKind
+Sandlada.RopSharp.RopErrorKind.Failure = 0 -> Sandlada.RopSharp.RopErrorKind
+Sandlada.RopSharp.RopErrorKind.Forbidden = 5 -> Sandlada.RopSharp.RopErrorKind
+Sandlada.RopSharp.RopErrorKind.NotFound = 2 -> Sandlada.RopSharp.RopErrorKind
+Sandlada.RopSharp.RopErrorKind.Unauthorized = 4 -> Sandlada.RopSharp.RopErrorKind
+Sandlada.RopSharp.RopErrorKind.Unexpected = 6 -> Sandlada.RopSharp.RopErrorKind
+Sandlada.RopSharp.RopErrorKind.Validation = 1 -> Sandlada.RopSharp.RopErrorKind
+Sandlada.RopSharp.Unit
+Sandlada.RopSharp.Unit.Equals(Sandlada.RopSharp.Unit other) -> bool
+Sandlada.RopSharp.Unit.Unit() -> void
+override Sandlada.RopSharp.Either<TLeft, TRight>.Equals(object? obj) -> bool
+override Sandlada.RopSharp.Either<TLeft, TRight>.GetHashCode() -> int
+override Sandlada.RopSharp.Either<TLeft, TRight>.ToString() -> string!
+override Sandlada.RopSharp.Option<T>.Equals(object? obj) -> bool
+override Sandlada.RopSharp.Option<T>.GetHashCode() -> int
+override Sandlada.RopSharp.Option<T>.ToString() -> string!
+override Sandlada.RopSharp.Result<TOk, TErr>.Equals(object? obj) -> bool
+override Sandlada.RopSharp.Result<TOk, TErr>.GetHashCode() -> int
+override Sandlada.RopSharp.Result<TOk, TErr>.ToString() -> string!
+override Sandlada.RopSharp.RopError.Equals(object? obj) -> bool
+override Sandlada.RopSharp.RopError.GetHashCode() -> int
+override Sandlada.RopSharp.RopError.ToString() -> string!
+override Sandlada.RopSharp.Unit.Equals(object? obj) -> bool
+override Sandlada.RopSharp.Unit.GetHashCode() -> int
+override Sandlada.RopSharp.Unit.ToString() -> string!
+static Sandlada.RopSharp.Either.Left<TLeft, TRight>(TLeft value) -> Sandlada.RopSharp.Either<TLeft, TRight>
+static Sandlada.RopSharp.Either.Right<TLeft, TRight>(TRight value) -> Sandlada.RopSharp.Either<TLeft, TRight>
+static Sandlada.RopSharp.Either<TLeft, TRight>.operator !=(Sandlada.RopSharp.Either<TLeft, TRight> left, Sandlada.RopSharp.Either<TLeft, TRight> right) -> bool
+static Sandlada.RopSharp.Either<TLeft, TRight>.operator ==(Sandlada.RopSharp.Either<TLeft, TRight> left, Sandlada.RopSharp.Either<TLeft, TRight> right) -> bool
+static Sandlada.RopSharp.Opt.Combine<T1, T2, T3, TOut>(Sandlada.RopSharp.Option<T1> first, Sandlada.RopSharp.Option<T2> second, Sandlada.RopSharp.Option<T3> third, System.Func<T1, T2, T3, TOut>! merger) -> Sandlada.RopSharp.Option<TOut>
+static Sandlada.RopSharp.Opt.Combine<T1, T2, TOut>(Sandlada.RopSharp.Option<T1> first, Sandlada.RopSharp.Option<T2> second, System.Func<T1, T2, TOut>! merger) -> Sandlada.RopSharp.Option<TOut>
+static Sandlada.RopSharp.Opt.FromNullable<T>(T? value) -> Sandlada.RopSharp.Option<T!>
+static Sandlada.RopSharp.Opt.FromNullableValue<T>(T? value) -> Sandlada.RopSharp.Option<T>
+static Sandlada.RopSharp.Opt.None<T>() -> Sandlada.RopSharp.Option<T>
+static Sandlada.RopSharp.Opt.Sequence<T>(System.Collections.Generic.IEnumerable<Sandlada.RopSharp.Option<T>>! options) -> Sandlada.RopSharp.Option<System.Collections.Generic.IReadOnlyList<T>!>
+static Sandlada.RopSharp.Opt.Some<T>(T value) -> Sandlada.RopSharp.Option<T>
+static Sandlada.RopSharp.Opt.Traverse<T, TOut>(System.Collections.Generic.IEnumerable<T>! source, System.Func<T, Sandlada.RopSharp.Option<TOut>>! mapper) -> Sandlada.RopSharp.Option<System.Collections.Generic.IReadOnlyList<TOut>!>
+static Sandlada.RopSharp.Opt.Values<T>(System.Collections.Generic.IEnumerable<Sandlada.RopSharp.Option<T>>! options) -> System.Collections.Generic.IReadOnlyList<T>!
+static Sandlada.RopSharp.Opt.When<T>(bool condition, System.Func<T>! valueFactory) -> Sandlada.RopSharp.Option<T>
+static Sandlada.RopSharp.Opt.Zip<T1, T2, T3>(Sandlada.RopSharp.Option<T1> first, Sandlada.RopSharp.Option<T2> second, Sandlada.RopSharp.Option<T3> third) -> Sandlada.RopSharp.Option<(T1, T2, T3)>
+static Sandlada.RopSharp.Opt.Zip<T1, T2>(Sandlada.RopSharp.Option<T1> first, Sandlada.RopSharp.Option<T2> second) -> Sandlada.RopSharp.Option<(T1, T2)>
+static Sandlada.RopSharp.Option<T>.operator !=(Sandlada.RopSharp.Option<T> left, Sandlada.RopSharp.Option<T> right) -> bool
+static Sandlada.RopSharp.Option<T>.operator ==(Sandlada.RopSharp.Option<T> left, Sandlada.RopSharp.Option<T> right) -> bool
+static Sandlada.RopSharp.OptionAsyncExtensions.AsTask<T>(this Sandlada.RopSharp.Option<T> option) -> System.Threading.Tasks.Task<Sandlada.RopSharp.Option<T>>!
+static Sandlada.RopSharp.OptionAsyncExtensions.BindNoneAsync<T>(this System.Threading.Tasks.Task<Sandlada.RopSharp.Option<T>>! task, System.Func<System.Threading.CancellationToken, System.Threading.Tasks.Task<Sandlada.RopSharp.Option<T>>!>! fallback, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Sandlada.RopSharp.Option<T>>!
+static Sandlada.RopSharp.OptionAsyncExtensions.BindNoneAsync<T>(this System.Threading.Tasks.Task<Sandlada.RopSharp.Option<T>>! task, System.Func<System.Threading.Tasks.Task<Sandlada.RopSharp.Option<T>>!>! fallback, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Sandlada.RopSharp.Option<T>>!
+static Sandlada.RopSharp.OptionAsyncExtensions.BindSomeAsync<T, TOut>(this Sandlada.RopSharp.Option<T> option, System.Func<T, System.Threading.Tasks.Task<Sandlada.RopSharp.Option<TOut>>!>! binder, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Sandlada.RopSharp.Option<TOut>>!
+static Sandlada.RopSharp.OptionAsyncExtensions.BindSomeAsync<T, TOut>(this System.Threading.Tasks.Task<Sandlada.RopSharp.Option<T>>! task, System.Func<T, System.Threading.CancellationToken, System.Threading.Tasks.Task<Sandlada.RopSharp.Option<TOut>>!>! binder, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Sandlada.RopSharp.Option<TOut>>!
+static Sandlada.RopSharp.OptionAsyncExtensions.BindSomeAsync<T, TOut>(this System.Threading.Tasks.Task<Sandlada.RopSharp.Option<T>>! task, System.Func<T, System.Threading.Tasks.Task<Sandlada.RopSharp.Option<TOut>>!>! binder, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Sandlada.RopSharp.Option<TOut>>!
+static Sandlada.RopSharp.OptionAsyncExtensions.FilterAsync<T>(this System.Threading.Tasks.Task<Sandlada.RopSharp.Option<T>>! task, System.Func<T, System.Threading.Tasks.Task<bool>!>! predicate, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Sandlada.RopSharp.Option<T>>!
+static Sandlada.RopSharp.OptionAsyncExtensions.FilterAsync<T>(this System.Threading.Tasks.Task<Sandlada.RopSharp.Option<T>>! task, System.Func<T, bool>! predicate, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Sandlada.RopSharp.Option<T>>!
+static Sandlada.RopSharp.OptionAsyncExtensions.MapSomeAsync<T, TOut>(this System.Threading.Tasks.Task<Sandlada.RopSharp.Option<T>>! task, System.Func<T, System.Threading.CancellationToken, System.Threading.Tasks.Task<TOut>!>! mapper, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Sandlada.RopSharp.Option<TOut>>!
+static Sandlada.RopSharp.OptionAsyncExtensions.MapSomeAsync<T, TOut>(this System.Threading.Tasks.Task<Sandlada.RopSharp.Option<T>>! task, System.Func<T, System.Threading.Tasks.Task<TOut>!>! mapper, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Sandlada.RopSharp.Option<TOut>>!
+static Sandlada.RopSharp.OptionAsyncExtensions.MapSomeAsync<T, TOut>(this System.Threading.Tasks.Task<Sandlada.RopSharp.Option<T>>! task, System.Func<T, TOut>! mapper, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Sandlada.RopSharp.Option<TOut>>!
+static Sandlada.RopSharp.OptionAsyncExtensions.TeeNoneAsync<T>(this System.Threading.Tasks.Task<Sandlada.RopSharp.Option<T>>! task, System.Func<System.Threading.CancellationToken, System.Threading.Tasks.Task!>! action, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Sandlada.RopSharp.Option<T>>!
+static Sandlada.RopSharp.OptionAsyncExtensions.TeeNoneAsync<T>(this System.Threading.Tasks.Task<Sandlada.RopSharp.Option<T>>! task, System.Func<System.Threading.Tasks.Task!>! action, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Sandlada.RopSharp.Option<T>>!
+static Sandlada.RopSharp.OptionAsyncExtensions.TeeSomeAsync<T>(this System.Threading.Tasks.Task<Sandlada.RopSharp.Option<T>>! task, System.Func<T, System.Threading.CancellationToken, System.Threading.Tasks.Task!>! action, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Sandlada.RopSharp.Option<T>>!
+static Sandlada.RopSharp.OptionAsyncExtensions.TeeSomeAsync<T>(this System.Threading.Tasks.Task<Sandlada.RopSharp.Option<T>>! task, System.Func<T, System.Threading.Tasks.Task!>! action, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Sandlada.RopSharp.Option<T>>!
+static Sandlada.RopSharp.OptionBridgeExtensions.RequireSome<T, TErr>(this Sandlada.RopSharp.Option<T> option, System.Func<TErr>! errorFactory) -> Sandlada.RopSharp.Result<T, TErr>
+static Sandlada.RopSharp.OptionBridgeExtensions.RequireSome<T, TErr>(this Sandlada.RopSharp.Option<T> option, TErr error) -> Sandlada.RopSharp.Result<T, TErr>
+static Sandlada.RopSharp.OptionBridgeExtensions.ToOption<T, TErr>(this Sandlada.RopSharp.Result<T, TErr> result) -> Sandlada.RopSharp.Option<T>
+static Sandlada.RopSharp.OptionBridgeExtensions.Transpose<T, TErr>(this Sandlada.RopSharp.Option<Sandlada.RopSharp.Result<T, TErr>> option) -> Sandlada.RopSharp.Result<Sandlada.RopSharp.Option<T>, TErr>
+static Sandlada.RopSharp.OptionBridgeExtensions.Transpose<T, TErr>(this Sandlada.RopSharp.Result<Sandlada.RopSharp.Option<T>, TErr> result) -> Sandlada.RopSharp.Option<Sandlada.RopSharp.Result<T, TErr>>
+static Sandlada.RopSharp.OptionEnumerableExtensions.Choose<T, TOut>(this System.Collections.Generic.IEnumerable<Sandlada.RopSharp.Option<T>>! source, System.Func<T, TOut>! mapper) -> System.Collections.Generic.IReadOnlyList<TOut>!
+static Sandlada.RopSharp.OptionEnumerableExtensions.Choose<T>(this System.Collections.Generic.IEnumerable<Sandlada.RopSharp.Option<T>>! source) -> System.Collections.Generic.IReadOnlyList<T>!
+static Sandlada.RopSharp.OptionEnumerableExtensions.Execute<T>(this Sandlada.RopSharp.Option<T> option, System.Action<T>! action) -> void
+static Sandlada.RopSharp.OptionEnumerableExtensions.ExecuteNoValue<T>(this Sandlada.RopSharp.Option<T> option, System.Action! action) -> void
+static Sandlada.RopSharp.OptionEnumerableExtensions.TryFind<TKey, TValue>(this System.Collections.Generic.IReadOnlyDictionary<TKey, TValue>! source, TKey key) -> Sandlada.RopSharp.Option<TValue>
+static Sandlada.RopSharp.OptionEnumerableExtensions.TryFirst<T>(this System.Collections.Generic.IEnumerable<T>! source) -> Sandlada.RopSharp.Option<T>
+static Sandlada.RopSharp.OptionEnumerableExtensions.TryFirst<T>(this System.Collections.Generic.IEnumerable<T>! source, System.Func<T, bool>! predicate) -> Sandlada.RopSharp.Option<T>
+static Sandlada.RopSharp.OptionEnumerableExtensions.TryLast<T>(this System.Collections.Generic.IEnumerable<T>! source) -> Sandlada.RopSharp.Option<T>
+static Sandlada.RopSharp.OptionEnumerableExtensions.TryLast<T>(this System.Collections.Generic.IEnumerable<T>! source, System.Func<T, bool>! predicate) -> Sandlada.RopSharp.Option<T>
+static Sandlada.RopSharp.OptionExtensions.BindNone<T>(this Sandlada.RopSharp.Option<T> option, System.Func<Sandlada.RopSharp.Option<T>>! fallback) -> Sandlada.RopSharp.Option<T>
+static Sandlada.RopSharp.OptionExtensions.BindNoneValue<T>(this Sandlada.RopSharp.Option<T> option, System.Func<T>! fallbackFactory) -> Sandlada.RopSharp.Option<T>
+static Sandlada.RopSharp.OptionExtensions.BindNoneValue<T>(this Sandlada.RopSharp.Option<T> option, T fallback) -> Sandlada.RopSharp.Option<T>
+static Sandlada.RopSharp.OptionExtensions.BindSome<T, TOut>(this Sandlada.RopSharp.Option<T> option, System.Func<T, Sandlada.RopSharp.Option<TOut>>! binder) -> Sandlada.RopSharp.Option<TOut>
+static Sandlada.RopSharp.OptionExtensions.Filter<T>(this Sandlada.RopSharp.Option<T> option, System.Func<T, bool>! predicate) -> Sandlada.RopSharp.Option<T>
+static Sandlada.RopSharp.OptionExtensions.Flatten<T>(this Sandlada.RopSharp.Option<Sandlada.RopSharp.Option<T>> option) -> Sandlada.RopSharp.Option<T>
+static Sandlada.RopSharp.OptionExtensions.MapSome<T, TOut>(this Sandlada.RopSharp.Option<T> option, System.Func<T, TOut>! mapper) -> Sandlada.RopSharp.Option<TOut>
+static Sandlada.RopSharp.OptionExtensions.MapSomeValue<T, TOut>(this Sandlada.RopSharp.Option<T> option, TOut value) -> Sandlada.RopSharp.Option<TOut>
+static Sandlada.RopSharp.OptionExtensions.Match<T, TResult>(this Sandlada.RopSharp.Option<T> option, System.Func<T, TResult>! some, System.Func<TResult>! none) -> TResult
+static Sandlada.RopSharp.OptionExtensions.OrThrow<T>(this Sandlada.RopSharp.Option<T> option) -> T
+static Sandlada.RopSharp.OptionExtensions.TeeNone<T>(this Sandlada.RopSharp.Option<T> option, System.Action! action) -> Sandlada.RopSharp.Option<T>
+static Sandlada.RopSharp.OptionExtensions.TeeSome<T>(this Sandlada.RopSharp.Option<T> option, System.Action<T>! action) -> Sandlada.RopSharp.Option<T>
+static Sandlada.RopSharp.OptionLinqExtensions.Select<T, TOut>(this Sandlada.RopSharp.Option<T> option, System.Func<T, TOut>! selector) -> Sandlada.RopSharp.Option<TOut>
+static Sandlada.RopSharp.OptionLinqExtensions.SelectMany<T, TCol, TOut>(this Sandlada.RopSharp.Option<T> option, System.Func<T, Sandlada.RopSharp.Option<TCol>>! collectionSelector, System.Func<T, TCol, TOut>! resultSelector) -> Sandlada.RopSharp.Option<TOut>
+static Sandlada.RopSharp.OptionLinqExtensions.SelectMany<T, TOut>(this Sandlada.RopSharp.Option<T> option, System.Func<T, Sandlada.RopSharp.Option<TOut>>! binder) -> Sandlada.RopSharp.Option<TOut>
+static Sandlada.RopSharp.OptionLinqExtensions.Where<T>(this Sandlada.RopSharp.Option<T> option, System.Func<T, bool>! predicate) -> Sandlada.RopSharp.Option<T>
+static Sandlada.RopSharp.OptionNullableExtensions.BindSomeNullable<T, TOut>(this Sandlada.RopSharp.Option<T> option, System.Func<T, TOut?>! binder) -> Sandlada.RopSharp.Option<TOut!>
+static Sandlada.RopSharp.OptionNullableExtensions.ToNullable<T>(this Sandlada.RopSharp.Option<T!> option) -> T?
+static Sandlada.RopSharp.OptionNullableValueExtensions.BindSomeNullableValue<T, TOut>(this Sandlada.RopSharp.Option<T> option, System.Func<T, TOut?>! binder) -> Sandlada.RopSharp.Option<TOut>
+static Sandlada.RopSharp.OptionNullableValueExtensions.ToNullableValue<T>(this Sandlada.RopSharp.Option<T> option) -> T?
+static Sandlada.RopSharp.Result<TOk, TErr>.operator !=(Sandlada.RopSharp.Result<TOk, TErr> left, Sandlada.RopSharp.Result<TOk, TErr> right) -> bool
+static Sandlada.RopSharp.Result<TOk, TErr>.operator ==(Sandlada.RopSharp.Result<TOk, TErr> left, Sandlada.RopSharp.Result<TOk, TErr> right) -> bool
+static Sandlada.RopSharp.ResultAsyncExtensions.AsTask<T, TErr>(this Sandlada.RopSharp.Result<T, TErr> result) -> System.Threading.Tasks.Task<Sandlada.RopSharp.Result<T, TErr>>!
+static Sandlada.RopSharp.ResultAsyncExtensions.BindErrAsync<TOk, TErr>(this Sandlada.RopSharp.Result<TOk, TErr> result, System.Func<TErr, System.Threading.CancellationToken, System.Threading.Tasks.Task<Sandlada.RopSharp.Result<TOk, TErr>>!>! fallback, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Sandlada.RopSharp.Result<TOk, TErr>>!
+static Sandlada.RopSharp.ResultAsyncExtensions.BindErrAsync<TOk, TErr>(this Sandlada.RopSharp.Result<TOk, TErr> result, System.Func<TErr, System.Threading.Tasks.Task<Sandlada.RopSharp.Result<TOk, TErr>>!>! fallback, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Sandlada.RopSharp.Result<TOk, TErr>>!
+static Sandlada.RopSharp.ResultAsyncExtensions.BindErrAsync<TOk, TErr>(this System.Threading.Tasks.Task<Sandlada.RopSharp.Result<TOk, TErr>>! task, System.Func<TErr, System.Threading.CancellationToken, System.Threading.Tasks.Task<Sandlada.RopSharp.Result<TOk, TErr>>!>! fallback, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Sandlada.RopSharp.Result<TOk, TErr>>!
+static Sandlada.RopSharp.ResultAsyncExtensions.BindErrAsync<TOk, TErr>(this System.Threading.Tasks.Task<Sandlada.RopSharp.Result<TOk, TErr>>! task, System.Func<TErr, System.Threading.Tasks.Task<Sandlada.RopSharp.Result<TOk, TErr>>!>! fallback, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Sandlada.RopSharp.Result<TOk, TErr>>!
+static Sandlada.RopSharp.ResultAsyncExtensions.BindOkAsync<TOk, TOut, TErr>(this Sandlada.RopSharp.Result<TOk, TErr> result, System.Func<TOk, System.Threading.CancellationToken, System.Threading.Tasks.Task<Sandlada.RopSharp.Result<TOut, TErr>>!>! binder, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Sandlada.RopSharp.Result<TOut, TErr>>!
+static Sandlada.RopSharp.ResultAsyncExtensions.BindOkAsync<TOk, TOut, TErr>(this Sandlada.RopSharp.Result<TOk, TErr> result, System.Func<TOk, System.Threading.Tasks.Task<Sandlada.RopSharp.Result<TOut, TErr>>!>! binder, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Sandlada.RopSharp.Result<TOut, TErr>>!
+static Sandlada.RopSharp.ResultAsyncExtensions.BindOkAsync<TOk, TOut, TErr>(this System.Threading.Tasks.Task<Sandlada.RopSharp.Result<TOk, TErr>>! task, System.Func<TOk, System.Threading.CancellationToken, System.Threading.Tasks.Task<Sandlada.RopSharp.Result<TOut, TErr>>!>! binder, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Sandlada.RopSharp.Result<TOut, TErr>>!
+static Sandlada.RopSharp.ResultAsyncExtensions.BindOkAsync<TOk, TOut, TErr>(this System.Threading.Tasks.Task<Sandlada.RopSharp.Result<TOk, TErr>>! task, System.Func<TOk, System.Threading.Tasks.Task<Sandlada.RopSharp.Result<TOut, TErr>>!>! binder, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Sandlada.RopSharp.Result<TOut, TErr>>!
+static Sandlada.RopSharp.ResultAsyncExtensions.MapErrAsync<TOk, TErr, TErr2>(this Sandlada.RopSharp.Result<TOk, TErr> result, System.Func<TErr, System.Threading.CancellationToken, System.Threading.Tasks.Task<TErr2>!>! mapper, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Sandlada.RopSharp.Result<TOk, TErr2>>!
+static Sandlada.RopSharp.ResultAsyncExtensions.MapErrAsync<TOk, TErr, TErr2>(this Sandlada.RopSharp.Result<TOk, TErr> result, System.Func<TErr, System.Threading.Tasks.Task<TErr2>!>! mapper, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Sandlada.RopSharp.Result<TOk, TErr2>>!
+static Sandlada.RopSharp.ResultAsyncExtensions.MapErrAsync<TOk, TErr, TErr2>(this System.Threading.Tasks.Task<Sandlada.RopSharp.Result<TOk, TErr>>! task, System.Func<TErr, System.Threading.CancellationToken, System.Threading.Tasks.Task<TErr2>!>! mapper, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Sandlada.RopSharp.Result<TOk, TErr2>>!
+static Sandlada.RopSharp.ResultAsyncExtensions.MapErrAsync<TOk, TErr, TErr2>(this System.Threading.Tasks.Task<Sandlada.RopSharp.Result<TOk, TErr>>! task, System.Func<TErr, System.Threading.Tasks.Task<TErr2>!>! mapper, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Sandlada.RopSharp.Result<TOk, TErr2>>!
+static Sandlada.RopSharp.ResultAsyncExtensions.MapErrAsync<TOk, TErr, TErr2>(this System.Threading.Tasks.Task<Sandlada.RopSharp.Result<TOk, TErr>>! task, System.Func<TErr, TErr2>! mapper, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Sandlada.RopSharp.Result<TOk, TErr2>>!
+static Sandlada.RopSharp.ResultAsyncExtensions.MapOkAsync<TOk, TOut, TErr>(this Sandlada.RopSharp.Result<TOk, TErr> result, System.Func<TOk, System.Threading.CancellationToken, System.Threading.Tasks.Task<TOut>!>! mapper, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Sandlada.RopSharp.Result<TOut, TErr>>!
+static Sandlada.RopSharp.ResultAsyncExtensions.MapOkAsync<TOk, TOut, TErr>(this Sandlada.RopSharp.Result<TOk, TErr> result, System.Func<TOk, System.Threading.Tasks.Task<TOut>!>! mapper, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Sandlada.RopSharp.Result<TOut, TErr>>!
+static Sandlada.RopSharp.ResultAsyncExtensions.MapOkAsync<TOk, TOut, TErr>(this System.Threading.Tasks.Task<Sandlada.RopSharp.Result<TOk, TErr>>! task, System.Func<TOk, System.Threading.CancellationToken, System.Threading.Tasks.Task<TOut>!>! mapper, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Sandlada.RopSharp.Result<TOut, TErr>>!
+static Sandlada.RopSharp.ResultAsyncExtensions.MapOkAsync<TOk, TOut, TErr>(this System.Threading.Tasks.Task<Sandlada.RopSharp.Result<TOk, TErr>>! task, System.Func<TOk, System.Threading.Tasks.Task<TOut>!>! mapper, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Sandlada.RopSharp.Result<TOut, TErr>>!
+static Sandlada.RopSharp.ResultAsyncExtensions.MapOkAsync<TOk, TOut, TErr>(this System.Threading.Tasks.Task<Sandlada.RopSharp.Result<TOk, TErr>>! task, System.Func<TOk, TOut>! mapper, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Sandlada.RopSharp.Result<TOut, TErr>>!
+static Sandlada.RopSharp.ResultAsyncExtensions.TeeErrAsync<TOk, TErr>(this System.Threading.Tasks.Task<Sandlada.RopSharp.Result<TOk, TErr>>! task, System.Func<TErr, System.Threading.CancellationToken, System.Threading.Tasks.Task!>! action, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Sandlada.RopSharp.Result<TOk, TErr>>!
+static Sandlada.RopSharp.ResultAsyncExtensions.TeeErrAsync<TOk, TErr>(this System.Threading.Tasks.Task<Sandlada.RopSharp.Result<TOk, TErr>>! task, System.Func<TErr, System.Threading.Tasks.Task!>! action, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Sandlada.RopSharp.Result<TOk, TErr>>!
+static Sandlada.RopSharp.ResultAsyncExtensions.TeeOkAsync<TOk, TErr>(this System.Threading.Tasks.Task<Sandlada.RopSharp.Result<TOk, TErr>>! task, System.Func<TOk, System.Threading.CancellationToken, System.Threading.Tasks.Task!>! action, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Sandlada.RopSharp.Result<TOk, TErr>>!
+static Sandlada.RopSharp.ResultAsyncExtensions.TeeOkAsync<TOk, TErr>(this System.Threading.Tasks.Task<Sandlada.RopSharp.Result<TOk, TErr>>! task, System.Func<TOk, System.Threading.Tasks.Task!>! action, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Sandlada.RopSharp.Result<TOk, TErr>>!
+static Sandlada.RopSharp.ResultEnsureExtensions.FailIf<TOk, TErr>(this Sandlada.RopSharp.Result<TOk, TErr> result, System.Func<TOk, bool>! predicate, System.Func<TOk, TErr>! errorFactory) -> Sandlada.RopSharp.Result<TOk, TErr>
+static Sandlada.RopSharp.ResultEnsureExtensions.FailIf<TOk, TErr>(this Sandlada.RopSharp.Result<TOk, TErr> result, System.Func<TOk, bool>! predicate, TErr error) -> Sandlada.RopSharp.Result<TOk, TErr>
+static Sandlada.RopSharp.ResultEnsureExtensions.ThenEnsure<TOk, TErr>(this Sandlada.RopSharp.Result<TOk, TErr> result, System.Func<TOk, Sandlada.RopSharp.Result<Sandlada.RopSharp.Unit, TErr>>! ensure) -> Sandlada.RopSharp.Result<TOk, TErr>
+static Sandlada.RopSharp.ResultExtensions.BindErr<TOk, TErr>(this Sandlada.RopSharp.Result<TOk, TErr> result, System.Func<TErr, Sandlada.RopSharp.Result<TOk, TErr>>! fallback) -> Sandlada.RopSharp.Result<TOk, TErr>
+static Sandlada.RopSharp.ResultExtensions.BindErrValue<TOk, TErr>(this Sandlada.RopSharp.Result<TOk, TErr> result, System.Func<TOk>! fallbackFactory) -> Sandlada.RopSharp.Result<TOk, TErr>
+static Sandlada.RopSharp.ResultExtensions.BindErrValue<TOk, TErr>(this Sandlada.RopSharp.Result<TOk, TErr> result, TOk fallback) -> Sandlada.RopSharp.Result<TOk, TErr>
+static Sandlada.RopSharp.ResultExtensions.BindOk<TOk, TOut, TErr>(this Sandlada.RopSharp.Result<TOk, TErr> result, System.Func<TOk, Sandlada.RopSharp.Result<TOut, TErr>>! binder) -> Sandlada.RopSharp.Result<TOut, TErr>
+static Sandlada.RopSharp.ResultExtensions.Ensure<TOk, TErr>(this Sandlada.RopSharp.Result<TOk, TErr> result, System.Func<TOk, bool>! predicate, System.Func<TOk, TErr>! errorFactory) -> Sandlada.RopSharp.Result<TOk, TErr>
+static Sandlada.RopSharp.ResultExtensions.Ensure<TOk, TErr>(this Sandlada.RopSharp.Result<TOk, TErr> result, System.Func<TOk, bool>! predicate, TErr error) -> Sandlada.RopSharp.Result<TOk, TErr>
+static Sandlada.RopSharp.ResultExtensions.ErrOrThrow<TOk, TErr>(this Sandlada.RopSharp.Result<TOk, TErr> result) -> TErr
+static Sandlada.RopSharp.ResultExtensions.MapErr<TOk, TErr, TErr2>(this Sandlada.RopSharp.Result<TOk, TErr> result, System.Func<TErr, TErr2>! mapper) -> Sandlada.RopSharp.Result<TOk, TErr2>
+static Sandlada.RopSharp.ResultExtensions.MapOk<TOk, TOut, TErr>(this Sandlada.RopSharp.Result<TOk, TErr> result, System.Func<TOk, TOut>! mapper) -> Sandlada.RopSharp.Result<TOut, TErr>
+static Sandlada.RopSharp.ResultExtensions.MapOkValue<TOk, TOut, TErr>(this Sandlada.RopSharp.Result<TOk, TErr> result, TOut value) -> Sandlada.RopSharp.Result<TOut, TErr>
+static Sandlada.RopSharp.ResultExtensions.Match<TOk, TErr, T>(this Sandlada.RopSharp.Result<TOk, TErr> result, System.Func<TOk, T>! ok, System.Func<TErr, T>! err) -> T
+static Sandlada.RopSharp.ResultExtensions.OkOrThrow<TOk, TErr>(this Sandlada.RopSharp.Result<TOk, TErr> result) -> TOk
+static Sandlada.RopSharp.ResultExtensions.OrThrow<TOk, TErr>(this Sandlada.RopSharp.Result<TOk, TErr> result) -> TOk
+static Sandlada.RopSharp.ResultExtensions.RequireNotNull<T>(this Sandlada.RopSharp.Result<T?, Sandlada.RopSharp.RopError!> result, System.Func<Sandlada.RopSharp.RopError!>! errorFactory) -> Sandlada.RopSharp.Result<T!, Sandlada.RopSharp.RopError!>
+static Sandlada.RopSharp.ResultExtensions.TeeErr<TOk, TErr>(this Sandlada.RopSharp.Result<TOk, TErr> result, System.Action<TErr>! action) -> Sandlada.RopSharp.Result<TOk, TErr>
+static Sandlada.RopSharp.ResultExtensions.TeeOk<TOk, TErr>(this Sandlada.RopSharp.Result<TOk, TErr> result, System.Action<TOk>! action) -> Sandlada.RopSharp.Result<TOk, TErr>
+static Sandlada.RopSharp.ResultLinqExtensions.Select<TOk, TOut, TErr>(this Sandlada.RopSharp.Result<TOk, TErr> result, System.Func<TOk, TOut>! selector) -> Sandlada.RopSharp.Result<TOut, TErr>
+static Sandlada.RopSharp.ResultLinqExtensions.Select<TOk, TOut, TErr>(this System.Threading.Tasks.Task<Sandlada.RopSharp.Result<TOk, TErr>>! task, System.Func<TOk, TOut>! selector) -> System.Threading.Tasks.Task<Sandlada.RopSharp.Result<TOut, TErr>>!
+static Sandlada.RopSharp.ResultLinqExtensions.SelectMany<TOk, TCol, TOut, TErr>(this Sandlada.RopSharp.Result<TOk, TErr> result, System.Func<TOk, Sandlada.RopSharp.Result<TCol, TErr>>! collectionSelector, System.Func<TOk, TCol, TOut>! resultSelector) -> Sandlada.RopSharp.Result<TOut, TErr>
+static Sandlada.RopSharp.ResultLinqExtensions.SelectMany<TOk, TCol, TOut, TErr>(this System.Threading.Tasks.Task<Sandlada.RopSharp.Result<TOk, TErr>>! source, System.Func<TOk, Sandlada.RopSharp.Result<TCol, TErr>>! collectionSelector, System.Func<TOk, TCol, TOut>! resultSelector) -> System.Threading.Tasks.Task<Sandlada.RopSharp.Result<TOut, TErr>>!
+static Sandlada.RopSharp.ResultLinqExtensions.SelectMany<TOk, TCol, TOut, TErr>(this System.Threading.Tasks.Task<Sandlada.RopSharp.Result<TOk, TErr>>! source, System.Func<TOk, System.Threading.Tasks.Task<Sandlada.RopSharp.Result<TCol, TErr>>!>! collectionSelector, System.Func<TOk, TCol, TOut>! resultSelector) -> System.Threading.Tasks.Task<Sandlada.RopSharp.Result<TOut, TErr>>!
+static Sandlada.RopSharp.ResultLinqExtensions.SelectMany<TOk, TOut, TErr>(this Sandlada.RopSharp.Result<TOk, TErr> result, System.Func<TOk, Sandlada.RopSharp.Result<TOut, TErr>>! binder) -> Sandlada.RopSharp.Result<TOut, TErr>
+static Sandlada.RopSharp.ResultTerminalExtensions.MatchFirst<T, TErr, TResult>(this Sandlada.RopSharp.Result<T, System.Collections.Generic.IReadOnlyList<TErr>!> result, System.Func<T, TResult>! ok, System.Func<TErr, TResult>! err) -> TResult
+static Sandlada.RopSharp.ResultTerminalExtensions.Switch<TOk, TErr>(this Sandlada.RopSharp.Result<TOk, TErr> result, System.Action<TOk>! ok, System.Action<TErr>! err) -> void
+static Sandlada.RopSharp.ResultTerminalExtensions.SwitchAsync<TOk, TErr>(this System.Threading.Tasks.Task<Sandlada.RopSharp.Result<TOk, TErr>>! task, System.Func<TOk, System.Threading.Tasks.Task!>! ok, System.Func<TErr, System.Threading.Tasks.Task!>! err, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
+static Sandlada.RopSharp.ResultTerminalExtensions.SwitchFirst<T, TErr>(this Sandlada.RopSharp.Result<T, System.Collections.Generic.IReadOnlyList<TErr>!> result, System.Action<T>! ok, System.Action<TErr>! err) -> void
+static Sandlada.RopSharp.ResultValidationExtensions.ToSingleError<T, TErr>(this Sandlada.RopSharp.Result<T, System.Collections.Generic.IReadOnlyList<TErr>!> result, System.Func<System.Collections.Generic.IReadOnlyList<TErr>!, TErr>! combine) -> Sandlada.RopSharp.Result<T, TErr>
+static Sandlada.RopSharp.ResultValidationExtensions.ToSingleError<T>(this Sandlada.RopSharp.Result<T, System.Collections.Generic.IReadOnlyList<Sandlada.RopSharp.RopError!>!> result) -> Sandlada.RopSharp.Result<T, Sandlada.RopSharp.RopError!>
+static Sandlada.RopSharp.ResultValidationExtensions.ToValidation<T, TErr>(this Sandlada.RopSharp.Result<T, TErr> result) -> Sandlada.RopSharp.Result<T, System.Collections.Generic.IReadOnlyList<TErr>!>
+static Sandlada.RopSharp.Rop.Combine<T1, T2, T3, TOut, TErr>(Sandlada.RopSharp.Result<T1, TErr> first, Sandlada.RopSharp.Result<T2, TErr> second, Sandlada.RopSharp.Result<T3, TErr> third, System.Func<T1, T2, T3, TOut>! merger) -> Sandlada.RopSharp.Result<TOut, TErr>
+static Sandlada.RopSharp.Rop.Combine<T1, T2, TOut, TErr>(Sandlada.RopSharp.Result<T1, TErr> first, Sandlada.RopSharp.Result<T2, TErr> second, System.Func<T1, T2, TOut>! merger) -> Sandlada.RopSharp.Result<TOut, TErr>
+static Sandlada.RopSharp.Rop.CombineAsync<T1, T2, T3, TOut, TErr>(System.Threading.Tasks.Task<Sandlada.RopSharp.Result<T1, TErr>>! first, System.Threading.Tasks.Task<Sandlada.RopSharp.Result<T2, TErr>>! second, System.Threading.Tasks.Task<Sandlada.RopSharp.Result<T3, TErr>>! third, System.Func<T1, T2, T3, TOut>! merger, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Sandlada.RopSharp.Result<TOut, TErr>>!
+static Sandlada.RopSharp.Rop.CombineAsync<T1, T2, TOut, TErr>(System.Threading.Tasks.Task<Sandlada.RopSharp.Result<T1, TErr>>! first, System.Threading.Tasks.Task<Sandlada.RopSharp.Result<T2, TErr>>! second, System.Func<T1, T2, TOut>! merger, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Sandlada.RopSharp.Result<TOut, TErr>>!
+static Sandlada.RopSharp.Rop.Err<TOk, TErr>(TErr error) -> Sandlada.RopSharp.Result<TOk, TErr>
+static Sandlada.RopSharp.Rop.Err<TOk>(Sandlada.RopSharp.RopError! error) -> Sandlada.RopSharp.Result<TOk, Sandlada.RopSharp.RopError!>
+static Sandlada.RopSharp.Rop.FailureIf<T>(bool condition, T value, Sandlada.RopSharp.RopError! error) -> Sandlada.RopSharp.Result<T, Sandlada.RopSharp.RopError!>
+static Sandlada.RopSharp.Rop.FailureIf<T>(bool condition, T value, System.Func<Sandlada.RopSharp.RopError!>! errorFactory) -> Sandlada.RopSharp.Result<T, Sandlada.RopSharp.RopError!>
+static Sandlada.RopSharp.Rop.FromNullable<TOk>(TOk? value, System.Func<Sandlada.RopSharp.RopError!>! errorFactory) -> Sandlada.RopSharp.Result<TOk!, Sandlada.RopSharp.RopError!>
+static Sandlada.RopSharp.Rop.FromNullableValue<TOk>(TOk? value, System.Func<Sandlada.RopSharp.RopError!>! errorFactory) -> Sandlada.RopSharp.Result<TOk, Sandlada.RopSharp.RopError!>
+static Sandlada.RopSharp.Rop.Ok<TOk, TErr>(TOk value) -> Sandlada.RopSharp.Result<TOk, TErr>
+static Sandlada.RopSharp.Rop.Ok<TOk>(TOk value) -> Sandlada.RopSharp.Result<TOk, Sandlada.RopSharp.RopError!>
+static Sandlada.RopSharp.Rop.Parse<T>(string? value, string! code = "E_PARSE") -> Sandlada.RopSharp.Result<T, Sandlada.RopSharp.RopError!>
+static Sandlada.RopSharp.Rop.Partition<T, TErr>(System.Collections.Generic.IEnumerable<Sandlada.RopSharp.Result<T, TErr>>! results) -> (System.Collections.Generic.IReadOnlyList<T>! Oks, System.Collections.Generic.IReadOnlyList<TErr>! Errs)
+static Sandlada.RopSharp.Rop.PartitionAsync<T, TErr>(System.Collections.Generic.IEnumerable<System.Threading.Tasks.Task<Sandlada.RopSharp.Result<T, TErr>>!>! tasks, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<(System.Collections.Generic.IReadOnlyList<T>! Oks, System.Collections.Generic.IReadOnlyList<TErr>! Errs)>!
+static Sandlada.RopSharp.Rop.Sequence<T, TErr>(System.Collections.Generic.IEnumerable<Sandlada.RopSharp.Result<T, TErr>>! results) -> Sandlada.RopSharp.Result<System.Collections.Generic.IReadOnlyList<T>!, TErr>
+static Sandlada.RopSharp.Rop.SequenceAsync<T, TErr>(System.Collections.Generic.IEnumerable<System.Threading.Tasks.Task<Sandlada.RopSharp.Result<T, TErr>>!>! tasks, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Sandlada.RopSharp.Result<System.Collections.Generic.IReadOnlyList<T>!, TErr>>!
+static Sandlada.RopSharp.Rop.SequenceValidation<T, TErr>(System.Collections.Generic.IEnumerable<Sandlada.RopSharp.Result<T, TErr>>! results) -> Sandlada.RopSharp.Result<System.Collections.Generic.IReadOnlyList<T>!, System.Collections.Generic.IReadOnlyList<TErr>!>
+static Sandlada.RopSharp.Rop.SuccessIf<T>(bool condition, T value, Sandlada.RopSharp.RopError! error) -> Sandlada.RopSharp.Result<T, Sandlada.RopSharp.RopError!>
+static Sandlada.RopSharp.Rop.SuccessIf<T>(bool condition, T value, System.Func<Sandlada.RopSharp.RopError!>! errorFactory) -> Sandlada.RopSharp.Result<T, Sandlada.RopSharp.RopError!>
+static Sandlada.RopSharp.Rop.Switch<T, TOut, TErr>(System.Func<T, TOut>! func) -> System.Func<T, Sandlada.RopSharp.Result<TOut, TErr>>!
+static Sandlada.RopSharp.Rop.Traverse<T, TOut, TErr>(System.Collections.Generic.IEnumerable<T>! source, System.Func<T, Sandlada.RopSharp.Result<TOut, TErr>>! mapper) -> Sandlada.RopSharp.Result<System.Collections.Generic.IReadOnlyList<TOut>!, TErr>
+static Sandlada.RopSharp.Rop.TraverseAsync<T, TOut, TErr>(System.Collections.Generic.IEnumerable<T>! source, System.Func<T, System.Threading.Tasks.Task<Sandlada.RopSharp.Result<TOut, TErr>>!>! mapper, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Sandlada.RopSharp.Result<System.Collections.Generic.IReadOnlyList<TOut>!, TErr>>!
+static Sandlada.RopSharp.Rop.Try<T>(System.Func<T>! func, System.Func<System.Exception!, Sandlada.RopSharp.RopError!>! errorFactory) -> Sandlada.RopSharp.Result<T, Sandlada.RopSharp.RopError!>
+static Sandlada.RopSharp.Rop.Try<T>(System.Func<T>! func, string! code) -> Sandlada.RopSharp.Result<T, Sandlada.RopSharp.RopError!>
+static Sandlada.RopSharp.Rop.TryAsync<T>(System.Func<System.Threading.Tasks.Task<T>!>! func, System.Func<System.Exception!, Sandlada.RopSharp.RopError!>! errorFactory, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Sandlada.RopSharp.Result<T, Sandlada.RopSharp.RopError!>>!
+static Sandlada.RopSharp.Rop.TryAsync<T>(System.Func<System.Threading.Tasks.Task<T>!>! func, string! code, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Sandlada.RopSharp.Result<T, Sandlada.RopSharp.RopError!>>!
+static Sandlada.RopSharp.Rop.TryParse<T>(string? value) -> Sandlada.RopSharp.Option<T>
+static Sandlada.RopSharp.Rop.TrySwitch<T, TOut>(System.Func<T, TOut>! func, System.Func<System.Exception!, Sandlada.RopSharp.RopError!>! errorFactory) -> System.Func<T, Sandlada.RopSharp.Result<TOut, Sandlada.RopSharp.RopError!>>!
+static Sandlada.RopSharp.Rop.Validate<T1, T2, T3, TOut, TErr>(Sandlada.RopSharp.Result<T1, TErr> first, Sandlada.RopSharp.Result<T2, TErr> second, Sandlada.RopSharp.Result<T3, TErr> third, System.Func<T1, T2, T3, TOut>! merger) -> Sandlada.RopSharp.Result<TOut, System.Collections.Generic.IReadOnlyList<TErr>!>
+static Sandlada.RopSharp.Rop.Validate<T1, T2, TOut, TErr>(Sandlada.RopSharp.Result<T1, TErr> first, Sandlada.RopSharp.Result<T2, TErr> second, System.Func<T1, T2, TOut>! merger) -> Sandlada.RopSharp.Result<TOut, System.Collections.Generic.IReadOnlyList<TErr>!>
+static Sandlada.RopSharp.Rop.ValidateAsync<T1, T2, T3, TOut, TErr>(System.Threading.Tasks.Task<Sandlada.RopSharp.Result<T1, TErr>>! first, System.Threading.Tasks.Task<Sandlada.RopSharp.Result<T2, TErr>>! second, System.Threading.Tasks.Task<Sandlada.RopSharp.Result<T3, TErr>>! third, System.Func<T1, T2, T3, TOut>! merger, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Sandlada.RopSharp.Result<TOut, System.Collections.Generic.IReadOnlyList<TErr>!>>!
+static Sandlada.RopSharp.Rop.ValidateAsync<T1, T2, TOut, TErr>(System.Threading.Tasks.Task<Sandlada.RopSharp.Result<T1, TErr>>! first, System.Threading.Tasks.Task<Sandlada.RopSharp.Result<T2, TErr>>! second, System.Func<T1, T2, TOut>! merger, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Sandlada.RopSharp.Result<TOut, System.Collections.Generic.IReadOnlyList<TErr>!>>!
+static Sandlada.RopSharp.Rop.Zip<T1, T2, T3, TErr>(Sandlada.RopSharp.Result<T1, TErr> first, Sandlada.RopSharp.Result<T2, TErr> second, Sandlada.RopSharp.Result<T3, TErr> third) -> Sandlada.RopSharp.Result<(T1, T2, T3), TErr>
+static Sandlada.RopSharp.Rop.Zip<T1, T2, TErr>(Sandlada.RopSharp.Result<T1, TErr> first, Sandlada.RopSharp.Result<T2, TErr> second) -> Sandlada.RopSharp.Result<(T1, T2), TErr>
+static Sandlada.RopSharp.Rop.ZipAsync<T1, T2, T3, TErr>(System.Threading.Tasks.Task<Sandlada.RopSharp.Result<T1, TErr>>! first, System.Threading.Tasks.Task<Sandlada.RopSharp.Result<T2, TErr>>! second, System.Threading.Tasks.Task<Sandlada.RopSharp.Result<T3, TErr>>! third, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Sandlada.RopSharp.Result<(T1, T2, T3), TErr>>!
+static Sandlada.RopSharp.Rop.ZipAsync<T1, T2, TErr>(System.Threading.Tasks.Task<Sandlada.RopSharp.Result<T1, TErr>>! first, System.Threading.Tasks.Task<Sandlada.RopSharp.Result<T2, TErr>>! second, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Sandlada.RopSharp.Result<(T1, T2), TErr>>!
+static Sandlada.RopSharp.RopError.Combine(System.Collections.Generic.IReadOnlyList<Sandlada.RopSharp.RopError!>! errors) -> Sandlada.RopSharp.RopError!
+static Sandlada.RopSharp.RopError.Create(string! code, string! message, Sandlada.RopSharp.RopErrorKind kind) -> Sandlada.RopSharp.RopError!
+static Sandlada.RopSharp.RopError.Create(string! code, string! message, string? details = null) -> Sandlada.RopSharp.RopError!
+static Sandlada.RopSharp.RopError.Create(string! code, string! message, string? details, Sandlada.RopSharp.RopErrorKind kind) -> Sandlada.RopSharp.RopError!
+static Sandlada.RopSharp.RopError.FromException(System.Exception! exception, Sandlada.RopSharp.RopErrorKind kind) -> Sandlada.RopSharp.RopError!
+static Sandlada.RopSharp.RopError.FromException(System.Exception! exception, string? code = null) -> Sandlada.RopSharp.RopError!
+static Sandlada.RopSharp.RopError.FromException(System.Exception! exception, string? code, Sandlada.RopSharp.RopErrorKind kind) -> Sandlada.RopSharp.RopError!
+static Sandlada.RopSharp.RopError.operator !=(Sandlada.RopSharp.RopError? left, Sandlada.RopSharp.RopError? right) -> bool
+static Sandlada.RopSharp.RopError.operator ==(Sandlada.RopSharp.RopError? left, Sandlada.RopSharp.RopError? right) -> bool
+static Sandlada.RopSharp.Unit.Value.get -> Sandlada.RopSharp.Unit
+static Sandlada.RopSharp.Unit.operator !=(Sandlada.RopSharp.Unit left, Sandlada.RopSharp.Unit right) -> bool
+static Sandlada.RopSharp.Unit.operator ==(Sandlada.RopSharp.Unit left, Sandlada.RopSharp.Unit right) -> bool

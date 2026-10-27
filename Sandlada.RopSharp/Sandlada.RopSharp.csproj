@@ -1,0 +1,53 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFrameworks>net10.0;net11.0</TargetFrameworks>
+    <RootNamespace>Sandlada.RopSharp</RootNamespace>
+    <AssemblyName>Sandlada.RopSharp</AssemblyName>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <IsAotCompatible>true</IsAotCompatible>
+    <IsTrimmable>true</IsTrimmable>
+    <EnableTrimAnalyzer>true</EnableTrimAnalyzer>
+    <EnableAotAnalyzer>true</EnableAotAnalyzer>
+    <EnableSingleFileAnalyzer>true</EnableSingleFileAnalyzer>
+    <IsPackable>true</IsPackable>
+    <EnablePackageValidation>true</EnablePackageValidation>
+    <!-- The library has no runtime package dependencies; its only package (ILLink) is SDK-versioned and would
+         make the lock file churn on every SDK update. Lock files are committed for the test/benchmark graphs. -->
+    <RestorePackagesWithLockFile>false</RestorePackagesWithLockFile>
+    <AnalysisMode>All</AnalysisMode>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <PackageId>Sandlada.RopSharp</PackageId>
+    <Version>0.0.1</Version>
+    <Authors>Sandlada</Authors>
+    <Company>Sandlada</Company>
+    <Product>Sandlada.RopSharp</Product>
+    <Description>Production-grade railway-oriented programming (ROP) for modern C#: Result&lt;TOk,TErr&gt;, Option&lt;T&gt;, Either&lt;TLeft,TRight&gt;, structured RopError with categories, applicative validation, parsing, and cancellation-aware async combinators. Immutable structs, AOT friendly, zero reflection in hot paths.</Description>
+    <PackageTags>rop;railway-oriented-programming;result;option;either;functional;validation;error-handling;async;cancellation;aot;csharp</PackageTags>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <PackageRequireLicenseAcceptance>false</PackageRequireLicenseAcceptance>
+    <NeutralLanguage>en</NeutralLanguage>
+    <PackageReleaseNotes>0.0.1 is the initial public release: Result&lt;TOk,TErr&gt;, Option&lt;T&gt; and Either&lt;TLeft,TRight&gt; immutable structs with symmetric combinators, applicative validation, parsing helpers, and cancellation-aware async combinators. Zero runtime dependencies, AOT/trim friendly. See docs/adr/0001-core-design-decisions.md and docs/adr/0002-api-gap-remediation.md.</PackageReleaseNotes>
+    <IncludeSymbols>true</IncludeSymbols>
+    <SymbolPackageFormat>snupkg</SymbolPackageFormat>
+    <EmbedUntrackedSources>true</EmbedUntrackedSources>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.CodeAnalysis.PublicApiAnalyzers" PrivateAssets="all" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <AdditionalFiles Include="PublicAPI.Shipped.txt" />
+    <AdditionalFiles Include="PublicAPI.Unshipped.txt" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="..\README.md" Pack="true" PackagePath="\" Visible="false" />
+    <None Include="..\LICENSE" Pack="true" PackagePath="\" Visible="false" />
+  </ItemGroup>
+
+</Project>
