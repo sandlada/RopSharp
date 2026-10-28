@@ -8,6 +8,233 @@ namespace Sandlada.RopSharp;
 public static partial class Rop
 {
     /// <summary>
+    /// Lifts an asynchronous function into a function returning a task-wrapped <see cref="Result{TOk,TErr}"/> on the
+    /// success track.
+    /// </summary>
+    /// <typeparam name="T">The input type.</typeparam>
+    /// <typeparam name="TOut">The output type.</typeparam>
+    /// <typeparam name="TErr">The error value type.</typeparam>
+    /// <param name="func">The asynchronous function to lift. Exceptions are not caught.</param>
+    /// <returns>A function that awaits <paramref name="func"/> and always returns <c>Ok</c> on success.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="func"/> is <see langword="null"/>.</exception>
+    /// <exception cref="InvalidOperationException">The function returned a null task.</exception>
+    /// <remarks>
+    /// <para>
+    /// This is the asynchronous counterpart of <see cref="Rop.Switch{T,TOut,TErr}"/>; the name is intentionally the
+    /// same operation with an awaited result. It is not the action terminal
+    /// <see cref="ResultTerminalExtensions.SwitchAsync{TOk,TErr}"/>, which consumes an existing result.
+    /// </para>
+    /// <para>
+    /// The lifted function carries no token of its own; close over the caller's token inside
+    /// <paramref name="func"/> when cancellation is required. A null payload throws
+    /// <see cref="ArgumentNullException"/> from <see cref="Ok{TOk,TErr}"/>, exactly like the synchronous lift.
+    /// </para>
+    /// </remarks>
+    public static Func<T, Task<Result<TOut, TErr>>> SwitchAsync<T, TOut, TErr>(Func<T, Task<TOut>> func)
+    {
+        ArgumentNullException.ThrowIfNull(func);
+        return async value => Ok<TOut, TErr>(
+            await AsyncGuards.Require(func(value), "func").ConfigureAwait(false));
+    }
+
+    /// <summary>
+    /// Lifts an asynchronous function into a function returning a task-wrapped <see cref="Result{TOk,TErr}"/>,
+    /// converting thrown exceptions into errors except for <see cref="OperationCanceledException"/>.
+    /// </summary>
+    /// <typeparam name="T">The input type.</typeparam>
+    /// <typeparam name="TOut">The output type.</typeparam>
+    /// <param name="func">The asynchronous function to lift.</param>
+    /// <param name="errorFactory">Maps a caught exception to an error. Must return a non-null error.</param>
+    /// <returns>A function that never throws for expected failures.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="func"/> or <paramref name="errorFactory"/> is <see langword="null"/>.</exception>
+    /// <remarks>
+    /// The returned function delegates to <see cref="TryAsync{T}(Func{Task{T}},Func{Exception,RopError},CancellationToken)"/>,
+    /// so a null task faults and a null payload produces <c>E_NULL_RESULT</c> exactly as that boundary does.
+    /// </remarks>
+    public static Func<T, Task<Result<TOut, RopError>>> TrySwitchAsync<T, TOut>(
+        Func<T, Task<TOut>> func,
+        Func<Exception, RopError> errorFactory)
+    {
+        ArgumentNullException.ThrowIfNull(func);
+        ArgumentNullException.ThrowIfNull(errorFactory);
+        return value => TryAsync(() => func(value), errorFactory);
+    }
+
+    /// <summary>
+    /// Lifts an asynchronous function into a function returning a task-wrapped <see cref="Result{TOk,TErr}"/> with a
+    /// caller-defined error type, converting thrown exceptions except for <see cref="OperationCanceledException"/>.
+    /// </summary>
+    /// <typeparam name="T">The input type.</typeparam>
+    /// <typeparam name="TOut">The output type.</typeparam>
+    /// <typeparam name="TErr">The error value type.</typeparam>
+    /// <param name="func">The asynchronous function to lift.</param>
+    /// <param name="errorFactory">Maps a caught exception to an error. Must return a non-null error.</param>
+    /// <param name="nullResultErrorFactory">
+    /// Builds the error used when <paramref name="func"/> resolves to <see langword="null"/>. Must return a non-null error.
+    /// </param>
+    /// <returns>A function that never throws for expected failures.</returns>
+    /// <exception cref="ArgumentNullException">An argument is <see langword="null"/>.</exception>
+    /// <remarks>
+    /// The returned function delegates to
+    /// <see cref="TryAsync{T,TErr}(Func{Task{T}},Func{Exception,TErr},Func{TErr},CancellationToken)"/>, so a null task
+    /// faults and a null payload produces <c>Err(nullResultErrorFactory())</c> exactly as that boundary does.
+    /// </remarks>
+    public static Func<T, Task<Result<TOut, TErr>>> TrySwitchAsync<T, TOut, TErr>(
+        Func<T, Task<TOut>> func,
+        Func<Exception, TErr> errorFactory,
+        Func<TErr> nullResultErrorFactory)
+    {
+        ArgumentNullException.ThrowIfNull(func);
+        ArgumentNullException.ThrowIfNull(errorFactory);
+        ArgumentNullException.ThrowIfNull(nullResultErrorFactory);
+        return value => TryAsync(() => func(value), errorFactory, nullResultErrorFactory);
+    }
+
+    /// <summary>
+    /// Runs an asynchronous boundary function and converts a thrown exception into an error, except
+    /// <see cref="OperationCanceledException"/> which is always rethrown.</summary>
+    /// <param name="action">The asynchronous boundary action to execute.</param>
+    /// <param name="errorFactory">Maps a caught exception to an error. Must return a non-null error.</param>
+    /// <param name="cancellationToken">An optional cancellation token.</param>
+    /// <returns><c>Ok(Unit.Value)</c> when the action completes; otherwise <c>Err(errorFactory(exception))</c>.</returns>
+    /// <exception cref="OperationCanceledException">The token was cancelled or the action threw <see cref="OperationCanceledException"/>.</exception>
+    /// <exception cref="InvalidOperationException">
+    /// The boundary action returned a null task, or the error factory returned null.
+    /// </exception>
+    /// <remarks>
+    /// Use this overload for asynchronous side effects that produce no value; the success payload is
+    /// <see cref="Unit"/>. Prefer this over <see cref="TryAsync{T}(Func{Task{T}},Func{Exception,RopError},CancellationToken)"/>
+    /// with a discarded value, which would require inventing a placeholder payload.
+    /// </remarks>
+    [SuppressMessage(
+        "Design",
+        "CA1031:Do not catch general exception types",
+        Justification = "Rop.TryAsync is the single asynchronous boundary where any non-cancellation exception becomes a domain error.")]
+    public static async Task<Result<Unit, RopError>> TryAsync(
+        Func<Task> action,
+        Func<Exception, RopError> errorFactory,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(action);
+        ArgumentNullException.ThrowIfNull(errorFactory);
+        cancellationToken.ThrowIfCancellationRequested();
+
+        Task pending;
+        try
+        {
+            pending = action();
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
+        catch (Exception exception)
+        {
+            return Err<Unit, RopError>(MaterializeException(errorFactory, exception));
+        }
+
+        if (pending is null)
+        {
+            throw new InvalidOperationException("The boundary function returned a null task.");
+        }
+
+        try
+        {
+            await pending.WaitAsync(cancellationToken).ConfigureAwait(false);
+            return Ok<Unit, RopError>(Unit.Value);
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
+        catch (Exception exception)
+        {
+            return Err<Unit, RopError>(MaterializeException(errorFactory, exception));
+        }
+    }
+
+    /// <summary>
+    /// Runs an asynchronous boundary action and converts a thrown exception into a caller-defined error, except
+    /// <see cref="OperationCanceledException"/> which is always rethrown.
+    /// </summary>
+    /// <typeparam name="TErr">The error value type.</typeparam>
+    /// <param name="action">The asynchronous boundary action to execute.</param>
+    /// <param name="errorFactory">Maps a caught exception to an error. Must return a non-null error.</param>
+    /// <param name="cancellationToken">An optional cancellation token.</param>
+    /// <returns><c>Ok(Unit.Value)</c> when the action completes; otherwise <c>Err(errorFactory(exception))</c>.</returns>
+    /// <exception cref="OperationCanceledException">The token was cancelled or the action threw <see cref="OperationCanceledException"/>.</exception>
+    /// <exception cref="InvalidOperationException">
+    /// The boundary action returned a null task, or the error factory returned null.
+    /// </exception>
+    /// <remarks>
+    /// There is no null-result branch because an action produces no payload. Use this overload when the caller's
+    /// error system is not <see cref="RopError"/>.
+    /// </remarks>
+    [SuppressMessage(
+        "Design",
+        "CA1031:Do not catch general exception types",
+        Justification = "Rop.TryAsync is the single asynchronous boundary where any non-cancellation exception becomes a domain error.")]
+    public static async Task<Result<Unit, TErr>> TryAsync<TErr>(
+        Func<Task> action,
+        Func<Exception, TErr> errorFactory,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(action);
+        ArgumentNullException.ThrowIfNull(errorFactory);
+        cancellationToken.ThrowIfCancellationRequested();
+
+        Task pending;
+        try
+        {
+            pending = action();
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
+        catch (Exception exception)
+        {
+            return Err<Unit, TErr>(MaterializeException(errorFactory, exception));
+        }
+
+        if (pending is null)
+        {
+            throw new InvalidOperationException("The boundary function returned a null task.");
+        }
+
+        try
+        {
+            await pending.WaitAsync(cancellationToken).ConfigureAwait(false);
+            return Ok<Unit, TErr>(Unit.Value);
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
+        catch (Exception exception)
+        {
+            return Err<Unit, TErr>(MaterializeException(errorFactory, exception));
+        }
+    }
+
+    /// <summary>
+    /// Runs an asynchronous boundary action and converts a thrown exception into an error with the given
+    /// <paramref name="code"/>, except <see cref="OperationCanceledException"/> which is always rethrown.
+    /// </summary>
+    /// <param name="action">The asynchronous boundary action to execute.</param>
+    /// <param name="code">The error code to attach to captured exceptions.</param>
+    /// <param name="cancellationToken">An optional cancellation token.</param>
+    /// <returns><c>Ok(Unit.Value)</c> or <c>Err</c> as described by <see cref="TryAsync(Func{Task},Func{Exception,RopError},CancellationToken)"/>.</returns>
+    public static Task<Result<Unit, RopError>> TryAsync(
+        Func<Task> action,
+        string code,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(code);
+        return TryAsync(action, exception => RopError.FromException(exception, code), cancellationToken);
+    }
+
+    /// <summary>
     /// Runs an asynchronous boundary function and converts a thrown exception into an error, except
     /// <see cref="OperationCanceledException"/> which is always rethrown.
     /// </summary>
@@ -70,6 +297,92 @@ public static partial class Rop
         {
             return Err<T, RopError>(MaterializeException(errorFactory, exception));
         }
+    }
+
+    /// <summary>
+    /// Runs an asynchronous boundary function and converts a thrown exception into a caller-defined error, except
+    /// <see cref="OperationCanceledException"/> which is always rethrown.
+    /// </summary>
+    /// <typeparam name="T">The produced value type.</typeparam>
+    /// <typeparam name="TErr">The error value type.</typeparam>
+    /// <param name="func">The boundary function to execute.</param>
+    /// <param name="errorFactory">Maps a caught exception to an error. Must return a non-null error.</param>
+    /// <param name="nullResultErrorFactory">
+    /// Builds the error used when <paramref name="func"/> resolves to <see langword="null"/>. Evaluated only on that
+    /// branch and must return a non-null error.
+    /// </param>
+    /// <param name="cancellationToken">An optional cancellation token.</param>
+    /// <returns>
+    /// <c>Ok(value)</c> when the function returns a non-null value; <c>Err(errorFactory(exception))</c> when it throws;
+    /// <c>Err(nullResultErrorFactory())</c> when it resolves to <see langword="null"/>.
+    /// </returns>
+    /// <exception cref="OperationCanceledException">The token was cancelled or the function threw <see cref="OperationCanceledException"/>.</exception>
+    /// <exception cref="InvalidOperationException">
+    /// The boundary function returned a null task, or an error factory returned null.
+    /// </exception>
+    /// <remarks>
+    /// <para>
+    /// This is the single asynchronous boundary for callers whose error type is not <see cref="RopError"/>. The
+    /// null-result branch is explicit because the library cannot synthesize a domain error for an arbitrary
+    /// <typeparamref name="TErr"/>; the <see cref="RopError"/> overload still reports <c>E_NULL_RESULT</c>.
+    /// </para>
+    /// <para>
+    /// Cancellation is checked before the function is invoked and while awaiting, so an already-completed task cannot
+    /// bypass a cancelled token. Argument validation surfaces through the returned task because the method is
+    /// asynchronous.
+    /// </para>
+    /// </remarks>
+    [SuppressMessage(
+        "Design",
+        "CA1031:Do not catch general exception types",
+        Justification = "Rop.TryAsync is the single asynchronous boundary where any non-cancellation exception becomes a domain error.")]
+    public static async Task<Result<T, TErr>> TryAsync<T, TErr>(
+        Func<Task<T>> func,
+        Func<Exception, TErr> errorFactory,
+        Func<TErr> nullResultErrorFactory,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(func);
+        ArgumentNullException.ThrowIfNull(errorFactory);
+        ArgumentNullException.ThrowIfNull(nullResultErrorFactory);
+        cancellationToken.ThrowIfCancellationRequested();
+
+        Task<T> pending;
+        try
+        {
+            pending = func();
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
+        catch (Exception exception)
+        {
+            return Err<T, TErr>(MaterializeException(errorFactory, exception));
+        }
+
+        if (pending is null)
+        {
+            throw new InvalidOperationException("The boundary function returned a null task.");
+        }
+
+        T value;
+        try
+        {
+            value = await pending.WaitAsync(cancellationToken).ConfigureAwait(false);
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
+        catch (Exception exception)
+        {
+            return Err<T, TErr>(MaterializeException(errorFactory, exception));
+        }
+
+        return value is null
+            ? Err<T, TErr>(MaterializeError(nullResultErrorFactory))
+            : Ok<T, TErr>(value);
     }
 
     /// <summary>

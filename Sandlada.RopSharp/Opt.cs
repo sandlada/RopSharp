@@ -14,7 +14,7 @@ namespace Sandlada.RopSharp;
 /// to the first <c>None</c>.
 /// </para>
 /// </remarks>
-public static class Opt
+public static partial class Opt
 {
     /// <summary>
     /// Creates an option containing <paramref name="value"/>.

@@ -14,21 +14,37 @@ namespace Sandlada.RopSharp;
 /// Methods that inspect a sequence enumerate it exactly once. <c>TryFirst</c> and <c>TryLast</c> stop as soon
 /// as the answer is known; <c>Choose</c> materializes the result immediately and never returns <see langword="null"/>.
 /// </para>
+/// <para>
+/// An <see cref="Option{T}"/> never contains <see langword="null"/>, so a <see langword="null"/> element, dictionary
+/// value or mapped value is a programming error: the probing helpers and the projecting <c>Choose</c> throw
+/// <see cref="ArgumentNullException"/> instead of turning the null into <c>Some(null)</c> or a null list entry. Use
+/// <see cref="Opt.FromNullable{T}(T)"/> or filter the sequence when nulls are expected data.
+/// </para>
 /// </remarks>
 public static class OptionEnumerableExtensions
 {
+    private const string NullElementMessage =
+        "The sequence contained null. An Option never contains null; remove the null element or use Opt.FromNullable.";
+
+    private const string NullMappedValueMessage =
+        "The mapper returned null. An Option never contains null; return Opt.None or use Opt.FromNullable instead.";
+
     /// <summary>
     /// Returns the first element of a sequence as <c>Some</c>, or <c>None</c> when the sequence is empty.
     /// </summary>
     /// <typeparam name="T">The element type.</typeparam>
     /// <param name="source">The source sequence. Enumerated once.</param>
     /// <returns><c>Some(first)</c> or <c>None</c>.</returns>
-    /// <exception cref="ArgumentNullException"><paramref name="source"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentNullException">
+    /// <paramref name="source"/> is <see langword="null"/>, or its first element is <see langword="null"/>.
+    /// </exception>
     public static Option<T> TryFirst<T>(this IEnumerable<T> source)
     {
         ArgumentNullException.ThrowIfNull(source);
         using var enumerator = source.GetEnumerator();
-        return enumerator.MoveNext() ? Opt.Some(enumerator.Current) : Opt.None<T>();
+        return enumerator.MoveNext()
+            ? Opt.Some(RequireElement(enumerator.Current, nameof(source), NullElementMessage))
+            : Opt.None<T>();
     }
 
     /// <summary>
@@ -39,7 +55,8 @@ public static class OptionEnumerableExtensions
     /// <param name="predicate">The predicate. Not evaluated after a match.</param>
     /// <returns><c>Some(firstMatch)</c> or <c>None</c>.</returns>
     /// <exception cref="ArgumentNullException">
-    /// <paramref name="source"/> or <paramref name="predicate"/> is <see langword="null"/>.
+    /// <paramref name="source"/> or <paramref name="predicate"/> is <see langword="null"/>, or the matching element is
+    /// <see langword="null"/>.
     /// </exception>
     public static Option<T> TryFirst<T>(this IEnumerable<T> source, Func<T, bool> predicate)
     {
@@ -49,7 +66,7 @@ public static class OptionEnumerableExtensions
         {
             if (predicate(element))
             {
-                return Opt.Some(element);
+                return Opt.Some(RequireElement(element, nameof(source), NullElementMessage));
             }
         }
 
@@ -62,19 +79,21 @@ public static class OptionEnumerableExtensions
     /// <typeparam name="T">The element type.</typeparam>
     /// <param name="source">The source sequence. Enumerated once.</param>
     /// <returns><c>Some(last)</c> or <c>None</c>.</returns>
-    /// <exception cref="ArgumentNullException"><paramref name="source"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentNullException">
+    /// <paramref name="source"/> is <see langword="null"/>, or its last element is <see langword="null"/>.
+    /// </exception>
     public static Option<T> TryLast<T>(this IEnumerable<T> source)
     {
         ArgumentNullException.ThrowIfNull(source);
         var found = false;
-        var last = default(T);
+        T last = default!;
         foreach (var element in source)
         {
             found = true;
             last = element;
         }
 
-        return found ? Opt.Some(last!) : Opt.None<T>();
+        return found ? Opt.Some(RequireElement(last, nameof(source), NullElementMessage)) : Opt.None<T>();
     }
 
     /// <summary>
@@ -85,14 +104,15 @@ public static class OptionEnumerableExtensions
     /// <param name="predicate">The predicate.</param>
     /// <returns><c>Some(lastMatch)</c> or <c>None</c>.</returns>
     /// <exception cref="ArgumentNullException">
-    /// <paramref name="source"/> or <paramref name="predicate"/> is <see langword="null"/>.
+    /// <paramref name="source"/> or <paramref name="predicate"/> is <see langword="null"/>, or the matching element is
+    /// <see langword="null"/>.
     /// </exception>
     public static Option<T> TryLast<T>(this IEnumerable<T> source, Func<T, bool> predicate)
     {
         ArgumentNullException.ThrowIfNull(source);
         ArgumentNullException.ThrowIfNull(predicate);
         var found = false;
-        var last = default(T);
+        T last = default!;
         foreach (var element in source)
         {
             if (predicate(element))
@@ -102,7 +122,7 @@ public static class OptionEnumerableExtensions
             }
         }
 
-        return found ? Opt.Some(last!) : Opt.None<T>();
+        return found ? Opt.Some(RequireElement(last, nameof(source), NullElementMessage)) : Opt.None<T>();
     }
 
     /// <summary>
@@ -113,14 +133,18 @@ public static class OptionEnumerableExtensions
     /// <param name="source">The dictionary. Not enumerated.</param>
     /// <param name="key">The key to find.</param>
     /// <returns><c>Some(value)</c> when the key exists; otherwise <c>None</c>.</returns>
-    /// <exception cref="ArgumentNullException"><paramref name="source"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentNullException">
+    /// <paramref name="source"/> is <see langword="null"/>, or the stored value is <see langword="null"/>.
+    /// </exception>
     public static Option<TValue> TryFind<TKey, TValue>(
         this IReadOnlyDictionary<TKey, TValue> source,
         TKey key)
         where TKey : notnull
     {
         ArgumentNullException.ThrowIfNull(source);
-        return source.TryGetValue(key, out var value) ? Opt.Some(value) : Opt.None<TValue>();
+        return source.TryGetValue(key, out var value)
+            ? Opt.Some(RequireElement(value, nameof(source), NullElementMessage))
+            : Opt.None<TValue>();
     }
 
     /// <summary>
@@ -141,7 +165,8 @@ public static class OptionEnumerableExtensions
     /// <param name="mapper">Projects a present value. Not evaluated for <c>None</c>.</param>
     /// <returns>A read-only list of projected values; empty when no option is <c>Some</c>.</returns>
     /// <exception cref="ArgumentNullException">
-    /// <paramref name="source"/> or <paramref name="mapper"/> is <see langword="null"/>.
+    /// <paramref name="source"/> or <paramref name="mapper"/> is <see langword="null"/>, or the mapper returned
+    /// <see langword="null"/>.
     /// </exception>
     public static IReadOnlyList<TOut> Choose<T, TOut>(
         this IEnumerable<Option<T>> source,
@@ -154,7 +179,7 @@ public static class OptionEnumerableExtensions
         {
             if (option.TryGetValue(out var value))
             {
-                values.Add(mapper(value));
+                values.Add(RequireElement(mapper(value), nameof(mapper), NullMappedValueMessage));
             }
         }
 
@@ -192,4 +217,7 @@ public static class OptionEnumerableExtensions
             action();
         }
     }
+
+    private static T RequireElement<T>(T value, string paramName, string message) =>
+        value is null ? throw new ArgumentNullException(paramName, message) : value!;
 }

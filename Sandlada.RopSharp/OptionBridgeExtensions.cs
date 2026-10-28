@@ -34,12 +34,18 @@ public static class OptionBridgeExtensions
     /// <param name="option">The source option.</param>
     /// <param name="errorFactory">Builds the error. Evaluated only for <c>None</c>.</param>
     /// <returns><c>Ok(value)</c> or <c>Err(errorFactory())</c>.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="errorFactory"/> is <see langword="null"/>.</exception>
+    /// <exception cref="InvalidOperationException">The factory returned <see langword="null"/>.</exception>
+    /// <remarks>
+    /// A null factory result is a programming error. It faults with <see cref="InvalidOperationException"/>, the same
+    /// contract the other lazy error factories in the library follow.
+    /// </remarks>
     public static Result<T, TErr> RequireSome<T, TErr>(this Option<T> option, Func<TErr> errorFactory)
     {
         ArgumentNullException.ThrowIfNull(errorFactory);
         return option.TryGetValue(out var value)
             ? Rop.Ok<T, TErr>(value)
-            : Rop.Err<T, TErr>(errorFactory());
+            : Rop.Err<T, TErr>(Rop.MaterializeError(errorFactory));
     }
 
     /// <summary>

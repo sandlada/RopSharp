@@ -14,8 +14,16 @@ namespace Sandlada.RopSharp;
 /// captured.
 /// </para>
 /// <para>
-/// Equality compares <see cref="Code"/>, <see cref="Message"/> and <see cref="Details"/>. <see cref="Cause"/>
-/// is deliberately excluded so that stack-trace differences do not make two logically equal errors unequal.
+/// <see cref="Combine"/> collapses several errors into one <c>E_MULTIPLE</c> error whose <see cref="InnerErrors"/>
+/// preserve the individual failures in the supplied order. An error that was not produced by <see cref="Combine"/>
+/// exposes an empty <see cref="InnerErrors"/> list rather than <see langword="null"/>.
+/// </para>
+/// <para>
+/// Equality compares <see cref="Kind"/>, <see cref="Code"/>, <see cref="Message"/> and <see cref="Details"/>.
+/// <see cref="Cause"/> is deliberately excluded so that stack-trace differences do not make two logically equal
+/// errors unequal, and <see cref="InnerErrors"/> is excluded for the same reason: the collapsed
+/// code/message/details already describe the aggregate for branching and display. Compare
+/// <see cref="InnerErrors"/> explicitly when the structure matters.
 /// </para>
 /// </remarks>
 [DebuggerDisplay("{ToString(),nq}")]
@@ -25,13 +33,20 @@ namespace Sandlada.RopSharp;
     Justification = "The shipped 3-parameter overload is preserved; category-aware overloads add a fourth parameter rather than changing the existing signature.")]
 public sealed class RopError : IEquatable<RopError>
 {
-    private RopError(string code, string message, string? details, Exception? cause, RopErrorKind kind)
+    private RopError(
+        string code,
+        string message,
+        string? details,
+        Exception? cause,
+        RopErrorKind kind,
+        IReadOnlyList<RopError> innerErrors)
     {
         Code = code;
         Message = message;
         Details = details;
         Cause = cause;
         Kind = kind;
+        InnerErrors = innerErrors;
     }
 
     /// <summary>
@@ -58,6 +73,17 @@ public sealed class RopError : IEquatable<RopError>
     /// Gets the coarse category of the failure. Use <see cref="Code"/> for precise domain branching.
     /// </summary>
     public RopErrorKind Kind { get; }
+
+    /// <summary>
+    /// Gets the errors this error was aggregated from, in the order supplied to <see cref="Combine"/>.
+    /// </summary>
+    /// <remarks>
+    /// The list is never <see langword="null"/>; an error that was not produced by <see cref="Combine"/> exposes an
+    /// empty list. Aggregation preserves the supplied elements as-is, including nested aggregates, so callers can walk
+    /// the tree when they need the individual failures rather than the collapsed <see cref="Message"/> and
+    /// <see cref="Details"/>.
+    /// </remarks>
+    public IReadOnlyList<RopError> InnerErrors { get; }
 
     /// <summary>
     /// Creates a structured error.
@@ -105,7 +131,7 @@ public sealed class RopError : IEquatable<RopError>
             ArgumentException.ThrowIfNullOrWhiteSpace(details);
         }
 
-        return new RopError(code, message, details, cause: null, kind);
+        return new RopError(code, message, details, cause: null, kind, Array.Empty<RopError>());
     }
 
     /// <summary>
@@ -147,7 +173,7 @@ public sealed class RopError : IEquatable<RopError>
         var message = string.IsNullOrWhiteSpace(exception.Message)
             ? exception.GetType().Name
             : exception.Message;
-        return new RopError(resolvedCode, message, details: null, cause: exception, kind);
+        return new RopError(resolvedCode, message, details: null, cause: exception, kind, Array.Empty<RopError>());
     }
 
     /// <summary>
@@ -159,7 +185,7 @@ public sealed class RopError : IEquatable<RopError>
     public RopError WithCode(string code)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(code);
-        return new RopError(code, Message, Details, Cause, Kind);
+        return new RopError(code, Message, Details, Cause, Kind, InnerErrors);
     }
 
     /// <summary>
@@ -171,7 +197,7 @@ public sealed class RopError : IEquatable<RopError>
     public RopError WithMessage(string message)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(message);
-        return new RopError(Code, message, Details, Cause, Kind);
+        return new RopError(Code, message, Details, Cause, Kind, InnerErrors);
     }
 
     /// <summary>
@@ -187,7 +213,7 @@ public sealed class RopError : IEquatable<RopError>
             ArgumentException.ThrowIfNullOrWhiteSpace(details);
         }
 
-        return new RopError(Code, Message, details, Cause, Kind);
+        return new RopError(Code, Message, details, Cause, Kind, InnerErrors);
     }
 
     /// <summary>
@@ -195,20 +221,36 @@ public sealed class RopError : IEquatable<RopError>
     /// </summary>
     /// <param name="kind">The replacement category.</param>
     /// <returns>A new <see cref="RopError"/> instance.</returns>
-    public RopError WithKind(RopErrorKind kind) => new(Code, Message, Details, Cause, kind);
+    public RopError WithKind(RopErrorKind kind) => new(Code, Message, Details, Cause, kind, InnerErrors);
 
     /// <summary>
     /// Combines a non-empty list of errors into a single error with code <c>E_MULTIPLE</c>.
     /// </summary>
     /// <param name="errors">The errors to combine. Must contain at least one element.</param>
     /// <returns>
-    /// A <see cref="RopError"/> whose message joins the distinct messages and whose details list the distinct codes.
-    /// The returned error never carries a <see cref="Cause"/>.
+    /// A <see cref="RopError"/> whose message joins the distinct messages, whose details list the distinct codes and
+    /// whose <see cref="InnerErrors"/> preserve every supplied error in order. The returned error never carries a
+    /// <see cref="Cause"/>.
     /// </returns>
     /// <exception cref="ArgumentNullException">
     /// <paramref name="errors"/> is <see langword="null"/>, or any element is <see langword="null"/>.
     /// </exception>
     /// <exception cref="ArgumentException"><paramref name="errors"/> is empty.</exception>
+    /// <remarks>
+    /// <para>
+    /// The aggregate collapses messages and codes for display and branching, but no information is lost: the original
+    /// errors remain available through <see cref="InnerErrors"/>. The supplied elements are preserved as-is, so a
+    /// nested aggregate keeps its own <see cref="InnerErrors"/> instead of being flattened.
+    /// </para>
+    /// <para>
+    /// A single-element call is an identity operation: it returns that error unchanged (including its
+    /// <see cref="InnerErrors"/>), which is why the returned instance may not carry the <c>E_MULTIPLE</c> code.
+    /// </para>
+    /// <para>
+    /// Message and code deduplication uses ordinal comparison and runs in linear time in the number of errors, so a
+    /// large validation batch cannot degrade into a quadratic scan.
+    /// </para>
+    /// </remarks>
     public static RopError Combine(IReadOnlyList<RopError> errors)
     {
         ArgumentNullException.ThrowIfNull(errors);
@@ -231,15 +273,20 @@ public sealed class RopError : IEquatable<RopError>
 
         var messages = new List<string>(errors.Count);
         var codes = new List<string>(errors.Count);
+        var distinctMessages = new HashSet<string>(errors.Count, StringComparer.Ordinal);
+        var distinctCodes = new HashSet<string>(errors.Count, StringComparer.Ordinal);
+        var innerErrors = new RopError[errors.Count];
         var kind = errors[0].Kind;
-        foreach (var error in errors)
+        for (var index = 0; index < errors.Count; index++)
         {
-            if (!messages.Contains(error.Message))
+            var error = errors[index];
+            innerErrors[index] = error;
+            if (distinctMessages.Add(error.Message))
             {
                 messages.Add(error.Message);
             }
 
-            if (!codes.Contains(error.Code))
+            if (distinctCodes.Add(error.Code))
             {
                 codes.Add(error.Code);
             }
@@ -255,7 +302,8 @@ public sealed class RopError : IEquatable<RopError>
             string.Join("; ", messages),
             string.Join(", ", codes),
             cause: null,
-            kind);
+            kind,
+            Array.AsReadOnly(innerErrors));
     }
 
     /// <inheritdoc />

@@ -111,6 +111,35 @@ public static partial class Rop
     }
 
     /// <summary>
+    /// Lifts a plain function into a function returning a <see cref="Result{TOk,TErr}"/> with a caller-defined error
+    /// type, converting thrown exceptions except for <see cref="OperationCanceledException"/>.
+    /// </summary>
+    /// <typeparam name="T">The input type.</typeparam>
+    /// <typeparam name="TOut">The output type.</typeparam>
+    /// <typeparam name="TErr">The error value type.</typeparam>
+    /// <param name="func">The function to lift.</param>
+    /// <param name="errorFactory">Maps a caught exception to an error. Must return a non-null error.</param>
+    /// <param name="nullResultErrorFactory">
+    /// Builds the error used when <paramref name="func"/> returns <see langword="null"/>. Must return a non-null error.
+    /// </param>
+    /// <returns>A function that never throws for expected failures.</returns>
+    /// <exception cref="ArgumentNullException">An argument is <see langword="null"/>.</exception>
+    /// <remarks>
+    /// The returned function delegates to <see cref="Try{T,TErr}(Func{T},Func{Exception,TErr},Func{TErr})"/>, so a
+    /// null payload produces <c>Err(nullResultErrorFactory())</c> exactly as that boundary does.
+    /// </remarks>
+    public static Func<T, Result<TOut, TErr>> TrySwitch<T, TOut, TErr>(
+        Func<T, TOut> func,
+        Func<Exception, TErr> errorFactory,
+        Func<TErr> nullResultErrorFactory)
+    {
+        ArgumentNullException.ThrowIfNull(func);
+        ArgumentNullException.ThrowIfNull(errorFactory);
+        ArgumentNullException.ThrowIfNull(nullResultErrorFactory);
+        return value => Try(() => func(value), errorFactory, nullResultErrorFactory);
+    }
+
+    /// <summary>
     /// Runs <paramref name="func"/> and converts any thrown exception into an error, except
     /// <see cref="OperationCanceledException"/> which is always rethrown.
     /// </summary>
@@ -123,8 +152,15 @@ public static partial class Rop
     /// </returns>
     /// <exception cref="OperationCanceledException">The function threw <see cref="OperationCanceledException"/>.</exception>
     /// <remarks>
+    /// <para>
     /// This is the only supported place where exceptions become domain values. Never wrap mapper/binder
     /// bodies in a local <c>try/catch</c>; lift the boundary instead.
+    /// </para>
+    /// <para>
+    /// This overload treats the returned value as the success payload. If <paramref name="func"/> returns a
+    /// <see cref="Task"/>, use <see cref="TryAsync{T}(Func{Task{T}},Func{Exception,RopError},CancellationToken)"/>:
+    /// the task would otherwise become an unawaited success value.
+    /// </para>
     /// </remarks>
     [SuppressMessage(
         "Design",
@@ -153,6 +189,68 @@ public static partial class Rop
     }
 
     /// <summary>
+    /// Runs <paramref name="func"/> and converts any thrown exception into a caller-defined error, except
+    /// <see cref="OperationCanceledException"/> which is always rethrown.
+    /// </summary>
+    /// <typeparam name="T">The produced value type.</typeparam>
+    /// <typeparam name="TErr">The error value type.</typeparam>
+    /// <param name="func">The boundary function to execute.</param>
+    /// <param name="errorFactory">Maps a caught exception to an error. Must return a non-null error.</param>
+    /// <param name="nullResultErrorFactory">
+    /// Builds the error used when <paramref name="func"/> returns <see langword="null"/>. Evaluated only on that
+    /// branch and must return a non-null error.
+    /// </param>
+    /// <returns>
+    /// <c>Ok(value)</c> when the function returns a non-null value; <c>Err(errorFactory(exception))</c> when it throws;
+    /// <c>Err(nullResultErrorFactory())</c> when it returns <see langword="null"/>.
+    /// </returns>
+    /// <exception cref="OperationCanceledException">The function threw <see cref="OperationCanceledException"/>.</exception>
+    /// <exception cref="InvalidOperationException">An error factory returned <see langword="null"/>.</exception>
+    /// <remarks>
+    /// <para>
+    /// This is the single synchronous boundary for callers whose error type is not <see cref="RopError"/>. The
+    /// null-result branch is explicit because the library cannot synthesize a domain error for an arbitrary
+    /// <typeparamref name="TErr"/>; the <see cref="RopError"/> overload still reports <c>E_NULL_RESULT</c>.
+    /// </para>
+    /// <para>
+    /// Never wrap mapper/binder bodies in a local <c>try/catch</c>; lift the boundary instead. If
+    /// <paramref name="func"/> returns a <see cref="Task"/>, use the asynchronous overloads so the task is awaited
+    /// instead of becoming the success payload.
+    /// </para>
+    /// </remarks>
+    [SuppressMessage(
+        "Design",
+        "CA1031:Do not catch general exception types",
+        Justification = "Rop.Try is the single boundary where any non-cancellation exception becomes a domain error.")]
+    public static Result<T, TErr> Try<T, TErr>(
+        Func<T> func,
+        Func<Exception, TErr> errorFactory,
+        Func<TErr> nullResultErrorFactory)
+    {
+        ArgumentNullException.ThrowIfNull(func);
+        ArgumentNullException.ThrowIfNull(errorFactory);
+        ArgumentNullException.ThrowIfNull(nullResultErrorFactory);
+
+        T value;
+        try
+        {
+            value = func();
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
+        catch (Exception exception)
+        {
+            return Err<T, TErr>(MaterializeException(errorFactory, exception));
+        }
+
+        return value is null
+            ? Err<T, TErr>(MaterializeError(nullResultErrorFactory))
+            : Ok<T, TErr>(value);
+    }
+
+    /// <summary>
     /// Runs <paramref name="func"/> and converts any thrown exception into an error with the given
     /// <paramref name="code"/>, except <see cref="OperationCanceledException"/> which is always rethrown.
     /// </summary>
@@ -164,6 +262,94 @@ public static partial class Rop
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(code);
         return Try(func, exception => RopError.FromException(exception, code));
+    }
+
+    /// <summary>
+    /// Runs <paramref name="action"/> and converts any thrown exception into an error, except
+    /// <see cref="OperationCanceledException"/> which is always rethrown.
+    /// </summary>
+    /// <param name="action">The boundary action to execute.</param>
+    /// <param name="errorFactory">Maps a caught exception to an error. Must return a non-null error.</param>
+    /// <returns><c>Ok(Unit.Value)</c> when the action completes; otherwise <c>Err(errorFactory(exception))</c>.</returns>
+    /// <exception cref="OperationCanceledException">The action threw <see cref="OperationCanceledException"/>.</exception>
+    /// <exception cref="InvalidOperationException">The error factory returned null.</exception>
+    /// <remarks>
+    /// Use this overload for side-effecting boundaries that produce no value. The success payload is
+    /// <see cref="Unit"/> so the result still composes with every other combinator.
+    /// </remarks>
+    [SuppressMessage(
+        "Design",
+        "CA1031:Do not catch general exception types",
+        Justification = "Rop.Try is the single boundary where any non-cancellation exception becomes a domain error.")]
+    public static Result<Unit, RopError> Try(Action action, Func<Exception, RopError> errorFactory)
+    {
+        ArgumentNullException.ThrowIfNull(action);
+        ArgumentNullException.ThrowIfNull(errorFactory);
+
+        try
+        {
+            action();
+            return Ok<Unit, RopError>(Unit.Value);
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
+        catch (Exception exception)
+        {
+            return Err<Unit, RopError>(MaterializeException(errorFactory, exception));
+        }
+    }
+
+    /// <summary>
+    /// Runs <paramref name="action"/> and converts any thrown exception into a caller-defined error, except
+    /// <see cref="OperationCanceledException"/> which is always rethrown.
+    /// </summary>
+    /// <typeparam name="TErr">The error value type.</typeparam>
+    /// <param name="action">The boundary action to execute.</param>
+    /// <param name="errorFactory">Maps a caught exception to an error. Must return a non-null error.</param>
+    /// <returns><c>Ok(Unit.Value)</c> when the action completes; otherwise <c>Err(errorFactory(exception))</c>.</returns>
+    /// <exception cref="OperationCanceledException">The action threw <see cref="OperationCanceledException"/>.</exception>
+    /// <exception cref="InvalidOperationException">The error factory returned <see langword="null"/>.</exception>
+    /// <remarks>
+    /// The success payload is <see cref="Unit"/> so a side-effecting boundary still composes with every combinator.
+    /// There is no null-result branch because an action produces no payload.
+    /// </remarks>
+    [SuppressMessage(
+        "Design",
+        "CA1031:Do not catch general exception types",
+        Justification = "Rop.Try is the single boundary where any non-cancellation exception becomes a domain error.")]
+    public static Result<Unit, TErr> Try<TErr>(Action action, Func<Exception, TErr> errorFactory)
+    {
+        ArgumentNullException.ThrowIfNull(action);
+        ArgumentNullException.ThrowIfNull(errorFactory);
+
+        try
+        {
+            action();
+            return Ok<Unit, TErr>(Unit.Value);
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
+        catch (Exception exception)
+        {
+            return Err<Unit, TErr>(MaterializeException(errorFactory, exception));
+        }
+    }
+
+    /// <summary>
+    /// Runs <paramref name="action"/> and converts any thrown exception into an error with the given
+    /// <paramref name="code"/>, except <see cref="OperationCanceledException"/> which is always rethrown.
+    /// </summary>
+    /// <param name="action">The boundary action to execute.</param>
+    /// <param name="code">The error code to attach to captured exceptions.</param>
+    /// <returns><c>Ok(Unit.Value)</c> or <c>Err</c> as described by <see cref="Try(Action,Func{Exception,RopError})"/>.</returns>
+    public static Result<Unit, RopError> Try(Action action, string code)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(code);
+        return Try(action, exception => RopError.FromException(exception, code));
     }
 
     /// <summary>
@@ -179,8 +365,31 @@ public static partial class Rop
     {
         ArgumentNullException.ThrowIfNull(errorFactory);
         return value is null
-            ? Err<TOk, RopError>(Materialize(errorFactory))
+            ? Err<TOk, RopError>(MaterializeError(errorFactory))
             : Ok<TOk, RopError>(value);
+    }
+
+    /// <summary>
+    /// Converts a possibly-null reference into a <see cref="Result{TOk,TErr}"/> with a custom error type.
+    /// </summary>
+    /// <typeparam name="TOk">The value type.</typeparam>
+    /// <typeparam name="TErr">The error value type.</typeparam>
+    /// <param name="value">The possibly-null value.</param>
+    /// <param name="errorFactory">Creates the error when <paramref name="value"/> is <see langword="null"/>.</param>
+    /// <returns><c>Ok(value)</c> when non-null; otherwise <c>Err(errorFactory())</c>.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="errorFactory"/> is <see langword="null"/>.</exception>
+    /// <exception cref="InvalidOperationException">The factory returned <see langword="null"/>.</exception>
+    /// <remarks>
+    /// The factory is evaluated only when the value is <see langword="null"/>. Use this overload when the caller's
+    /// error system is not <see cref="RopError"/>; the <see cref="RopError"/> overload remains the default.
+    /// </remarks>
+    public static Result<TOk, TErr> FromNullable<TOk, TErr>(TOk? value, Func<TErr> errorFactory)
+        where TOk : class
+    {
+        ArgumentNullException.ThrowIfNull(errorFactory);
+        return value is null
+            ? Err<TOk, TErr>(MaterializeError(errorFactory))
+            : Ok<TOk, TErr>(value);
     }
 
     /// <summary>
@@ -199,16 +408,40 @@ public static partial class Rop
     {
         ArgumentNullException.ThrowIfNull(errorFactory);
         return value is null
-            ? Err<TOk, RopError>(Materialize(errorFactory))
+            ? Err<TOk, RopError>(MaterializeError(errorFactory))
             : Ok<TOk, RopError>(value.GetValueOrDefault());
     }
 
-    internal static RopError Materialize(Func<RopError> factory)
+    /// <summary>
+    /// Converts a possibly-null value type into a <see cref="Result{TOk,TErr}"/> with a custom error type.
+    /// </summary>
+    /// <typeparam name="TOk">The underlying value type.</typeparam>
+    /// <typeparam name="TErr">The error value type.</typeparam>
+    /// <param name="value">The possibly-null value.</param>
+    /// <param name="errorFactory">Creates the error when <paramref name="value"/> has no value.</param>
+    /// <returns><c>Ok(value)</c> when it has a value; otherwise <c>Err(errorFactory())</c>.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="errorFactory"/> is <see langword="null"/>.</exception>
+    /// <exception cref="InvalidOperationException">The factory returned <see langword="null"/>.</exception>
+    /// <remarks>
+    /// The factory is evaluated only when the value has no value. Use this overload when the caller's error system is
+    /// not <see cref="RopError"/>.
+    /// </remarks>
+    public static Result<TOk, TErr> FromNullableValue<TOk, TErr>(TOk? value, Func<TErr> errorFactory)
+        where TOk : struct
     {
-        var error = factory();
+        ArgumentNullException.ThrowIfNull(errorFactory);
+        return value is null
+            ? Err<TOk, TErr>(MaterializeError(errorFactory))
+            : Ok<TOk, TErr>(value.GetValueOrDefault());
+    }
+
+    internal static TErr MaterializeError<TErr>(Func<TErr> factory) => RequireError(factory());
+
+    internal static TErr RequireError<TErr>(TErr error)
+    {
         if (error is null)
         {
-            throw new InvalidOperationException("The error factory returned null. A RopError is required.");
+            throw new InvalidOperationException("The error factory returned null. An error value is required.");
         }
 
         return error;
@@ -217,16 +450,8 @@ public static partial class Rop
     internal static Result<TOk, TErr> OkUnchecked<TOk, TErr>(TOk value) =>
         new(value, default!, isOk: true);
 
-    private static RopError MaterializeException(Func<Exception, RopError> factory, Exception exception)
-    {
-        var error = factory(exception);
-        if (error is null)
-        {
-            throw new InvalidOperationException("The error factory returned null. A RopError is required.");
-        }
-
-        return error;
-    }
+    private static TErr MaterializeException<TErr>(Func<Exception, TErr> factory, Exception exception) =>
+        RequireError(factory(exception));
 
     private static RopError NullResultError() => RopError.Create(
         "E_NULL_RESULT",

@@ -37,6 +37,21 @@ public static class ResultValidationExtensions
         result.ToSingleError(static errors => errors[0]);
 
     /// <summary>
+    /// Collapses an aggregating result with a caller-defined error type by keeping the first error.
+    /// </summary>
+    /// <typeparam name="T">The success type.</typeparam>
+    /// <typeparam name="TErr">The error value type.</typeparam>
+    /// <param name="result">The source result.</param>
+    /// <returns>The original success, or <c>Err</c> with the first error.</returns>
+    /// <exception cref="InvalidOperationException">The error list is empty, which violates the aggregating invariant.</exception>
+    /// <remarks>
+    /// Use this overload when the caller's error system is not <see cref="RopError"/>. When a different collapse
+    /// strategy is required, use <see cref="ToSingleError{T,TErr}(Result{T,IReadOnlyList{TErr}},Func{IReadOnlyList{TErr},TErr})"/>.
+    /// </remarks>
+    public static Result<T, TErr> ToSingleError<T, TErr>(this Result<T, IReadOnlyList<TErr>> result) =>
+        result.ToSingleError(static errors => errors[0]);
+
+    /// <summary>
     /// Collapses an aggregating result with an explicit strategy.
     /// </summary>
     /// <typeparam name="T">The success type.</typeparam>
@@ -45,7 +60,7 @@ public static class ResultValidationExtensions
     /// <param name="combine">Collapses the non-empty error list into a single error (for example <see cref="RopError.Combine"/>).</param>
     /// <returns>The original success, or <c>Err(combine(errors))</c>.</returns>
     /// <exception cref="ArgumentNullException"><paramref name="combine"/> is <see langword="null"/>.</exception>
-    /// <exception cref="InvalidOperationException">The error list is empty, which violates the aggregating invariant.</exception>
+    /// <exception cref="InvalidOperationException">The error list is empty, which violates the aggregating invariant, or <paramref name="combine"/> returned <see langword="null"/>.</exception>
     public static Result<T, TErr> ToSingleError<T, TErr>(
         this Result<T, IReadOnlyList<TErr>> result,
         Func<IReadOnlyList<TErr>, TErr> combine)
@@ -63,6 +78,6 @@ public static class ResultValidationExtensions
                 "An aggregating result must carry at least one error when it is on the failure track.");
         }
 
-        return Rop.Err<T, TErr>(combine(errors));
+        return Rop.Err<T, TErr>(Rop.RequireError(combine(errors)));
     }
 }

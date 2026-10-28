@@ -24,7 +24,8 @@ namespace Sandlada.RopSharp;
 /// These methods are asynchronous: argument validation errors surface through the returned task rather than being
 /// thrown synchronously. A callback that returns a <see cref="Task"/> must not return <see langword="null"/>; a null
 /// task faults the returned task with <see cref="InvalidOperationException"/> naming the callback role
-/// (<c>mapper</c>, <c>binder</c>, <c>fallback</c>, <c>action</c> or <c>predicate</c>).
+/// (<c>mapper</c>, <c>binder</c>, <c>fallback</c>, <c>action</c> or <c>predicate</c>). An error mapper that returns a
+/// null error value faults with the same exception instead of producing an error-less failure.
 /// </para>
 /// </remarks>
 public static class ResultAsyncExtensions
@@ -224,7 +225,7 @@ public static class ResultAsyncExtensions
         }
 
         cancellationToken.ThrowIfCancellationRequested();
-        return Rop.Err<TOk, TErr2>(mapper(error));
+        return Rop.Err<TOk, TErr2>(Rop.RequireError(mapper(error)));
     }
 
     /// <summary>
@@ -253,7 +254,7 @@ public static class ResultAsyncExtensions
         }
 
         cancellationToken.ThrowIfCancellationRequested();
-        return Rop.Err<TOk, TErr2>(await AsyncGuards.Require(mapper(error), "mapper").ConfigureAwait(false));
+        return Rop.Err<TOk, TErr2>(Rop.RequireError(await AsyncGuards.Require(mapper(error), "mapper").ConfigureAwait(false)));
     }
 
     /// <summary>
@@ -283,7 +284,8 @@ public static class ResultAsyncExtensions
 
         cancellationToken.ThrowIfCancellationRequested();
         return Rop.Err<TOk, TErr2>(
-            await AsyncGuards.Require(mapper(error, cancellationToken), "mapper").ConfigureAwait(false));
+            Rop.RequireError(
+                await AsyncGuards.Require(mapper(error, cancellationToken), "mapper").ConfigureAwait(false)));
     }
 
     /// <summary>
@@ -315,7 +317,7 @@ public static class ResultAsyncExtensions
         }
 
         cancellationToken.ThrowIfCancellationRequested();
-        return Rop.Err<TOk, TErr2>(await AsyncGuards.Require(mapper(error), "mapper").ConfigureAwait(false));
+        return Rop.Err<TOk, TErr2>(Rop.RequireError(await AsyncGuards.Require(mapper(error), "mapper").ConfigureAwait(false)));
     }
 
     /// <summary>
@@ -348,7 +350,8 @@ public static class ResultAsyncExtensions
 
         cancellationToken.ThrowIfCancellationRequested();
         return Rop.Err<TOk, TErr2>(
-            await AsyncGuards.Require(mapper(error, cancellationToken), "mapper").ConfigureAwait(false));
+            Rop.RequireError(
+                await AsyncGuards.Require(mapper(error, cancellationToken), "mapper").ConfigureAwait(false)));
     }
 
     /// <summary>

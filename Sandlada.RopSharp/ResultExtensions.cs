@@ -48,6 +48,8 @@ public static class ResultExtensions
     /// <param name="result">The source result.</param>
     /// <param name="mapper">Maps the error. Not evaluated on the success track.</param>
     /// <returns>The original success or <c>Err(mapper(error))</c>.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="mapper"/> is <see langword="null"/>.</exception>
+    /// <exception cref="InvalidOperationException">The mapper returned <see langword="null"/>.</exception>
     /// <remarks>
     /// The success track is passed through unchanged, including a success that carries <see langword="null"/>
     /// after a nullable mapping (see <see cref="MapOk{TOk,TOut,TErr}"/>); the payload is never re-validated.
@@ -58,7 +60,7 @@ public static class ResultExtensions
     {
         ArgumentNullException.ThrowIfNull(mapper);
         return result.TryGetErr(out var error)
-            ? Rop.Err<TOk, TErr2>(mapper(error))
+            ? Rop.Err<TOk, TErr2>(Rop.RequireError(mapper(error)))
             : Rop.OkUnchecked<TOk, TErr2>(result.OkUnsafe);
     }
 
@@ -132,6 +134,8 @@ public static class ResultExtensions
     /// <param name="predicate">The invariant to check. Not evaluated on the failure track.</param>
     /// <param name="errorFactory">Builds the error from the value. Evaluated only when the predicate fails.</param>
     /// <returns>The original success when the predicate holds; otherwise <c>Err(errorFactory(value))</c>.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="predicate"/> or <paramref name="errorFactory"/> is <see langword="null"/>.</exception>
+    /// <exception cref="InvalidOperationException">The factory returned <see langword="null"/>.</exception>
     /// <remarks>Prefer this overload on hot paths: the message is only formatted on the failing branch.</remarks>
     public static Result<TOk, TErr> Ensure<TOk, TErr>(
         this Result<TOk, TErr> result,
@@ -141,7 +145,7 @@ public static class ResultExtensions
         ArgumentNullException.ThrowIfNull(predicate);
         ArgumentNullException.ThrowIfNull(errorFactory);
         return result.TryGetOk(out var value) && !predicate(value)
-            ? Rop.Err<TOk, TErr>(errorFactory(value))
+            ? Rop.Err<TOk, TErr>(Rop.RequireError(errorFactory(value)))
             : result;
     }
 
@@ -183,8 +187,38 @@ public static class ResultExtensions
         }
 
         return value is null
-            ? Rop.Err<T, RopError>(Rop.Materialize(errorFactory))
+            ? Rop.Err<T, RopError>(Rop.MaterializeError(errorFactory))
             : Rop.Ok<T, RopError>(value);
+    }
+
+    /// <summary>
+    /// Turns a success carrying <see langword="null"/> into a failure with a caller-defined error type.
+    /// </summary>
+    /// <typeparam name="T">The success type.</typeparam>
+    /// <typeparam name="TErr">The error value type.</typeparam>
+    /// <param name="result">The source result whose success value may be null.</param>
+    /// <param name="errorFactory">Builds the error when the success value is <see langword="null"/>.</param>
+    /// <returns>The original success when non-null; otherwise <c>Err(errorFactory())</c>. Errors pass through.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="errorFactory"/> is <see langword="null"/>.</exception>
+    /// <exception cref="InvalidOperationException">The factory returned <see langword="null"/>.</exception>
+    /// <remarks>
+    /// Use this overload when the caller's error system is not <see cref="RopError"/>. The factory is evaluated only
+    /// on the null-success branch.
+    /// </remarks>
+    public static Result<T, TErr> RequireNotNull<T, TErr>(
+        this Result<T?, TErr> result,
+        Func<TErr> errorFactory)
+        where T : class
+    {
+        ArgumentNullException.ThrowIfNull(errorFactory);
+        if (!result.TryGetOk(out var value))
+        {
+            return Rop.Err<T, TErr>(result.ErrUnsafe);
+        }
+
+        return value is null
+            ? Rop.Err<T, TErr>(Rop.MaterializeError(errorFactory))
+            : Rop.Ok<T, TErr>(value);
     }
 
     /// <summary>

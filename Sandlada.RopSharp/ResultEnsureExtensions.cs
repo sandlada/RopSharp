@@ -42,6 +42,7 @@ public static class ResultEnsureExtensions
     /// <param name="errorFactory">Builds the error from the value. Evaluated only when the predicate holds.</param>
     /// <returns>The original success when the predicate does not hold; otherwise <c>Err(errorFactory(value))</c>.</returns>
     /// <exception cref="ArgumentNullException"><paramref name="predicate"/> or <paramref name="errorFactory"/> is <see langword="null"/>.</exception>
+    /// <exception cref="InvalidOperationException">The factory returned <see langword="null"/>.</exception>
     public static Result<TOk, TErr> FailIf<TOk, TErr>(
         this Result<TOk, TErr> result,
         Func<TOk, bool> predicate,
@@ -50,7 +51,7 @@ public static class ResultEnsureExtensions
         ArgumentNullException.ThrowIfNull(predicate);
         ArgumentNullException.ThrowIfNull(errorFactory);
         return result.TryGetOk(out var value) && predicate(value)
-            ? Rop.Err<TOk, TErr>(errorFactory(value))
+            ? Rop.Err<TOk, TErr>(Rop.RequireError(errorFactory(value)))
             : result;
     }
 

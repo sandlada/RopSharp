@@ -119,13 +119,49 @@ public readonly struct Either<TLeft, TRight> : IEquatable<Either<TLeft, TRight>>
     /// <param name="errorFactory">Builds the error from a left value. Evaluated only on the left branch.</param>
     /// <returns><c>Err(errorFactory(left))</c> or <c>Ok(right)</c>.</returns>
     /// <exception cref="ArgumentNullException"><paramref name="errorFactory"/> is <see langword="null"/>.</exception>
+    /// <exception cref="InvalidOperationException">The factory returned <see langword="null"/>.</exception>
+    /// <remarks>
+    /// Both <c>ToResult</c> overloads reject a null error value the same way: with the library-wide
+    /// <see cref="InvalidOperationException"/> rather than the argument exception raised by <see cref="Rop.Err{TOk,TErr}"/>.
+    /// </remarks>
     public Result<TRight, RopError> ToResult(Func<TLeft, RopError> errorFactory)
     {
         ArgumentNullException.ThrowIfNull(errorFactory);
         return _isLeft
-            ? Rop.Err<TRight>(errorFactory(_left))
+            ? Rop.Err<TRight>(Rop.RequireError(errorFactory(_left)))
             : Rop.Ok<TRight>(_right);
     }
+
+    /// <summary>
+    /// Converts the left branch into a caller-defined error and keeps the right branch as a success.
+    /// </summary>
+    /// <typeparam name="TErr">The error value type.</typeparam>
+    /// <param name="errorFactory">Builds the error from a left value. Evaluated only on the left branch.</param>
+    /// <returns><c>Err(errorFactory(left))</c> or <c>Ok(right)</c>.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="errorFactory"/> is <see langword="null"/>.</exception>
+    /// <exception cref="InvalidOperationException">The factory returned <see langword="null"/>.</exception>
+    /// <remarks>
+    /// Use this overload when the caller's error system is not <see cref="RopError"/>. The <see cref="RopError"/>
+    /// overload remains the default.
+    /// </remarks>
+    public Result<TRight, TErr> ToResult<TErr>(Func<TLeft, TErr> errorFactory)
+    {
+        ArgumentNullException.ThrowIfNull(errorFactory);
+        return _isLeft
+            ? Rop.Err<TRight, TErr>(Rop.RequireError(errorFactory(_left)))
+            : Rop.Ok<TRight, TErr>(_right);
+    }
+
+    /// <summary>
+    /// Converts the right branch into a present value, discarding the left branch.
+    /// </summary>
+    /// <returns><c>Some(right)</c> on the right branch; <c>None</c> on the left branch.</returns>
+    /// <remarks>
+    /// The left value is dropped and cannot be recovered. Use <see cref="ToResult"/> when the left value carries a
+    /// reason that must survive the crossing, and bridge to <see cref="Option{T}"/> only when the branch itself is
+    /// the answer.
+    /// </remarks>
+    public Option<TRight> ToOption() => _isLeft ? Opt.None<TRight>() : Opt.Some(_right);
 
     /// <inheritdoc />
     public bool Equals(Either<TLeft, TRight> other)

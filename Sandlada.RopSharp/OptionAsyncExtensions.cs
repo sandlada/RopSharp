@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
 
 namespace Sandlada.RopSharp;
@@ -22,6 +23,10 @@ namespace Sandlada.RopSharp;
 /// (<c>mapper</c>, <c>binder</c>, <c>fallback</c>, <c>action</c> or <c>predicate</c>).
 /// </para>
 /// </remarks>
+[SuppressMessage(
+    "ApiDesign",
+    "RS0026:Do not add multiple overloads with optional parameters",
+    Justification = "The class exposes ct-last overloads for synchronous, asynchronous and cancellation-aware callback shapes; overloads differ by receiver or delegate arity, so existing calls cannot become ambiguous.")]
 public static class OptionAsyncExtensions
 {
     /// <summary>
@@ -412,6 +417,342 @@ public static class OptionAsyncExtensions
 
         cancellationToken.ThrowIfCancellationRequested();
         return await AsyncGuards.Require(predicate(value), "predicate").ConfigureAwait(false)
+            ? option
+            : Opt.None<T>();
+    }
+
+    /// <summary>
+    /// Maps the contained value of a synchronous option with an asynchronous mapper.
+    /// </summary>
+    /// <typeparam name="T">The current value type.</typeparam>
+    /// <typeparam name="TOut">The mapped value type.</typeparam>
+    /// <param name="option">The source option.</param>
+    /// <param name="mapper">Maps the value asynchronously. Not evaluated for <c>None</c>.</param>
+    /// <param name="cancellationToken">An optional cancellation token.</param>
+    /// <returns><c>Some(mapped)</c> or <c>None</c>.</returns>
+    /// <exception cref="OperationCanceledException">The token was cancelled before the mapper was invoked.</exception>
+    /// <exception cref="InvalidOperationException">The mapper returned a null task.</exception>
+    [OverloadResolutionPriority(2)]
+    public static async Task<Option<TOut>> MapSomeAsync<T, TOut>(
+        this Option<T> option,
+        Func<T, Task<TOut>> mapper,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(mapper);
+
+        if (!option.TryGetValue(out var value))
+        {
+            return Opt.None<TOut>();
+        }
+
+        cancellationToken.ThrowIfCancellationRequested();
+        return Opt.Some(await AsyncGuards.Require(mapper(value), "mapper").ConfigureAwait(false));
+    }
+
+    /// <summary>
+    /// Maps the contained value of a synchronous option with a cancellation-aware asynchronous mapper.
+    /// </summary>
+    /// <typeparam name="T">The current value type.</typeparam>
+    /// <typeparam name="TOut">The mapped value type.</typeparam>
+    /// <param name="option">The source option.</param>
+    /// <param name="mapper">Maps the value asynchronously, receiving the same token.</param>
+    /// <param name="cancellationToken">An optional cancellation token.</param>
+    /// <returns><c>Some(mapped)</c> or <c>None</c>.</returns>
+    /// <exception cref="OperationCanceledException">The token was cancelled before the mapper was invoked.</exception>
+    /// <exception cref="InvalidOperationException">The mapper returned a null task.</exception>
+    [OverloadResolutionPriority(3)]
+    public static async Task<Option<TOut>> MapSomeAsync<T, TOut>(
+        this Option<T> option,
+        Func<T, CancellationToken, Task<TOut>> mapper,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(mapper);
+
+        if (!option.TryGetValue(out var value))
+        {
+            return Opt.None<TOut>();
+        }
+
+        cancellationToken.ThrowIfCancellationRequested();
+        return Opt.Some(
+            await AsyncGuards.Require(mapper(value, cancellationToken), "mapper").ConfigureAwait(false));
+    }
+
+    /// <summary>
+    /// Expands the contained value of a synchronous option with a cancellation-aware asynchronous binder.
+    /// </summary>
+    /// <typeparam name="T">The current value type.</typeparam>
+    /// <typeparam name="TOut">The bound value type.</typeparam>
+    /// <param name="option">The source option.</param>
+    /// <param name="binder">Maps the value to an option asynchronously, receiving the same token.</param>
+    /// <param name="cancellationToken">An optional cancellation token.</param>
+    /// <returns>The bound option, or <c>None</c>.</returns>
+    /// <exception cref="OperationCanceledException">The token was cancelled before the binder was invoked.</exception>
+    /// <exception cref="InvalidOperationException">The binder returned a null task.</exception>
+    [OverloadResolutionPriority(1)]
+    public static async Task<Option<TOut>> BindSomeAsync<T, TOut>(
+        this Option<T> option,
+        Func<T, CancellationToken, Task<Option<TOut>>> binder,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(binder);
+
+        if (!option.TryGetValue(out var value))
+        {
+            return Opt.None<TOut>();
+        }
+
+        cancellationToken.ThrowIfCancellationRequested();
+        return await AsyncGuards.Require(binder(value, cancellationToken), "binder").ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// Recovers from <c>None</c> on a synchronous option with an asynchronous fallback.
+    /// </summary>
+    /// <typeparam name="T">The value type.</typeparam>
+    /// <param name="option">The source option.</param>
+    /// <param name="fallback">Produces the fallback option asynchronously. Not evaluated for <c>Some</c>.</param>
+    /// <param name="cancellationToken">An optional cancellation token.</param>
+    /// <returns>The original option, or the fallback option.</returns>
+    /// <exception cref="OperationCanceledException">The token was cancelled before the fallback was invoked.</exception>
+    /// <exception cref="InvalidOperationException">The fallback returned a null task.</exception>
+    [OverloadResolutionPriority(0)]
+    public static async Task<Option<T>> BindNoneAsync<T>(
+        this Option<T> option,
+        Func<Task<Option<T>>> fallback,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(fallback);
+
+        if (option.IsSome)
+        {
+            return option;
+        }
+
+        cancellationToken.ThrowIfCancellationRequested();
+        return await AsyncGuards.Require(fallback(), "fallback").ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// Recovers from <c>None</c> on a synchronous option with a cancellation-aware asynchronous fallback.
+    /// </summary>
+    /// <typeparam name="T">The value type.</typeparam>
+    /// <param name="option">The source option.</param>
+    /// <param name="fallback">Produces the fallback option asynchronously, receiving the same token.</param>
+    /// <param name="cancellationToken">An optional cancellation token.</param>
+    /// <returns>The original option, or the fallback option.</returns>
+    /// <exception cref="OperationCanceledException">The token was cancelled before the fallback was invoked.</exception>
+    /// <exception cref="InvalidOperationException">The fallback returned a null task.</exception>
+    [OverloadResolutionPriority(1)]
+    public static async Task<Option<T>> BindNoneAsync<T>(
+        this Option<T> option,
+        Func<CancellationToken, Task<Option<T>>> fallback,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(fallback);
+
+        if (option.IsSome)
+        {
+            return option;
+        }
+
+        cancellationToken.ThrowIfCancellationRequested();
+        return await AsyncGuards.Require(fallback(cancellationToken), "fallback").ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// Observes the contained value of a synchronous option asynchronously.
+    /// </summary>
+    /// <typeparam name="T">The value type.</typeparam>
+    /// <param name="option">The source option.</param>
+    /// <param name="action">The asynchronous side effect. Exceptions propagate.</param>
+    /// <param name="cancellationToken">An optional cancellation token.</param>
+    /// <returns>The same option value.</returns>
+    /// <exception cref="OperationCanceledException">The token was cancelled before the action was invoked.</exception>
+    /// <exception cref="InvalidOperationException">The action returned a null task.</exception>
+    [OverloadResolutionPriority(0)]
+    public static async Task<Option<T>> TeeSomeAsync<T>(
+        this Option<T> option,
+        Func<T, Task> action,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(action);
+
+        if (option.TryGetValue(out var value))
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            await AsyncGuards.Require(action(value), "action").ConfigureAwait(false);
+        }
+
+        return option;
+    }
+
+    /// <summary>
+    /// Observes the contained value of a synchronous option with a cancellation-aware asynchronous action.
+    /// </summary>
+    /// <typeparam name="T">The value type.</typeparam>
+    /// <param name="option">The source option.</param>
+    /// <param name="action">The asynchronous side effect, receiving the same token.</param>
+    /// <param name="cancellationToken">An optional cancellation token.</param>
+    /// <returns>The same option value.</returns>
+    /// <exception cref="OperationCanceledException">The token was cancelled before the action was invoked.</exception>
+    /// <exception cref="InvalidOperationException">The action returned a null task.</exception>
+    [OverloadResolutionPriority(1)]
+    public static async Task<Option<T>> TeeSomeAsync<T>(
+        this Option<T> option,
+        Func<T, CancellationToken, Task> action,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(action);
+
+        if (option.TryGetValue(out var value))
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            await AsyncGuards.Require(action(value, cancellationToken), "action").ConfigureAwait(false);
+        }
+
+        return option;
+    }
+
+    /// <summary>
+    /// Observes the empty track of a synchronous option asynchronously.
+    /// </summary>
+    /// <typeparam name="T">The value type.</typeparam>
+    /// <param name="option">The source option.</param>
+    /// <param name="action">The asynchronous side effect. Exceptions propagate.</param>
+    /// <param name="cancellationToken">An optional cancellation token.</param>
+    /// <returns>The same option value.</returns>
+    /// <exception cref="OperationCanceledException">The token was cancelled before the action was invoked.</exception>
+    /// <exception cref="InvalidOperationException">The action returned a null task.</exception>
+    [OverloadResolutionPriority(0)]
+    public static async Task<Option<T>> TeeNoneAsync<T>(
+        this Option<T> option,
+        Func<Task> action,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(action);
+
+        if (option.IsNone)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            await AsyncGuards.Require(action(), "action").ConfigureAwait(false);
+        }
+
+        return option;
+    }
+
+    /// <summary>
+    /// Observes the empty track of a synchronous option with a cancellation-aware asynchronous action.
+    /// </summary>
+    /// <typeparam name="T">The value type.</typeparam>
+    /// <param name="option">The source option.</param>
+    /// <param name="action">The asynchronous side effect, receiving the same token.</param>
+    /// <param name="cancellationToken">An optional cancellation token.</param>
+    /// <returns>The same option value.</returns>
+    /// <exception cref="OperationCanceledException">The token was cancelled before the action was invoked.</exception>
+    /// <exception cref="InvalidOperationException">The action returned a null task.</exception>
+    [OverloadResolutionPriority(1)]
+    public static async Task<Option<T>> TeeNoneAsync<T>(
+        this Option<T> option,
+        Func<CancellationToken, Task> action,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(action);
+
+        if (option.IsNone)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            await AsyncGuards.Require(action(cancellationToken), "action").ConfigureAwait(false);
+        }
+
+        return option;
+    }
+
+    /// <summary>
+    /// Filters a synchronous option with an asynchronous predicate.
+    /// </summary>
+    /// <typeparam name="T">The value type.</typeparam>
+    /// <param name="option">The source option.</param>
+    /// <param name="predicate">The asynchronous predicate. Not evaluated for <c>None</c>.</param>
+    /// <param name="cancellationToken">An optional cancellation token.</param>
+    /// <returns>The original option when the predicate holds; otherwise <c>None</c>.</returns>
+    /// <exception cref="OperationCanceledException">The token was cancelled before the predicate was invoked.</exception>
+    /// <exception cref="InvalidOperationException">The predicate returned a null task.</exception>
+    [OverloadResolutionPriority(1)]
+    public static async Task<Option<T>> FilterAsync<T>(
+        this Option<T> option,
+        Func<T, Task<bool>> predicate,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(predicate);
+
+        if (!option.TryGetValue(out var value))
+        {
+            return option;
+        }
+
+        cancellationToken.ThrowIfCancellationRequested();
+        return await AsyncGuards.Require(predicate(value), "predicate").ConfigureAwait(false)
+            ? option
+            : Opt.None<T>();
+    }
+
+    /// <summary>
+    /// Filters a synchronous option with a cancellation-aware asynchronous predicate.
+    /// </summary>
+    /// <typeparam name="T">The value type.</typeparam>
+    /// <param name="option">The source option.</param>
+    /// <param name="predicate">The asynchronous predicate, receiving the same token.</param>
+    /// <param name="cancellationToken">An optional cancellation token.</param>
+    /// <returns>The original option when the predicate holds; otherwise <c>None</c>.</returns>
+    /// <exception cref="OperationCanceledException">The token was cancelled before the predicate was invoked.</exception>
+    /// <exception cref="InvalidOperationException">The predicate returned a null task.</exception>
+    [OverloadResolutionPriority(2)]
+    public static async Task<Option<T>> FilterAsync<T>(
+        this Option<T> option,
+        Func<T, CancellationToken, Task<bool>> predicate,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(predicate);
+
+        if (!option.TryGetValue(out var value))
+        {
+            return option;
+        }
+
+        cancellationToken.ThrowIfCancellationRequested();
+        return await AsyncGuards.Require(predicate(value, cancellationToken), "predicate").ConfigureAwait(false)
+            ? option
+            : Opt.None<T>();
+    }
+
+    /// <summary>
+    /// Filters a task-wrapped option with a cancellation-aware asynchronous predicate.
+    /// </summary>
+    /// <typeparam name="T">The value type.</typeparam>
+    /// <param name="task">The source task.</param>
+    /// <param name="predicate">The asynchronous predicate, receiving the same token.</param>
+    /// <param name="cancellationToken">An optional cancellation token.</param>
+    /// <returns>The original option when the predicate holds; otherwise <c>None</c>.</returns>
+    /// <exception cref="OperationCanceledException">The token was cancelled before the predicate was invoked.</exception>
+    /// <exception cref="InvalidOperationException">The predicate returned a null task.</exception>
+    [OverloadResolutionPriority(2)]
+    public static async Task<Option<T>> FilterAsync<T>(
+        this Task<Option<T>> task,
+        Func<T, CancellationToken, Task<bool>> predicate,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(task);
+        ArgumentNullException.ThrowIfNull(predicate);
+
+        var option = await task.WaitAsync(cancellationToken).ConfigureAwait(false);
+        if (!option.TryGetValue(out var value))
+        {
+            return option;
+        }
+
+        cancellationToken.ThrowIfCancellationRequested();
+        return await AsyncGuards.Require(predicate(value, cancellationToken), "predicate").ConfigureAwait(false)
             ? option
             : Opt.None<T>();
     }

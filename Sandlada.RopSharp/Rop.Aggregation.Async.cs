@@ -194,14 +194,159 @@ public static partial class Rop
     /// <param name="cancellationToken">An optional cancellation token.</param>
     /// <returns>All success values and all errors, preserving source order.</returns>
     /// <exception cref="OperationCanceledException">The token was cancelled before completion.</exception>
+    /// <exception cref="InvalidOperationException">The sequence contained a null task.</exception>
+    /// <remarks>
+    /// Null tasks are rejected with <see cref="InvalidOperationException"/>, matching
+    /// <see cref="SequenceValidationAsync{T,TErr}"/> and <see cref="TraverseValidationAsync{T,TOut,TErr}(IEnumerable{T},Func{T,Task{Result{TOut,TErr}}},CancellationToken)"/>,
+    /// so every aggregation helper reports the same programming error.
+    /// </remarks>
     public static async Task<(IReadOnlyList<T> Oks, IReadOnlyList<TErr> Errs)> PartitionAsync<T, TErr>(
         IEnumerable<Task<Result<T, TErr>>> tasks,
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(tasks);
         cancellationToken.ThrowIfCancellationRequested();
-        var materialized = Task.WhenAll(tasks).WaitAsync(cancellationToken);
-        var results = await materialized.ConfigureAwait(false);
+
+        var pending = CreateList<Task<Result<T, TErr>>, Task<Result<T, TErr>>>(tasks);
+        foreach (var task in tasks)
+        {
+            if (task is null)
+            {
+                throw new InvalidOperationException("The sequence contained a null task.");
+            }
+
+            pending.Add(task);
+        }
+
+        var results = await Task.WhenAll(pending).WaitAsync(cancellationToken).ConfigureAwait(false);
         return Partition(results);
+    }
+
+    /// <summary>
+    /// Awaits a sequence of task-wrapped results and collects every error, awaiting every task.
+    /// </summary>
+    /// <typeparam name="T">The success type.</typeparam>
+    /// <typeparam name="TErr">The error type.</typeparam>
+    /// <param name="tasks">The result tasks to await. Enumerated exactly once.</param>
+    /// <param name="cancellationToken">An optional cancellation token.</param>
+    /// <returns>
+    /// <c>Ok</c> with all success values in source order, or <c>Err</c> with all errors in source order (never
+    /// empty). An empty source yields <c>Ok([])</c>.
+    /// </returns>
+    /// <exception cref="OperationCanceledException">The token was cancelled before the sequence was started or completed.</exception>
+    /// <exception cref="InvalidOperationException">The sequence contained a null task.</exception>
+    /// <remarks>
+    /// Aggregating semantics require every input, so all tasks are awaited instead of short-circuiting. All faults are
+    /// observed; when more than one task faults, the first fault wins. Use
+    /// <see cref="Rop.SequenceAsync{T,TErr}"/> when only the first error matters.
+    /// </remarks>
+    public static async Task<Result<IReadOnlyList<T>, IReadOnlyList<TErr>>> SequenceValidationAsync<T, TErr>(
+        IEnumerable<Task<Result<T, TErr>>> tasks,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(tasks);
+        cancellationToken.ThrowIfCancellationRequested();
+
+        var pending = CreateList<Task<Result<T, TErr>>, Task<Result<T, TErr>>>(tasks);
+        foreach (var task in tasks)
+        {
+            if (task is null)
+            {
+                throw new InvalidOperationException("The sequence contained a null task.");
+            }
+
+            pending.Add(task);
+        }
+
+        var all = Task.WhenAll(pending);
+        cancellationToken.ThrowIfCancellationRequested();
+        return SequenceValidation(await all.WaitAsync(cancellationToken).ConfigureAwait(false));
+    }
+
+    /// <summary>
+    /// Maps each element to a task-wrapped result and collects every error, awaiting every task.
+    /// </summary>
+    /// <typeparam name="T">The source element type.</typeparam>
+    /// <typeparam name="TOut">The success type.</typeparam>
+    /// <typeparam name="TErr">The error type.</typeparam>
+    /// <param name="source">The source elements. Enumerated exactly once.</param>
+    /// <param name="mapper">Maps an element to a task-wrapped result.</param>
+    /// <param name="cancellationToken">An optional cancellation token.</param>
+    /// <returns>
+    /// <c>Ok</c> with all success values in source order, or <c>Err</c> with all errors in source order (never
+    /// empty). An empty source yields <c>Ok([])</c>.
+    /// </returns>
+    /// <exception cref="OperationCanceledException">
+    /// The token was cancelled before the mapper was invoked for the next element (the mapper is then not called) or
+    /// before the produced tasks completed.
+    /// </exception>
+    /// <exception cref="InvalidOperationException">The mapper returned a null task.</exception>
+    /// <remarks>
+    /// The mapper is invoked for every element because aggregation never short-circuits. Use
+    /// <see cref="Rop.TraverseAsync{T,TOut,TErr}"/> when only the first error matters.
+    /// </remarks>
+    public static async Task<Result<IReadOnlyList<TOut>, IReadOnlyList<TErr>>> TraverseValidationAsync<T, TOut, TErr>(
+        IEnumerable<T> source,
+        Func<T, Task<Result<TOut, TErr>>> mapper,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(source);
+        ArgumentNullException.ThrowIfNull(mapper);
+        cancellationToken.ThrowIfCancellationRequested();
+
+        var pending = CreateList<T, Task<Result<TOut, TErr>>>(source);
+        foreach (var element in source)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            pending.Add(AsyncGuards.Require(mapper(element), "mapper"));
+        }
+
+        var all = Task.WhenAll(pending);
+        cancellationToken.ThrowIfCancellationRequested();
+        return SequenceValidation(await all.WaitAsync(cancellationToken).ConfigureAwait(false));
+    }
+
+    /// <summary>
+    /// Maps each element to a task-wrapped result with a cancellation-aware mapper and collects every error,
+    /// awaiting every task.
+    /// </summary>
+    /// <typeparam name="T">The source element type.</typeparam>
+    /// <typeparam name="TOut">The success type.</typeparam>
+    /// <typeparam name="TErr">The error type.</typeparam>
+    /// <param name="source">The source elements. Enumerated exactly once.</param>
+    /// <param name="mapper">Maps an element to a task-wrapped result, receiving the same token.</param>
+    /// <param name="cancellationToken">An optional cancellation token.</param>
+    /// <returns>
+    /// <c>Ok</c> with all success values in source order, or <c>Err</c> with all errors in source order (never
+    /// empty). An empty source yields <c>Ok([])</c>.
+    /// </returns>
+    /// <exception cref="OperationCanceledException">
+    /// The token was cancelled before the mapper was invoked for the next element (the mapper is then not called) or
+    /// before the produced tasks completed.
+    /// </exception>
+    /// <exception cref="InvalidOperationException">The mapper returned a null task.</exception>
+    /// <remarks>
+    /// The mapper is invoked for every element because aggregation never short-circuits. Use
+    /// <see cref="Rop.TraverseAsync{T,TOut,TErr}"/> when only the first error matters.
+    /// </remarks>
+    public static async Task<Result<IReadOnlyList<TOut>, IReadOnlyList<TErr>>> TraverseValidationAsync<T, TOut, TErr>(
+        IEnumerable<T> source,
+        Func<T, CancellationToken, Task<Result<TOut, TErr>>> mapper,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(source);
+        ArgumentNullException.ThrowIfNull(mapper);
+        cancellationToken.ThrowIfCancellationRequested();
+
+        var pending = CreateList<T, Task<Result<TOut, TErr>>>(source);
+        foreach (var element in source)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            pending.Add(AsyncGuards.Require(mapper(element, cancellationToken), "mapper"));
+        }
+
+        var all = Task.WhenAll(pending);
+        cancellationToken.ThrowIfCancellationRequested();
+        return SequenceValidation(await all.WaitAsync(cancellationToken).ConfigureAwait(false));
     }
 }

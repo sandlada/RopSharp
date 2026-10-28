@@ -248,6 +248,50 @@ public static partial class Rop
     }
 
     /// <summary>
+    /// Maps each element with <paramref name="mapper"/> and sequences the results, collecting every error.
+    /// </summary>
+    /// <typeparam name="T">The source element type.</typeparam>
+    /// <typeparam name="TOut">The success type.</typeparam>
+    /// <typeparam name="TErr">The error type.</typeparam>
+    /// <param name="source">The source elements. Enumerated exactly once, immediately.</param>
+    /// <param name="mapper">Maps an element to a result.</param>
+    /// <returns>
+    /// <c>Ok</c> with all success values in order, or <c>Err</c> with all errors in element order (never empty).
+    /// An empty source yields <c>Ok([])</c>.
+    /// </returns>
+    /// <exception cref="ArgumentNullException"><paramref name="source"/> or <paramref name="mapper"/> is <see langword="null"/>.</exception>
+    /// <remarks>
+    /// Applicative (aggregating) semantics: the mapper is invoked for every element and no element is skipped after a
+    /// failure. Use <see cref="Traverse{T,TOut,TErr}"/> when only the first error matters.
+    /// </remarks>
+    public static Result<IReadOnlyList<TOut>, IReadOnlyList<TErr>> TraverseValidation<T, TOut, TErr>(
+        IEnumerable<T> source,
+        Func<T, Result<TOut, TErr>> mapper)
+    {
+        ArgumentNullException.ThrowIfNull(source);
+        ArgumentNullException.ThrowIfNull(mapper);
+
+        var values = CreateList<T, TOut>(source);
+        List<TErr>? errors = null;
+        foreach (var element in source)
+        {
+            var result = mapper(element);
+            if (result.TryGetOk(out var value))
+            {
+                values.Add(value);
+            }
+            else
+            {
+                errors = AddError(errors, result.ErrUnsafe);
+            }
+        }
+
+        return errors is null
+            ? Ok<IReadOnlyList<TOut>, IReadOnlyList<TErr>>(ToReadOnlyList(values))
+            : Err<IReadOnlyList<TOut>, IReadOnlyList<TErr>>(ToReadOnlyList(errors));
+    }
+
+    /// <summary>
     /// Maps each element with <paramref name="mapper"/> and sequences the results, short-circuiting on the first error.
     /// </summary>
     /// <typeparam name="T">The source element type.</typeparam>
