@@ -116,6 +116,9 @@ additive work below into the first version.
   `TraverseValidationAsync`.
 - `RopError.Combine` deduplicates messages and codes with ordinal hash sets, so the aggregation is linear in the
   number of errors instead of quadratic.
+- `default(Result<TOk,TErr>)` no longer leaks a null error: `TryGetErr`, `Match`, `Switch`, the error-track
+  combinators and `ErrOrThrow` now fault with `InvalidOperationException` instead of handing `null` to user code.
+  Valid results and non-nullable value-type errors are unchanged.
 
 ### Documentation
 
@@ -129,7 +132,7 @@ additive work below into the first version.
 - Zero-warning build for `net10.0` and `net11.0` with warnings treated as errors.
 - Public API baseline enforced by `Microsoft.CodeAnalysis.PublicApiAnalyzers`.
 - Formatting verified with `dotnet format --verify-no-changes`.
-- TUnit test suite (1386 runs, 693 per target framework) covering algebraic laws, invariants, guards,
+- TUnit test suite (1398 runs, 699 per target framework) covering algebraic laws, invariants, guards,
   aggregation, LINQ, Option async parity, validation traversal, async boundaries, diagnostics, model bridges,
   custom error types, async/cancellation semantics, single enumeration and concurrent readers.
 - Code coverage measured with `Microsoft.Testing.Extensions.CodeCoverage` (100% lines / 99.84% branches on `net11.0`).

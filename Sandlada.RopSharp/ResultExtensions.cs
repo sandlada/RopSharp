@@ -320,11 +320,18 @@ public static class ResultExtensions
     /// <typeparam name="TErr">The error type.</typeparam>
     /// <param name="result">The source result.</param>
     /// <returns>The success value.</returns>
-    /// <exception cref="InvalidOperationException">The result is an error.</exception>
+    /// <exception cref="InvalidOperationException">The result is an error or an uninitialized default.</exception>
     /// <remarks>Intended for tests and boundaries only; production code should use <see cref="Match{TOk,TErr,T}"/>.</remarks>
-    public static TOk OrThrow<TOk, TErr>(this Result<TOk, TErr> result) => result.TryGetOk(out var value)
-        ? value
-        : throw new InvalidOperationException($"Expected Ok but was {result}.");
+    public static TOk OrThrow<TOk, TErr>(this Result<TOk, TErr> result)
+    {
+        if (result.TryGetOk(out var value))
+        {
+            return value;
+        }
+
+        result.ThrowIfUninitialized();
+        throw new InvalidOperationException($"Expected Ok but was {result}.");
+    }
 
     /// <summary>
     /// Returns the success value or throws when the result is a failure.
@@ -333,7 +340,7 @@ public static class ResultExtensions
     /// <typeparam name="TErr">The error type.</typeparam>
     /// <param name="result">The source result.</param>
     /// <returns>The success value.</returns>
-    /// <exception cref="InvalidOperationException">The result is an error.</exception>
+    /// <exception cref="InvalidOperationException">The result is an error or an uninitialized default.</exception>
     public static TOk OkOrThrow<TOk, TErr>(this Result<TOk, TErr> result) => result.OrThrow();
 
     /// <summary>
@@ -343,7 +350,7 @@ public static class ResultExtensions
     /// <typeparam name="TErr">The error type.</typeparam>
     /// <param name="result">The source result.</param>
     /// <returns>The error value.</returns>
-    /// <exception cref="InvalidOperationException">The result is a success.</exception>
+    /// <exception cref="InvalidOperationException">The result is a success or an uninitialized default.</exception>
     public static TErr ErrOrThrow<TOk, TErr>(this Result<TOk, TErr> result) => result.TryGetErr(out var error)
         ? error
         : throw new InvalidOperationException($"Expected Err but was {result}.");

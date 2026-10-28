@@ -10,7 +10,7 @@ Everything in this file is reproducible on a clean checkout. The commands are th
 | Restore | `dotnet restore --locked-mode` | success (test/benchmark lock files enforced) |
 | Formatting | `dotnet format RopSharp.sln --verify-no-changes --no-restore` | exit 0 |
 | Build | `dotnet build -c Release` | 0 warnings, 0 errors |
-| Tests | `dotnet test -c Release --no-build` | 1386 passed (693 on net10.0 + 693 on net11.0), 0 failed, 0 skipped |
+| Tests | `dotnet test -c Release --no-build` | 1398 passed (699 on net10.0 + 699 on net11.0), 0 failed, 0 skipped |
 | Coverage | see below | 100% line / 99.84% branch (library, net11.0) |
 | Pack | `dotnet pack -c Release` | `Sandlada.RopSharp.0.0.1.nupkg` + `.snupkg`; package validation enabled |
 | Consumer | local feed + fresh console apps | package restores on `net10.0` and `net11.0`, programs run |
@@ -22,7 +22,7 @@ Everything in this file is reproducible on a clean checkout. The commands are th
 
 ## Test matrix
 
-The test project targets `net10.0` and `net11.0`; `dotnet test` runs both (693 tests per target, 1386 runs). Consecutive runs were green with no flakes. Coverage includes:
+The test project targets `net10.0` and `net11.0`; `dotnet test` runs both (699 tests per target, 1398 runs). Consecutive runs were green with no flakes. Coverage includes:
 
 - construction/equality/invariants and null guards,
 - the algebraic laws (functor/monad laws for both tracks, plus seeded randomized checks),
@@ -46,7 +46,8 @@ The test project targets `net10.0` and `net11.0`; `dotnet test` runs both (693 t
   `ToSingleError`, null-producing `IParsable<T>` implementations, null tasks in `PartitionAsync`, and linear
   `RopError.Combine` deduplication,
 - invariants: single-pass enumeration for every sequence helper, read-only materialized collections, concurrent
-  readers of shared immutable values and documented `default` behavior,
+  readers of shared immutable values and documented `default` behavior (an uninitialized `Result<,>` faults from
+  `TryGetErr` and every terminal/error-track read instead of leaking a null error),
 - model bridges: `Result`→`Either`, `Option`→`Either` (value and factory) and `Either`→`Option`, including null
   payloads, lazy factories and lossless round trips,
 - null-element policy: `TryFirst`, `TryLast`, `TryFind` and the projecting `Choose` reject null elements with the
@@ -79,8 +80,8 @@ Latest measurement (`net11.0`, `Sandlada.RopSharp` assembly):
 
 | Metric | Covered | Total | Rate |
 | --- | ---: | ---: | ---: |
-| Lines | 1476 | 1476 | 100% |
-| Branches | 609 | 610 | 99.84% |
+| Lines | 1484 | 1484 | 100% |
+| Branches | 615 | 616 | 99.84% |
 
 Every line is covered. The single remaining partial branch is the left-null arm of `Either.GetHashCode`, which is
 unreachable through the public surface: `Either.Left` rejects null and `default(Either<,>)` is a right value. CI runs

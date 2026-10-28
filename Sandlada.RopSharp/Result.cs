@@ -12,8 +12,9 @@ namespace Sandlada.RopSharp;
 /// <remarks>
 /// <para>
 /// Create values through <see cref="Rop.Ok{TOk,TErr}(TOk)"/> and <see cref="Rop.Err{TOk,TErr}(TErr)"/>.
-/// The parameterless <see langword="default"/> value is undefined and must not be relied upon: the library
-/// makes no guarantee about <see cref="IsOk"/>/<see cref="IsErr"/> for it.
+/// The parameterless <see langword="default"/> value is not a valid result: it reports <see cref="IsErr"/> but
+/// carries no error. Reading that error through <see cref="TryGetErr"/> or a terminal/error-track combinator
+/// throws <see cref="InvalidOperationException"/> instead of exposing a null error.
 /// </para>
 /// <para>
 /// Instances are immutable and safe to share across threads. Expected failures are values, never exceptions.
@@ -58,15 +59,26 @@ public readonly struct Result<TOk, TErr> : IEquatable<Result<TOk, TErr>>
     }
 
     /// <summary>
-    /// Attempts to read the error value without throwing.
+    /// Attempts to read the error value without throwing for a valid result.
     /// </summary>
     /// <param name="error">
     /// When this method returns <see langword="true"/>, the error value; otherwise the default of
     /// <typeparamref name="TErr"/> (which may be <see langword="null"/>).
     /// </param>
     /// <returns><see langword="true"/> when the result is <c>Err</c>; otherwise <see langword="false"/>.</returns>
+    /// <exception cref="InvalidOperationException">
+    /// The result is an uninitialized <see langword="default"/> value. The default is not a valid result;
+    /// construct values with <see cref="Rop.Ok{TOk,TErr}(TOk)"/> or <see cref="Rop.Err{TOk,TErr}(TErr)"/>.
+    /// </exception>
+    /// <remarks>
+    /// An uninitialized default reports <see cref="IsErr"/> as <see langword="true"/> so failure routing cannot
+    /// mistake it for a success, but it carries no error. This probe therefore faults instead of returning
+    /// <see langword="true"/> with a <see langword="null"/> error. The exception is only for that invalid state;
+    /// an ordinary <c>Err</c> never throws.
+    /// </remarks>
     public bool TryGetErr([MaybeNullWhen(false)] out TErr error)
     {
+        ThrowIfUninitialized();
         error = _err;
         return !_isOk;
     }
@@ -81,7 +93,29 @@ public readonly struct Result<TOk, TErr> : IEquatable<Result<TOk, TErr>>
 
     internal TOk OkUnsafe => _ok;
 
-    internal TErr ErrUnsafe => _err;
+    /// <summary>
+    /// Gets a value indicating whether this instance was produced by a factory. An uninitialized default has no
+    /// error value; non-nullable value-type errors cannot be distinguished from a legitimate default error.
+    /// </summary>
+    internal bool IsInitialized => _isOk || _err is not null || default(TErr) is not null;
+
+    internal TErr ErrUnsafe
+    {
+        get
+        {
+            ThrowIfUninitialized();
+            return _err;
+        }
+    }
+
+    internal void ThrowIfUninitialized()
+    {
+        if (!IsInitialized)
+        {
+            throw new InvalidOperationException(
+                "The result is an uninitialized default value; construct results with Rop.Ok or Rop.Err.");
+        }
+    }
 
     /// <inheritdoc />
     public bool Equals(Result<TOk, TErr> other)

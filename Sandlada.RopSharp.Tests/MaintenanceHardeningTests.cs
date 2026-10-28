@@ -582,6 +582,94 @@ public sealed class MaintenanceHardeningTests
         await Assert.That(outcomes.All(outcome => outcome)).IsTrue();
     }
 
+    // ---------------------------------------------------------------- invalid default results
+
+    [Test]
+    public async Task DefaultResult_ErrorTrackAccessFailsFast()
+    {
+        var result = default(Result<int, RopError>);
+
+        await Assert.That(() => result.Match(ok: value => value.ToString(), err: error => error.Code))
+            .Throws<InvalidOperationException>();
+        await Assert.That(() => result.Switch(ok: _ => { }, err: _ => { }))
+            .Throws<InvalidOperationException>();
+        await Assert.That(() => result.MapErr(error => error.WithCode("E_MAPPED")))
+            .Throws<InvalidOperationException>();
+        await Assert.That(() => result.BindErr(_ => Rop.Ok<int, RopError>(1)))
+            .Throws<InvalidOperationException>();
+        await Assert.That(() => result.BindErrValue(1))
+            .Throws<InvalidOperationException>();
+        await Assert.That(() => result.TeeErr(_ => { }))
+            .Throws<InvalidOperationException>();
+        await Assert.That(() => result.ErrOrThrow())
+            .Throws<InvalidOperationException>();
+        await Assert.That(() => result.OrThrow())
+            .Throws<InvalidOperationException>();
+        await Assert.That(() => result.TryGetErr(out _))
+            .Throws<InvalidOperationException>();
+    }
+
+    [Test]
+    public async Task ValidResults_AreUnaffectedByDefaultGuards()
+    {
+        var error = RopError.Create("E_VALID", "valid");
+        var failed = Rop.Err<int, RopError>(error);
+        var succeeded = Rop.Ok<int, RopError>(7);
+
+        await Assert.That(failed.TryGetErr(out var actual)).IsTrue();
+        await Assert.That(ReferenceEquals(actual, error)).IsTrue();
+        await Assert.That(failed.ErrOrThrow().Code).IsEqualTo("E_VALID");
+        await Assert.That(failed.Match(ok: value => value, err: e => e.Code == "E_VALID" ? 1 : 0))
+            .IsEqualTo(1);
+        await Assert.That(succeeded.TryGetErr(out _)).IsFalse();
+        await Assert.That(succeeded.Match(ok: value => value, err: _ => -1)).IsEqualTo(7);
+    }
+
+    [Test]
+    public async Task DefaultStructError_RemainsAValidValue()
+    {
+        var result = Rop.Err<int, StructError>(default);
+
+        await Assert.That(result.TryGetErr(out var error)).IsTrue();
+        await Assert.That(error.Status).IsEqualTo(0);
+        await Assert.That(result.ErrOrThrow().Status).IsEqualTo(0);
+        await Assert.That(result.Match(ok: value => value, err: e => e.Status)).IsEqualTo(0);
+    }
+
+    [Test]
+    public async Task DefaultResult_WithNullableValueError_FailsFast()
+    {
+        var result = default(Result<int, int?>);
+
+        await Assert.That(() => result.TryGetErr(out _)).Throws<InvalidOperationException>();
+        await Assert.That(() => result.ErrOrThrow()).Throws<InvalidOperationException>();
+
+        var valid = Rop.Err<int, int?>(5);
+        await Assert.That(valid.TryGetErr(out var error)).IsTrue();
+        await Assert.That(error).IsEqualTo(5);
+    }
+
+    [Test]
+    public async Task DefaultResult_InArrayFailsFast()
+    {
+        var results = new Result<int, RopError>[1];
+
+        await Assert.That(results[0].IsErr).IsTrue();
+        await Assert.That(() => results[0].Match(ok: value => value.ToString(), err: error => error.Code))
+            .Throws<InvalidOperationException>();
+    }
+
+    [Test]
+    public async Task DefaultResult_WithCustomClassError_FailsFast()
+    {
+        var result = default(Result<int, AppError>);
+
+        await Assert.That(() => result.TryGetErr(out _)).Throws<InvalidOperationException>();
+        await Assert.That(() => result.ErrOrThrow()).Throws<InvalidOperationException>();
+        await Assert.That(() => result.Match(ok: value => value.ToString(), err: error => error.Code))
+            .Throws<InvalidOperationException>();
+    }
+
     // ---------------------------------------------------------------- documented default values
 
     [Test]
