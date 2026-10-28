@@ -10,11 +10,11 @@ Everything in this file is reproducible on a clean checkout. The commands are th
 | Restore | `dotnet restore --locked-mode` | success (test/benchmark lock files enforced) |
 | Formatting | `dotnet format RopSharp.sln --verify-no-changes --no-restore` | exit 0 |
 | Build | `dotnet build -c Release` | 0 warnings, 0 errors |
-| Tests | `dotnet test -c Release --no-build` | 850 passed (425 on net10.0 + 425 on net11.0), 0 failed, 0 skipped |
-| Coverage | see below | 100% line / 98.1% branch (library, net11.0) |
-| Pack | `dotnet pack -c Release` | `Sandlada.RopSharp.1.1.0.nupkg` + `.snupkg`; package validation enabled |
+| Tests | `dotnet test -c Release --no-build` | 1386 passed (693 on net10.0 + 693 on net11.0), 0 failed, 0 skipped |
+| Coverage | see below | 100% line / 99.84% branch (library, net11.0) |
+| Pack | `dotnet pack -c Release` | `Sandlada.RopSharp.0.0.1.nupkg` + `.snupkg`; package validation enabled |
 | Consumer | local feed + fresh console apps | package restores on `net10.0` and `net11.0`, programs run |
-| Public API | (build) | `PublicAPI.Shipped.txt` (252 symbols) + `PublicAPI.Unshipped.txt` match the surface exactly |
+| Public API | (build) | `PublicAPI.Shipped.txt` (252 symbols) + `PublicAPI.Unshipped.txt` (72 pending symbols) match the surface exactly |
 | Dependencies | `dotnet list package --vulnerable --include-transitive` | no vulnerable packages |
 | XML docs | build + XML inventory | every documented member has a summary |
 | Trim runtime | see below | trimmed sample prints the same output as the normal build |
@@ -22,7 +22,7 @@ Everything in this file is reproducible on a clean checkout. The commands are th
 
 ## Test matrix
 
-The test project targets `net10.0` and `net11.0`; `dotnet test` runs both (425 tests per target, 850 runs). Consecutive runs were green with no flakes. Coverage includes:
+The test project targets `net10.0` and `net11.0`; `dotnet test` runs both (693 tests per target, 1386 runs). Consecutive runs were green with no flakes. Coverage includes:
 
 - construction/equality/invariants and null guards,
 - the algebraic laws (functor/monad laws for both tracks, plus seeded randomized checks),
@@ -32,8 +32,29 @@ The test project targets `net10.0` and `net11.0`; `dotnet test` runs both (425 t
 - conditional construction, parsing, action terminals (`Switch`/`MatchFirst`/`SwitchFirst`) and
   `FailIf`/`ThenEnsure`,
 - async aggregation (`CombineAsync`/`ValidateAsync`/`ZipAsync`/`PartitionAsync`) and async LINQ,
+- Option async parity: sync-source async map/bind/tee/filter, `Opt.CombineAsync`/`ZipAsync`/
+  `SequenceAsync`/`TraverseAsync`, and `Task<Option<T>>` query syntax,
+- validation traversal: `Rop.TraverseValidation`, `Rop.SequenceValidationAsync` and
+  `Rop.TraverseValidationAsync` error ordering, full mapping, faults, cancellation and null tasks,
+- `RopError.InnerErrors`: aggregate structure, single-element identity, nested aggregation, immutable snapshots,
+  `With*` propagation and equality exclusion,
+- async boundaries: `Rop.Try(Action)`, `Rop.TryAsync(Func<Task>)`, `Rop.SwitchAsync` and `Rop.TrySwitchAsync`
+  success, exception, null-task, null-payload and cancellation paths,
+- diagnostics: `RopErrorKind` append-only numbering, `Rop.Parse` null/empty distinction, bounded echoing by Unicode
+  code point, control/line-separator/bidi escaping, lone-surrogate escaping and surrogate-safe truncation,
+- hardening: null-returning error factories across `MapErr`/`Ensure`/`FailIf`/`RequireSome`/`Either.ToResult`/
+  `ToSingleError`, null-producing `IParsable<T>` implementations, null tasks in `PartitionAsync`, and linear
+  `RopError.Combine` deduplication,
+- invariants: single-pass enumeration for every sequence helper, read-only materialized collections, concurrent
+  readers of shared immutable values and documented `default` behavior,
+- model bridges: `Result`→`Either`, `Option`→`Either` (value and factory) and `Either`→`Option`, including null
+  payloads, lazy factories and lossless round trips,
+- null-element policy: `TryFirst`, `TryLast`, `TryFind` and the projecting `Choose` reject null elements with the
+  `source`/`mapper` parameter name,
 - `Either<TLeft,TRight>` equality, mapping, swapping and result conversion,
 - `RopErrorKind` classification and combination semantics,
+- custom error types: generic factory/boundary/parse overloads, class and record-struct errors, null-result
+  factories, cancellation and the unchanged `RopError` overloads,
 - async overload resolution, cancellation-aware overloads, `OperationCanceledException` propagation,
 - opposite-track non-execution for every `Tee*` variant,
 - allocation smoke tests for the hot Result/Option pipelines.
@@ -58,24 +79,25 @@ Latest measurement (`net11.0`, `Sandlada.RopSharp` assembly):
 
 | Metric | Covered | Total | Rate |
 | --- | ---: | ---: | ---: |
-| Lines | 1009 | 1009 | 100% |
-| Branches | 453 | 462 | 98.1% |
+| Lines | 1476 | 1476 | 100% |
+| Branches | 609 | 610 | 99.84% |
 
-Every line is covered. The remaining unmeasured branch conditions are documented-undefined `default` values and
-defensive guard arms (for example the null arm of `Result.GetHashCode`, reachable only through
-`default(Result<,>)`) plus a few compiler-generated async/branch paths whose both outcomes execute in tests but
-which the collector still reports as partially covered. CI runs this command and uploads the Cobertura report as
-an artifact (informational, no hard threshold).
+Every line is covered. The single remaining partial branch is the left-null arm of `Either.GetHashCode`, which is
+unreachable through the public surface: `Either.Left` rejects null and `default(Either<,>)` is a right value. CI runs
+this command and uploads the Cobertura report as an artifact (informational, no hard threshold).
 
 ## Packaged artifact consumption
 
 The shipped `.nupkg` is installed from a local feed into fresh console apps and executed:
 
 ```bash
-# feed = Sandlada.RopSharp/bin/Release
+# Pack into a folder feed. NuGet requires an absolute path for folder sources.
+dotnet pack Sandlada.RopSharp/Sandlada.RopSharp.csproj -c Release -o "$PWD/artifacts/local-feed"
+
 dotnet new console -o consumer-net11 -f net11.0
-dotnet add package Sandlada.RopSharp --version 1.1.0   # local feed via nuget.config
-dotnet run -c Release
+dotnet add consumer-net11/consumer-net11.csproj package Sandlada.RopSharp \
+  --version 0.0.1 --source "$PWD/artifacts/local-feed"
+dotnet run --project consumer-net11/consumer-net11.csproj -c Release
 ```
 
 Verified output on both `net10.0` and `net11.0`:
@@ -205,7 +227,7 @@ Verified output matches the untrimmed run:
 -- cancellation while the batch is in flight
    => OperationCanceledException before any charge attempt (attempts: 0)
 
-=== 4. New in 1.1 - parsing, Either, async aggregation and collection helpers ===
+=== 4. Parsing, Either, async aggregation and collection helpers ===
    parsed: 82
    either: refund
    option last: 3

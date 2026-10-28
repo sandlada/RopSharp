@@ -107,10 +107,24 @@ Option<Order>[] slots = new Option<Order>[3];                 // all None
 | Action exit | `Switch` / `SwitchAsync` / `SwitchFirst` |
 | Non-throwing probe | `TryGetOk` / `TryGetErr` / `TryGetValue` |
 | Short-circuit combination | `Rop.Combine`, `Rop.Zip`, `Rop.Sequence`, `Rop.Traverse` |
-| Aggregating combination | `Rop.Validate`, `Rop.SequenceValidation` |
-| Explicit model conversion | `ToValidation` / `ToSingleError` / `RequireSome` / `ToOption` / `Transpose` |
+| Aggregating combination | `Rop.Validate`, `Rop.SequenceValidation`, `Rop.TraverseValidation` |
+| Explicit model conversion | `ToValidation` / `ToSingleError` / `RequireSome` / `ToOption` / `ToEither` / `Transpose` |
 
 Every combinator is **data-last** (mapper/binder/predicate/action last), so chains read left to right.
+
+### Model bridging
+
+Crossing between the three models is always explicit, and every bridge names which side becomes which:
+
+```csharp
+Either<RopError, int> fromResult = Rop.Ok(42).ToEither();              // Ok -> Right, Err -> Left
+Result<int, RopError> back      = fromResult.ToResult(error => error); // Left -> Err, Right -> Ok
+Either<string, int>  fromOption = Opt.None<int>().ToEither("missing"); // None -> Left, Some -> Right
+Option<int>          present    = Either.Right<string, int>(1).ToOption(); // Left is discarded
+```
+
+`ToOption` on `Result` and `Either` deliberately drops the reason; use `RequireSome` or `ToResult` when it must
+survive the crossing.
 
 ## Error model
 
@@ -124,18 +138,55 @@ RopError error = RopError.Create(
 
 RopError fromBoundary = RopError.FromException(exception, "E_IO"); // Cause is captured here only
 RopError retagged     = error.WithCode("E_USER");
+
+RopError aggregate = RopError.Combine([nameError, amountError]);
+IReadOnlyList<RopError> leaves = aggregate.InnerErrors; // the originals, in supplied order
 ```
 
 - `Code` and `Message` must be non-blank; blank input is a programming error (`ArgumentException`).
 - `Details` may be `null` but must not be blank.
 - `Kind` is a coarse category (`Failure`, `Validation`, `NotFound`, `Conflict`, `Unauthorized`, `Forbidden`,
-  `Unexpected`) for transport/presentation mapping; branch on `Code` for precise domain decisions.
-- Equality compares `Kind`, `Code`, `Message` and `Details`; `Cause` is excluded so stack-trace noise cannot make
-  two logically equal errors unequal.
+  `Unexpected`, `Timeout`, `Unavailable`, `RateLimited`) for transport/presentation mapping; branch on `Code` for
+  precise domain decisions. New values are appended, so treat the enum as open-ended.
+- `InnerErrors` is never `null`: atomic errors expose an empty list, while a `Combine` aggregate keeps every input in
+  order (no flattening) so nothing is lost by collapsing. `WithCode` and the other `With*` methods preserve it.
+- Equality compares `Kind`, `Code`, `Message` and `Details`; `Cause` and `InnerErrors` are excluded so stack-trace
+  noise and structural differences cannot make two equally reported errors unequal.
 - `RopError.Combine(errors)` collapses a non-empty list into `E_MULTIPLE`; a uniform `Kind` is preserved and mixed
-  kinds fall back to `Failure`.
+  kinds fall back to `Failure`. A single-element call returns that error unchanged instead of wrapping it.
 
 Recommended code convention: `E_<DOMAIN>[_<REASON>]`, uppercase with underscores.
+
+### Custom error types
+
+`Result<TOk, TErr>` is generic; `RopError` is the recommended default, not a constraint. Every combinator,
+aggregation helper and LINQ operator already works with any `TErr`. The convenience and boundary helpers have
+`TErr` overloads so a domain error type can be used end to end:
+
+```csharp
+public sealed record AppError(string Code, string Message);
+
+Result<int, AppError> parsed =
+    Rop.Parse<int, AppError>(raw, failure => new AppError(failure.Code, failure.Message));
+
+Result<Order, AppError> loaded =
+    Rop.Try(() => LoadOrder(id),
+            ex => new AppError("E_IO", ex.Message),
+            () => new AppError("E_NULL", "the loader returned null"));
+```
+
+- The `RopError` overloads remain the default and keep their `E_NULL_RESULT` / `(func, code)` behavior.
+- `Try` / `TryAsync` / `TrySwitch` / `TrySwitchAsync` require an explicit null-result factory for
+  value-producing boundaries, because the library cannot synthesize an arbitrary error. Action boundaries do
+  not need one.
+- `Parse` passes a `ParseFailure` (`Code`/`Message`/`Input`/`TypeName`/`Details`) to the factory, so the
+  bounded, escaped diagnostics survive.
+- `ToSingleError()` takes the first error; use `ToSingleError(combine)` for a custom collapse.
+
+Caveats: `Rop.Err` rejects `null` error values; `default(Result<,>)` is undefined; `Result` equality delegates
+to `EqualityComparer<TErr>.Default` (records and structs compare by value, plain classes by reference); `TErr`
+is inlined in the struct, so prefer a reference type or a small struct. A custom error type also gives up
+`Code`/`Kind`/`InnerErrors`; model what you need on the type itself.
 
 ## Short-circuit vs aggregating
 
@@ -160,13 +211,14 @@ Result<Order, RopError> merged = validated.ToSingleError(RopError.Combine);
 ```
 
 `Sequence`, `Traverse` and `Partition` accept any `IEnumerable<T>` but materialize exactly once. Empty input
-yields `Ok([])` (or `Some([])` for options), never `null`.
+yields `Ok([])` (or `Some([])` for options), never `null`. `SequenceValidation` and `TraverseValidation` share
+those collection rules but aggregate: every element is mapped and every error is returned in element order.
 
 ## Async and cancellation
 
-The map/bind/tee combinators have `...Async` counterparts. The token is optional and always last; cancellation
-is reported as `OperationCanceledException` and never converted into an error, because errors describe domain
-failures.
+The map/bind/tee combinators have `...Async` counterparts for both `Result` and `Option`. The token is optional
+and always last; cancellation is reported as `OperationCanceledException` and never converted into an error,
+because errors describe domain failures.
 
 ```csharp
 Task<Result<string, RopError>> chained =
@@ -195,6 +247,33 @@ Semantics:
 `Rop.TryAsync`, `Rop.SequenceAsync` and `Rop.TraverseAsync` follow the same rules. `SequenceAsync` awaits in
 enumeration order so the reported failure is deterministic; start tasks eagerly if they should run concurrently.
 
+The aggregating traversal helpers keep their no-short-circuit contract on the async track:
+`Rop.SequenceValidationAsync` and `Rop.TraverseValidationAsync` (plain and cancellation-aware mapper) await every
+task and return every error in source order. A faulted task surfaces as an exception rather than an error, and when
+several tasks fault the first fault wins while the rest are still observed.
+
+```csharp
+Result<IReadOnlyList<Order>, IReadOnlyList<RopError>> validated =
+    await Rop.TraverseValidationAsync(lines, (line, token) => ParseLineAsync(line, token), ct);
+
+// Same aggregation without async work
+Result<IReadOnlyList<Order>, IReadOnlyList<RopError>> sync =
+    Rop.TraverseValidation(lines, ParseLine);
+```
+
+`Option` mirrors that surface for map/bind/tee/filter, aggregation and LINQ. A synchronous `Option<T>` can be
+lifted directly with the async
+`MapSomeAsync` / `BindSomeAsync` / `BindNoneAsync` / `TeeSomeAsync` / `TeeNoneAsync` / `FilterAsync`
+overloads; `Opt.CombineAsync` / `ZipAsync` await every input, while `Opt.SequenceAsync` / `TraverseAsync`
+await in order and stop at the first `None`. `Task<Option<T>>` supports query syntax through
+`Select` / `SelectMany` / `Where`:
+
+```csharp
+Option<string> name = await GetUserAsync(id, ct)
+    .MapSomeAsync(user => user.Name, ct)
+    .FilterAsync(value => value.Length > 0, ct);
+```
+
 ## Boundaries
 
 Exceptions become domain values in exactly one place:
@@ -203,6 +282,10 @@ Exceptions become domain values in exactly one place:
 Result<int, RopError> parsed = Rop.Try(() => int.Parse(text), ex => RopError.FromException(ex, "E_PARSE"));
 Result<int, RopError> byCode = Rop.Try(() => int.Parse(text), code: "E_PARSE");
 
+// Side-effecting boundaries keep the result composable via Unit
+Result<Unit, RopError> saved = Rop.Try(() => repository.Save(order), ex => RopError.FromException(ex, "E_SAVE"));
+Task<Result<Unit, RopError>> sent = Rop.TryAsync(() => gateway.SendAsync(order, ct), "E_SEND", ct);
+
 Result<string, RopError> required = Rop.FromNullable(maybeName, () => RopError.Create("E_NULL", "name required"));
 Result<int, RopError> requiredAge  = Rop.FromNullableValue(maybeAge, () => RopError.Create("E_AGE", "age required"));
 ```
@@ -210,7 +293,28 @@ Result<int, RopError> requiredAge  = Rop.FromNullableValue(maybeAge, () => RopEr
 - `OperationCanceledException` is always rethrown, never converted.
 - A boundary function returning `null` yields `Err` with code `E_NULL_RESULT` — an `Ok(null)` is never produced
   by `Try`.
-- `Rop.Switch` lifts a plain function without catching; `Rop.TrySwitch` lifts it with exception conversion.
+- `Rop.Switch` / `Rop.TrySwitch` lift a plain function without and with exception conversion; `Rop.SwitchAsync` /
+  `Rop.TrySwitchAsync` are the awaited counterparts. They adapt a function, they do not consume an existing result
+  (that is `Switch`/`SwitchAsync` on `Result`).
+- `Rop.Try(Action, ...)` and `Rop.TryAsync(Func<Task>, ...)` cover boundaries with no payload; they return
+  `Result<Unit, RopError>` so the outcome still flows through the normal combinators.
+- Do not pass a `Task`-returning lambda to the synchronous `Rop.Try<T>`: the `Task` would become the success payload.
+  Use `Rop.TryAsync` for asynchronous work.
+
+## Parsing
+
+`Rop.Parse<T>` and `Rop.TryParse<T>` use the invariant culture and the static abstract `IParsable<T>` contract.
+A parse failure echoes the offending input in the message and in `Details` as `input=<quoted>`, so the error is
+self-describing without logging the raw payload separately.
+
+```csharp
+Result<int, RopError> quantity = Rop.Parse<int>(raw, "E_QUANTITY");
+// Err: Code=E_QUANTITY, Message='abc' is not a valid Int32., Details=input="abc"
+```
+
+The echo is bounded to 64 characters, truncates on a code-point boundary, and escapes quotes, backslashes and
+control characters. `null` renders as the literal `null` instead of an empty pair of quotes, so "missing" and
+"empty" stay distinguishable.
 
 ## LINQ
 
@@ -235,6 +339,9 @@ var sum = from a in Opt.Some(1)
 - `Option<T>` never contains `null`; map nullable results with `BindSomeNullable` / `BindSomeNullableValue`.
 - `ToNullable` is the only place the library hands out `null` for reference types; cross back with
   `Opt.FromNullable` at the consuming boundary.
+- Collection helpers treat `null` as a programming error: `TryFirst`, `TryLast`, `TryFind` and the projecting
+  `Choose` throw `ArgumentNullException` when the element, stored value or mapped value is `null`, instead of
+  producing `Some(null)` or a null list entry. Filter the sequence or lift with `Opt.FromNullable` first.
 
 ```csharp
 Result<string, RopError> name =
@@ -254,6 +361,18 @@ Result<string, RopError> name =
 4. **No null on the public surface.** Aggregations return empty collections, never `null`.
 5. **No reflection on hot paths, no boxing of the core types.**
 6. **`default(Option<T>)` is `None`; `default(Result<,>)` is undefined** — never rely on it.
+
+### Scope decisions
+
+Three larger topics are deliberately caller-owned (ADR 0010):
+
+- **Arity stops at three.** `Combine`/`Zip`/`Validate` cover 2 and 3 inputs; larger aggregations use a record, a
+  collection with `SequenceValidation`/`TraverseValidation`, or nested calls.
+- **Concurrency policy stays at the call site.** The async helpers are sequential or await-all; for bounded fan-out
+  compose `Task.WhenAll`/`Parallel.ForEachAsync` at the boundary. The library never throttles or creates a token
+  source.
+- **`IAsyncEnumerable<T>` is composed, not wrapped.** Materialize with `await foreach` and pass the results to
+  `Rop.SequenceAsync`/`SequenceValidationAsync` (or `Opt.SequenceAsync`).
 
 ## API map
 
@@ -277,13 +396,18 @@ Rop.Combine(a, b, merger)                     Rop.Combine(a, b, c, merger)
 Rop.Zip(a, b)                                 Rop.Zip(a, b, c)
 Rop.Validate(a, b, merger)                    Rop.Validate(a, b, c, merger)
 Rop.Sequence(results)                         Rop.SequenceValidation(results)
-Rop.Traverse(source, mapper)                  Rop.Partition(results)
+Rop.Traverse(source, mapper)                  Rop.TraverseValidation(source, mapper)
+Rop.Partition(results)
 ToValidation() / ToSingleError() / ToSingleError(combine)
 Rop.Try(func, errorFactory) / Rop.Try(func, code)
+Rop.Try(action, errorFactory) / Rop.Try(action, code)                 -> Result<Unit, RopError>
 Rop.TryAsync(func, errorFactory, ct) / Rop.TryAsync(func, code, ct)
+Rop.TryAsync(action, errorFactory, ct) / Rop.TryAsync(action, code, ct) -> Task<Result<Unit, RopError>>
 Rop.Switch(func) / Rop.TrySwitch(func, errorFactory)
+Rop.SwitchAsync(func) / Rop.TrySwitchAsync(func, errorFactory)
 Rop.FromNullable(value, errorFactory) / Rop.FromNullableValue(value, errorFactory)
 Rop.SequenceAsync(tasks, ct) / Rop.TraverseAsync(source, mapper, ct)
+Rop.SequenceValidationAsync(tasks, ct) / Rop.TraverseValidationAsync(source, mapper, ct)
 Select / SelectMany
 ```
 
@@ -297,6 +421,7 @@ BindOkAsync (async binder | CT-aware binder)                       on Task<Resul
 BindErrAsync(async fallback | CT-aware fallback)                   on Task<Result<,>> and Result<,>
 TeeOkAsync / TeeErrAsync (async action | CT-aware action)
 CombineAsync (2, 3) / ValidateAsync (2, 3) / ZipAsync (2, 3) / PartitionAsync
+SequenceValidationAsync / TraverseValidationAsync (async | CT-aware mapper)
 Select / SelectMany on Task<Result<,>> (async LINQ)
 ```
 
@@ -305,13 +430,16 @@ Select / SelectMany on Task<Result<,>> (async LINQ)
 ```text
 Opt.Some / Opt.None / Opt.FromNullable / Opt.FromNullableValue / Opt.When
 Opt.Combine (2, 3) / Opt.Zip (2, 3) / Opt.Sequence / Opt.Traverse / Opt.Values
+Opt.CombineAsync (2, 3) / Opt.ZipAsync (2, 3)
+Opt.SequenceAsync / Opt.TraverseAsync (async | CT-aware mapper)
 MapSome / TeeSome / TeeNone / Filter / MapSomeValue
 BindSome / BindSomeNullable / BindSomeNullableValue / BindNone / BindNoneValue
 Flatten / Match / OrThrow
-RequireSome(error|factory) / ToOption / ToNullable / ToNullableValue / Transpose
-AsTask / MapSomeAsync (3) / BindSomeAsync (3) / BindNoneAsync (2)
-TeeSomeAsync (2) / TeeNoneAsync (2) / FilterAsync (sync|async predicate)
-Select / SelectMany / Where
+RequireSome(error|factory) / ToOption / ToEither(value|factory) / ToNullable / ToNullableValue / Transpose
+AsTask / MapSomeAsync (sync on Task; async | CT-aware on Option and Task)
+BindSomeAsync (async | CT-aware) / BindNoneAsync (async | CT-aware)
+TeeSomeAsync (2) / TeeNoneAsync (2) / FilterAsync (sync | async | CT-aware)
+Select / SelectMany / Where (Option and Task sources)
 ```
 
 ### Collection, terminals, parsing and the general union (1.1)
@@ -322,7 +450,26 @@ SuccessIf / FailureIf (value | factory)                          (Rop)
 Rop.Parse<T> / Rop.TryParse<T>                                   (invariant culture, IParsable<T>)
 Switch / SwitchAsync / SwitchFirst / MatchFirst                  (ResultTerminalExtensions)
 FailIf / ThenEnsure                                              (ResultEnsureExtensions)
-Either.Left / Either.Right / Match / MapLeft / MapRight / Swap / ToResult
+Either.Left / Either.Right / Match / MapLeft / MapRight / Swap / ToResult / ToOption
+Result<,>.ToEither / Option<>.ToEither (value | factory)
+```
+
+### Custom error types
+
+Every entry below keeps an identical `RopError` overload; the `TErr` form is additive.
+
+```text
+FromNullable<TOk,TErr>(value, errorFactory)            FromNullableValue<TOk,TErr>(value, errorFactory)
+SuccessIf<T,TErr>(condition, value, error|factory)     FailureIf<T,TErr>(condition, value, error|factory)
+RequireNotNull<T,TErr>(errorFactory)                   Either.ToResult<TErr>(errorFactory)
+ToSingleError<T,TErr>()                                ToSingleError<T,TErr>(combine)
+Try<T,TErr>(func, errorFactory, nullResultErrorFactory)
+Try<TErr>(action, errorFactory)
+TryAsync<T,TErr>(func, errorFactory, nullResultErrorFactory, ct)
+TryAsync<TErr>(action, errorFactory, ct)
+TrySwitch<T,TOut,TErr>(func, errorFactory, nullResultErrorFactory)
+TrySwitchAsync<T,TOut,TErr>(func, errorFactory, nullResultErrorFactory)
+Parse<T,TErr>(value, Func<ParseFailure,TErr>, code = "E_PARSE")
 ```
 
 ## Anti-patterns
@@ -353,7 +500,16 @@ The library started from an early draft specification. The still-valid decisions
 corrections such as the `...Value` suffix for nullable value-type helpers) are recorded in
 [`docs/adr/0001-core-design-decisions.md`](docs/adr/0001-core-design-decisions.md). API additions and the
 rationale for capabilities that remain deliberately out of scope are recorded in
-[`docs/adr/0002-api-gap-remediation.md`](docs/adr/0002-api-gap-remediation.md).
+[`docs/adr/0002-api-gap-remediation.md`](docs/adr/0002-api-gap-remediation.md). Option asynchronous parity is
+recorded in [`docs/adr/0003-option-async-parity.md`](docs/adr/0003-option-async-parity.md), validation traversal
+in [`docs/adr/0004-validation-traversal.md`](docs/adr/0004-validation-traversal.md), lossless error aggregation in
+[`docs/adr/0005-lossless-error-aggregation.md`](docs/adr/0005-lossless-error-aggregation.md), asynchronous
+boundaries in [`docs/adr/0006-async-boundaries.md`](docs/adr/0006-async-boundaries.md), diagnostics in
+[`docs/adr/0007-diagnostics.md`](docs/adr/0007-diagnostics.md), model bridging in
+[`docs/adr/0008-model-bridges.md`](docs/adr/0008-model-bridges.md), the null-element policy in
+[`docs/adr/0009-null-elements.md`](docs/adr/0009-null-elements.md), the concurrency/streaming scope in
+[`docs/adr/0010-concurrency-and-streaming-scope.md`](docs/adr/0010-concurrency-and-streaming-scope.md), and
+custom error types in [`docs/adr/0011-custom-error-types.md`](docs/adr/0011-custom-error-types.md).
 
 ## Repository layout
 

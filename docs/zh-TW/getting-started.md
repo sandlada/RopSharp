@@ -61,12 +61,19 @@ RopError error = RopError.Create(
 
 RopError boundary = RopError.FromException(exception, "E_IO"); // 只有這裡會帶 Cause
 RopError retagged = error.WithCode("E_USER");
+
+RopError aggregate = RopError.Combine([nameError, amountError]);
+IReadOnlyList<RopError> leaves = aggregate.InnerErrors; // 原始錯誤，依傳入順序
 ```
 
 - `Code`／`Message` 不可為空白；空白屬於程式錯誤（`ArgumentException`）。
 - `Details` 可為 `null`，但不可為空白字串。
-- 相等性比 `Code`、`Message`、`Details`，**不比較 `Cause`**（避免堆疊差異）。
-- `RopError.Combine(errors)` 將非空清單合併為 `E_MULTIPLE`。
+- `Kind` 是粗略分類（`Failure`、`Validation`、`NotFound`、`Conflict`、`Unauthorized`、`Forbidden`、`Unexpected`、
+  `Timeout`、`Unavailable`、`RateLimited`），供傳輸層對映使用；精確分支請用 `Code`。新值只會附加，請把 enum 視為開放集合。
+- 相等性比 `Kind`、`Code`、`Message`、`Details`，**不比較 `Cause` 與 `InnerErrors`**（避免堆疊與結構差異）。
+- `InnerErrors` 永不為 `null`：一般錯誤是空清單，`Combine` 的聚合則保留每個原始錯誤（不攤平，巢狀聚合維持巢狀）；
+  `WithCode` 等 `With*` 方法會一併保留。
+- `RopError.Combine(errors)` 將非空清單合併為 `E_MULTIPLE`；只傳一個元素時直接回傳該錯誤，不再包一層。
 - 慣例：`E_<DOMAIN>[_<REASON>]`，全大寫加底線。
 
 ## 短路 vs 聚合（兩種語義，永不混用）
@@ -90,6 +97,7 @@ Result<Order, RopError> merged = validated.ToSingleError(RopError.Combine);
 ```
 
 `Sequence`／`Traverse`／`Partition` 接受 `IEnumerable<T>`，但**立即物化一次**。空集合回傳 `Ok([])`／`Some([])`，永不回傳 `null`。
+`SequenceValidation`／`TraverseValidation` 遵循相同的集合規則，但採聚合語義：每個元素都會被映射，所有錯誤依元素順序回傳。
 
 ## Option 快速上手
 
@@ -117,6 +125,14 @@ Result<int, RopError> required = Opt.None<int>().RequireSome(RopError.Create("E_
 
 // Result -> Option：丟棄錯誤
 Option<int> optional = Rop.Err<int>(error).ToOption();
+
+// Result/Option -> Either：Ok/Some -> Right，Err/None -> Left
+Either<RopError, int> fromResult = Rop.Ok(42).ToEither();
+Either<string, int>  fromOption = Opt.None<int>().ToEither("missing");
+Result<int, RopError> roundTrip = fromResult.ToResult(reason => reason);
+
+// Either -> Option：只保留 Right，Left 會被丟棄
+Option<int> present = Either.Right<string, int>(1).ToOption();
 
 // Option <-> Nullable
 string? back = Opt.Some("x").ToNullable();          // 引用型別
@@ -154,11 +170,24 @@ Task<Result<string, RopError>> ctAware =
 `Rop.TryAsync`、`Rop.SequenceAsync`、`Rop.TraverseAsync` 規則相同；`SequenceAsync` 依列舉順序逐一
 await，確保回報的錯誤具決定性（要並行請在呼叫端先啟動 Task）。
 
+聚合遍歷在非同步軌也維持「不短路」契約：`Rop.SequenceValidationAsync` 與 `Rop.TraverseValidationAsync`
+（含 CT-aware mapper 重載）會等待所有 Task，並依來源順序回傳所有錯誤。Task 擲出的例外一律往外拋，
+不視為領域錯誤；多個 Task 同時失敗時以第一個例外為準，其餘仍會被觀察。
+
+`Option` 也補齊了同樣的非同步表面：同步 `Option<T>` 可直接使用 `MapSomeAsync`／`BindSomeAsync`／
+`BindNoneAsync`／`TeeSomeAsync`／`TeeNoneAsync`／`FilterAsync`；`Opt.CombineAsync`／`ZipAsync` 會等待
+所有輸入，`Opt.SequenceAsync`／`TraverseAsync` 依序等待並在第一個 `None` 短路。`Task<Option<T>>` 也
+支援 `Select`／`SelectMany`／`Where` 查詢語法。
+
 ## 邊界：例外只在此處變成值
 
 ```csharp
 Result<int, RopError> parsed = Rop.Try(() => int.Parse(text), ex => RopError.FromException(ex, "E_PARSE"));
 Result<int, RopError> byCode = Rop.Try(() => int.Parse(text), code: "E_PARSE");
+
+// 沒有回傳值的邊界：用 Unit 保持結果可組合
+Result<Unit, RopError> saved = Rop.Try(() => repository.Save(order), ex => RopError.FromException(ex, "E_SAVE"));
+Task<Result<Unit, RopError>> sent = Rop.TryAsync(() => gateway.SendAsync(order, ct), "E_SEND", ct);
 
 Result<string, RopError> name =
     Rop.FromNullable(maybeName, () => RopError.Create("E_NULL", "name required"));
@@ -169,7 +198,23 @@ Result<int, RopError> age =
 
 - `OperationCanceledException` 永遠原樣拋出。
 - 邊界函數回傳 `null` → `Err`，代碼 `E_NULL_RESULT`；`Try` 永不產生 `Ok(null)`。
-- `Rop.Switch` 純抬升（不捕例外）；`Rop.TrySwitch` 抬升並轉例外。
+- `Rop.Switch` 純抬升（不捕例外）；`Rop.TrySwitch` 抬升並轉例外；`Rop.SwitchAsync`／`Rop.TrySwitchAsync` 是等待版本。
+  它們只負責「抬升函數」，不是 `Result` 上的 `Switch`／`SwitchAsync` 終端。
+- `Rop.Try(Action, …)`／`Rop.TryAsync(Func<Task>, …)` 處理沒有回傳值的邊界，回傳 `Result<Unit, RopError>`。
+- 不要把回傳 `Task` 的 lambda 傳給同步 `Rop.Try<T>`：`Task` 會變成成功值；非同步工作請用 `Rop.TryAsync`。
+
+## 解析
+
+`Rop.Parse<T>`／`Rop.TryParse<T>` 使用 invariant culture 與 `IParsable<T>`。解析失敗時，錯誤會同時在訊息與
+`Details`（`input=<quoted>`）回顯原始輸入，讓錯誤本身就能定位問題，不必另外記錄原始 payload。
+
+```csharp
+Result<int, RopError> quantity = Rop.Parse<int>(raw, "E_QUANTITY");
+// Err: Code=E_QUANTITY, Message='abc' is not a valid Int32., Details=input="abc"
+```
+
+回顯上限為 64 個 code point，會在不切開 surrogate pair 的前提下截斷，並轉義引號、反斜線與控制字元；
+`null` 會顯示為字面 `null`，與空字串區分。
 
 ## LINQ
 
@@ -200,6 +245,9 @@ Result<string, RopError> name =
 
 - `Option<T>` 永不含 `null`；可空映射請用 `BindSomeNullable`／`BindSomeNullableValue`。
 - `ToNullable` 是程式庫唯一產生 `null` 的地方（引用型別）；回到 Option 請用 `Opt.FromNullable`。
+- 集合輔助方法把 `null` 視為程式錯誤：`TryFirst`、`TryLast`、`TryFind` 與帶 mapper 的 `Choose` 遇到
+  `null` 元素、字典值或映射結果時拋 `ArgumentNullException`，訊息會指出來源（`source` 或 `mapper`）；
+  `Option` 不會產生 `Some(null)`，也不會把 `null` 放進結果清單。
 
 ## 命名對照
 
@@ -235,8 +283,16 @@ Result<string, RopError> name =
 - `Rop.SuccessIf`／`Rop.FailureIf`、`Rop.Parse<T>`／`Rop.TryParse<T>`（`IParsable<T>`、invariant culture）。
 - `Switch`／`SwitchAsync`／`MatchFirst`／`SwitchFirst`、`FailIf`／`ThenEnsure`。
 - 非同步聚合：`CombineAsync`、`ValidateAsync`、`ZipAsync`、`PartitionAsync`（皆支援取消）。
+- 驗證遍歷：`Rop.SequenceValidation`、`Rop.TraverseValidation`，以及
+  `Rop.SequenceValidationAsync`、`Rop.TraverseValidationAsync`（支援取消與 CT-aware mapper）。
 - 非同步 LINQ：`Task<Result<,>>` 上的 `Select`／`SelectMany`。
 - `Either<TLeft,TRight>` 與 `RopErrorKind`（`RopError.Kind`）。
+- `RopError.InnerErrors`：`RopError.Combine` 保留每個原始錯誤，不再只留下摘要。
+- 非同步邊界與抬升：`Rop.Try(Action)`、`Rop.TryAsync(Func<Task>)`、`Rop.SwitchAsync`、`Rop.TrySwitchAsync`。
+- 診斷品質：`RopErrorKind` 新增 `Timeout`／`Unavailable`／`RateLimited`；`Rop.Parse` 在 `Details` 回顯輸入。
+- 模型橋接：`Result.ToEither`、`Option.ToEither`、`Either.ToOption` 補齊三種模型間的轉換。
+- 集合輔助方法統一 null 元素政策：一律拋 `ArgumentNullException`，訊息指出來源。
+- 範圍決策（ADR 0010）：高元數 `Combine`/`Validate`、有界並發、`IAsyncEnumerable` 皆留在呼叫端組合，核心不新增 API。
 
 ## 與初稿的已知差異
 

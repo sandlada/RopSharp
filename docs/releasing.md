@@ -12,6 +12,10 @@ The package follows [Semantic Versioning](https://semver.org/):
 
 `CHANGELOG.md` is updated in the same commit as the version bump.
 
+The development default version lives in `Sandlada.RopSharp/Sandlada.RopSharp.csproj` (`<Version>`); a `vX.Y.Z`
+tag or the manual `version` input overrides it at pack time (`-p:Version=...`), so the csproj value is the local
+default and the fallback for `dotnet pack -c Release`.
+
 ## Pre-flight checklist
 
 ```bash
@@ -43,8 +47,8 @@ The workflow requires a repository secret named `NUGET_API_KEY` with push permis
 ## Manual publish (fallback)
 
 ```bash
-dotnet pack -c Release -p:Version=1.0.1
-dotnet nuget push Sandlada.RopSharp/bin/Release/Sandlada.RopSharp.1.0.1.nupkg \
+dotnet pack -c Release -p:Version=0.0.1
+dotnet nuget push Sandlada.RopSharp/bin/Release/Sandlada.RopSharp.0.0.1.nupkg \
   --api-key "$NUGET_API_KEY" --source https://api.nuget.org/v3/index.json
 ```
 
@@ -55,13 +59,13 @@ The two mechanics `release.yml` relies on can be exercised without a NuGet key:
 ```bash
 # Version override (the tag path strips the leading "v" before passing this).
 dotnet pack Sandlada.RopSharp/Sandlada.RopSharp.csproj -c Release \
-  -p:Version=1.0.1 -o artifacts/release-test
-# Verified: package file names and nuspec <version> become 1.0.1, and README/LICENSE are still packed.
+  -p:Version=0.0.1 -o artifacts/release-test
+# Verified: package file names and nuspec <version> become 0.0.1, and README/LICENSE are still packed.
 
 # Push to a folder source. The path must be absolute; relative paths are rejected as an invalid source.
-dotnet nuget push artifacts/release-test/Sandlada.RopSharp.1.0.1.nupkg \
+dotnet nuget push artifacts/release-test/Sandlada.RopSharp.0.0.1.nupkg \
   --source "E:\path\to\local-feed"
-dotnet nuget push artifacts/release-test/Sandlada.RopSharp.1.0.1.nupkg \
+dotnet nuget push artifacts/release-test/Sandlada.RopSharp.0.0.1.nupkg \
   --source "E:\path\to\local-feed" --skip-duplicate
 # Verified: the command shape used by release.yml works. Folder sources warn that --skip-duplicate
 # is not supported (they overwrite); nuget.org honours it and rejects duplicates otherwise.
