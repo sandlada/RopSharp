@@ -102,4 +102,69 @@ public sealed class OptionEnumerableTests
         await Assert.That(TestSupport.Catch(() => new[] { 1 }.TryFirst(null!)) is ArgumentNullException).IsTrue();
         await Assert.That(TestSupport.Catch(() => Opt.Some(1).Execute(null!)) is ArgumentNullException).IsTrue();
     }
+
+    [Test]
+    public async Task TryFirst_WithNullFirstElement_Throws()
+    {
+        var source = new string?[] { null, "b" };
+
+        var exception = TestSupport.Catch(() => source.TryFirst());
+
+        await Assert.That(exception is ArgumentNullException).IsTrue();
+        await Assert.That(((ArgumentNullException)exception!).Message.Contains("null element")).IsTrue();
+    }
+
+    [Test]
+    public async Task TryFirst_WithPredicate_MatchingNullElement_Throws()
+    {
+        var source = new string?[] { null, "a" };
+
+        var exception = TestSupport.Catch(() => source.TryFirst(_ => true));
+
+        await Assert.That(exception is ArgumentNullException).IsTrue();
+    }
+
+    [Test]
+    public async Task TryLast_WithNullLastElement_Throws()
+    {
+        var source = new string?[] { "a", null };
+
+        var exception = TestSupport.Catch(() => source.TryLast());
+
+        await Assert.That(exception is ArgumentNullException).IsTrue();
+    }
+
+    [Test]
+    public async Task TryLast_WithPredicate_MatchingNullElement_Throws()
+    {
+        var source = new string?[] { null, "b" };
+
+        var exception = TestSupport.Catch(() => source.TryLast(value => value is null));
+
+        await Assert.That(exception is ArgumentNullException).IsTrue();
+    }
+
+    [Test]
+    public async Task TryFind_WithNullStoredValue_Throws()
+    {
+        IReadOnlyDictionary<string, string> source = new Dictionary<string, string>
+        {
+            ["a"] = null!,
+        };
+
+        var exception = TestSupport.Catch(() => source.TryFind("a"));
+
+        await Assert.That(exception is ArgumentNullException).IsTrue();
+    }
+
+    [Test]
+    public async Task Choose_WithMapperReturningNull_Throws()
+    {
+        var source = new[] { Opt.Some(1) };
+
+        var exception = TestSupport.Catch(() => source.Choose<int, string>(_ => null!));
+
+        await Assert.That(exception is ArgumentNullException).IsTrue();
+        await Assert.That(((ArgumentNullException)exception!).ParamName).IsEqualTo("mapper");
+    }
 }
