@@ -1,0 +1,91 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build-test:
+    name: build, test, pack
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out
+        uses: actions/checkout@v4
+
+      - name: Install the SDK from global.json
+        uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+          dotnet-quality: preview
+
+      - name: Restore (locked)
+        run: dotnet restore --locked-mode
+
+      - name: Format
+        run: dotnet format RopSharp.sln --verify-no-changes --no-restore
+
+      - name: Build
+        run: dotnet build -c Release --no-restore
+
+      - name: Test
+        run: dotnet test -c Release --no-build
+
+      - name: Coverage
+        run: >
+          dotnet test Sandlada.RopSharp.Tests/Sandlada.RopSharp.Tests.csproj
+          -c Release -f net11.0 --no-build
+          --coverage
+          --coverage-output-format cobertura
+          --coverage-output cobertura.net11.xml
+          --results-directory artifacts/coverage
+
+      - name: Upload coverage
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage
+          path: artifacts/coverage/cobertura.net11.xml
+          if-no-files-found: error
+
+      - name: Pack
+        run: dotnet pack -c Release --no-build
+
+      - name: Upload packages
+        uses: actions/upload-artifact@v4
+        with:
+          name: packages
+          path: |
+            Sandlada.RopSharp/bin/Release/*.nupkg
+            Sandlada.RopSharp/bin/Release/*.snupkg
+          if-no-files-found: error
+
+  native-aot:
+    name: native AOT publish
+    runs-on: windows-latest
+
+    steps:
+      - name: Check out
+        uses: actions/checkout@v4
+
+      - name: Install the SDK from global.json
+        uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+          dotnet-quality: preview
+
+      - name: Restore (locked)
+        run: dotnet restore --locked-mode
+
+      - name: Publish native image
+        run: >
+          dotnet publish Sandlada.RopSharp.Sample/Sandlada.RopSharp.Sample.csproj
+          -c Release -r win-x64 -p:PublishAot=true
+          -o artifacts/aot
+
+      - name: Run native image
+        run: artifacts/aot/Sandlada.RopSharp.Sample.exe
