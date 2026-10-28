@@ -17,5 +17,5 @@ await ScenarioRunner.RunAsync(
     SettlementScenario.RunAsync);
 
 await ScenarioRunner.RunAsync(
-    "4. New in 1.1 - parsing, Either, async aggregation and collection helpers",
+    "4. Parsing, Either, async aggregation and collection helpers",
     NewApiScenario.RunAsync);
