@@ -19,6 +19,9 @@ Everything in this file is reproducible on a clean checkout. The commands are th
 | XML docs | build + XML inventory | every documented member has a summary |
 | Trim runtime | see below | trimmed sample prints the same output as the normal build |
 | Native AOT | see below | PublishAot=true native image builds and runs |
+| AOT size | see below | native image stays within 10% of `perf/aot-size.baseline.json` |
+| Allocation gate | `dotnet test -c Release` | zero-byte and per-call byte budgets hold (see `performance-budgets.md`) |
+| Benchmarks | see `benchmarks.md` | no `ZeroMeasurement`, no configuration issues, results exported |
 
 ## Test matrix
 
@@ -254,10 +257,27 @@ compiling any library code; that is an environment prerequisite, not a library d
 AOT safety on every build, and the `native-aot` CI job (GitHub-hosted Windows runner with the C++ workload)
 publishes and runs the sample with `PublishAot=true` on every push.
 
+The `native-aot` job additionally checks the size of the native image against `perf/aot-size.baseline.json` and fails
+when it grows by more than 10%. The size of the binary is the cheapest stable signal that a change made the library
+heavier, and unlike a timing threshold it does not depend on the machine. Updating the baseline is a dedicated pull
+request that must explain the cause; see [`perf/README.md`](../perf/README.md).
+
+## Allocation gate
+
+Allocation is deterministic, so it is enforced as a test rather than a benchmark. `Sandlada.RopSharp.Tests/PerformanceGuards/`
+asserts that the hot paths allocate nothing and that the aggregating paths stay inside per-call byte budgets, and it
+runs in every `dotnet test`. The measured values, the measurement method and the procedure for changing a budget are
+documented in [`performance-budgets.md`](performance-budgets.md).
+
 ## Benchmark baselines
 
 See [`benchmarks.md`](benchmarks.md). Re-run with:
 
 ```bash
-dotnet run -c Release --project Sandlada.RopSharp.Benchmarks -- --filter "*"
+dotnet run -c Release --project Sandlada.RopSharp.Benchmarks -- --filter "*Benchmarks*"
 ```
+
+The job, diagnoser, exporters and validators are pinned in `BenchConfig`, so no extra flags are needed. A run must
+finish without `ZeroMeasurement` warnings and without configuration issues, and must export JSON and Markdown to
+`artifacts/benchmarks/`. The nightly `benchmarks.yml` workflow stores the time trend in the `gh-pages` branch; time
+regressions alert but never fail the workflow, because the allocation gate is the blocking signal.

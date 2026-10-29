@@ -1,0 +1,72 @@
+name: Benchmarks
+
+on:
+  schedule:
+    - cron: "17 3 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: benchmarks
+  cancel-in-progress: false
+
+jobs:
+  bench:
+    name: run benchmarks and store the trend
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out
+        uses: actions/checkout@v4
+
+      - name: Install the SDK from global.json
+        uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+          dotnet-quality: preview
+
+      # The benchmark project targets net10.0, so the .NET 10 runtime has to be present to execute it.
+      - name: Install the .NET 10 runtime
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Restore (locked)
+        run: dotnet restore --locked-mode
+
+      - name: Run benchmarks
+        run: >
+          dotnet run -c Release --project Sandlada.RopSharp.Benchmarks --
+          --filter "*Benchmarks*"
+
+      # BenchmarkDotNet writes one report per class; the trend action reads a single file.
+      - name: Merge the reports
+        run: >
+          jq -s '{Benchmarks: (map(.Benchmarks) | add)}'
+          artifacts/benchmarks/results/*-report-full-compressed.json
+          > artifacts/benchmarks/results/all.json
+
+      - name: Upload benchmark results
+        uses: actions/upload-artifact@v4
+        with:
+          name: benchmark-results
+          path: artifacts/benchmarks
+          if-no-files-found: error
+
+      # Time numbers on a shared runner are noisy, so a regression raises an alert but never fails the workflow.
+      # The allocation gate that blocks a merge lives in the test suite (PerformanceGuards).
+      - name: Store the trend
+        uses: benchmark-action/github-action-benchmark@v1
+        with:
+          name: RopSharp
+          tool: benchmarkdotnet
+          output-file-path: artifacts/benchmarks/results/all.json
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          auto-push: true
+          gh-pages-branch: gh-pages
+          benchmark-data-dir-path: dev/bench
+          alert-threshold: "150%"
+          comment-on-alert: false
+          fail-on-alert: false

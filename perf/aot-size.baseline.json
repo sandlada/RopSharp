@@ -1,0 +1,13 @@
+{
+  "$schema": "https://json.schemastore.org/base.json",
+  "description": "Native AOT size baseline for the sample application. Update in a dedicated pull request that explains the cause.",
+  "artifact": "Sandlada.RopSharp.Sample.exe",
+  "bytes": 2008064,
+  "tolerancePercent": 10,
+  "measuredWith": {
+    "sdk": "11.0.100-rc.1.26425.128",
+    "runtimeIdentifier": "win-x64",
+    "os": "Windows 11 (10.0.26100)",
+    "command": "dotnet publish Sandlada.RopSharp.Sample/Sandlada.RopSharp.Sample.csproj -c Release -r win-x64 -p:PublishAot=true -o artifacts/aot"
+  }
+}

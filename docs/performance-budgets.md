@@ -42,6 +42,18 @@ Bytes per call, measured on the reference run (16 elements for the collection pa
 The short-circuit budget is lower than the success budget because `Sequence` stops at the first error and does not
 materialize the remaining values, which is the documented contract.
 
+## The gate was verified against a real regression
+
+A temporary allocation was introduced into `Result.MapOk` (`_ = new object[1];`) and the suite was run:
+
+```text
+failed ResultMapOk_OnOk_AllocatesNothing (311ms)
+[Test Failure] AssertionException: Expected to be 0
+```
+
+The probe was then reverted, the file returned byte-for-byte to its committed state, and the guard returned to
+green. The zero-byte assertions therefore detect a real allocation, not just a change in the measurement itself.
+
 ## Changing a budget
 
 1. Measure the new value with the same harness and record the old and new numbers.

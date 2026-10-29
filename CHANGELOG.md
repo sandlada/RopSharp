@@ -95,7 +95,16 @@ additive work below into the first version.
   workflow `version` input at pack time. The same steps remain runnable manually (`dotnet build` / `dotnet test` /
   `dotnet pack` / `dotnet nuget push`).
 - Allocation gate in the test suite (`PerformanceGuards/`): zero-byte assertions for the hot success and failure paths of `Result`, `Option` and `Either`, and per-call byte budgets (1.2x the measured value) for `Rop.Sequence`, `Rop.SequenceValidation` and `RopError.Combine`. Budgets are documented in `docs/performance-budgets.md`.
-
+- Benchmark suite: shared `BenchConfig` pins the ShortRun job, memory diagnoser, JSON and Markdown exporters and
+  rejects non-optimized builds and groups without exactly one baseline; `EnvironmentProvenance` records the commit
+  and host of every run.
+- Benchmark coverage for `Either`, for `Rop.Sequence`/`SequenceValidation`/`Partition`/`Opt.Values` at
+  N = 16 / 256 / 4096, for `RopError.Combine` at N = 1 / 10 / 100 / 1000, and for parsing, async, collection and
+  equality paths.
+- Native AOT size gate: the CI native image job fails when `Sandlada.RopSharp.Sample.exe` grows more than 10% over
+  the baseline in `perf/aot-size.baseline.json`.
+- Nightly benchmark workflow (`benchmarks.yml`) that stores the time trend in the `gh-pages` branch. Time
+  regressions alert but never fail the workflow; the allocation gate that blocks a merge lives in the test suite.
 ### Changed
 
 - `RopError` equality and hashing now include `Kind`; existing errors default to `Failure`.
@@ -140,6 +149,8 @@ additive work below into the first version.
 - Trim-published self-contained sample verified end to end (`PublishTrimmed` + run).
 - Native AOT publish + run verified locally and in CI.
 - BenchmarkDotNet baselines for the hot Result/Option combinators published in `docs/benchmarks.md`.
+- Allocation gate in the test suite: zero-byte assertions for the hot paths and per-call byte budgets for the
+  aggregating paths, enforced by every `dotnet test` run (see `docs/performance-budgets.md`).
 - XML documentation for every public member.
 - `AnalysisMode=All` with justified local suppressions.
 - `EnablePackageValidation` enabled; NuGet package ships both target frameworks, XML docs, README and LICENSE.

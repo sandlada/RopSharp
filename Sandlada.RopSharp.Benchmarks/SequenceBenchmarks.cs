@@ -56,5 +56,9 @@ public class SequenceBenchmarks
         Rop.SequenceValidation(_allErr);
 
     [Benchmark]
+    public Result<IReadOnlyList<int>, IReadOnlyList<RopError>> SequenceValidation_HalfErr() =>
+        Rop.SequenceValidation(_errorAtMiddle);
+
+    [Benchmark]
     public (IReadOnlyList<int> Oks, IReadOnlyList<RopError> Errs) Partition_Half() => Rop.Partition(_errorAtMiddle);
 }

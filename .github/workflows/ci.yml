@@ -89,3 +89,17 @@ jobs:
 
       - name: Run native image
         run: artifacts/aot/Sandlada.RopSharp.Sample.exe
+
+      - name: Check native image size
+        shell: bash
+        run: |
+          baseline=$(jq -r .bytes perf/aot-size.baseline.json)
+          tolerance=$(jq -r .tolerancePercent perf/aot-size.baseline.json)
+          artifact=$(jq -r .artifact perf/aot-size.baseline.json)
+          size=$(wc -c < "artifacts/aot/$artifact" | tr -d '[:space:]')
+          limit=$(( baseline * (100 + tolerance) / 100 ))
+          echo "native image: $size bytes (baseline $baseline, limit $limit)"
+          if [ "$size" -gt "$limit" ]; then
+            echo "::error::$artifact grew by more than $tolerance% over the baseline in perf/aot-size.baseline.json"
+            exit 1
+          fi
