@@ -1,18 +1,17 @@
 using BenchmarkDotNet.Attributes;
 using Sandlada.RopSharp;
+using Sandlada.RopSharp.Benchmarks.Infrastructure;
 
 namespace Sandlada.RopSharp.Benchmarks;
 
 /// <summary>
-/// Hot-path baselines for the <see cref="Result{TOk,TErr}"/> surface. Decorated with the memory diagnoser so the
-/// "no allocation per combinator" promise is visible next to the timings.
+/// Hot-path baselines for the <see cref="Result{TOk,TErr}"/> surface. Sequence and partition scaling lives in
+/// <see cref="SequenceBenchmarks"/>.
 /// </summary>
-[MemoryDiagnoser]
+[Config(typeof(BenchConfig))]
 public class ResultBenchmarks
 {
     private static readonly RopError Error = RopError.Create("E_BENCH", "failure");
-    private static readonly Result<int, RopError>[] Successes =
-        [.. Enumerable.Range(0, 16).Select(static value => Rop.Ok(value))];
 
     private readonly Result<int, RopError> _ok = Rop.Ok(42);
     private readonly Result<int, RopError> _err = Rop.Err<int>(Error);
@@ -35,14 +34,4 @@ public class ResultBenchmarks
     [Benchmark]
     public Result<int, IReadOnlyList<RopError>> Validate_Two() =>
         Rop.Validate(Rop.Ok(1), Rop.Ok(2), static (first, second) => first + second);
-
-    [Benchmark]
-    public Result<IReadOnlyList<int>, RopError> Sequence_16() => Rop.Sequence(Successes);
-
-    [Benchmark]
-    public Result<IReadOnlyList<int>, IReadOnlyList<RopError>> SequenceValidation_16() =>
-        Rop.SequenceValidation(Successes);
-
-    [Benchmark]
-    public (IReadOnlyList<int> Oks, IReadOnlyList<RopError> Errs) Partition_16() => Rop.Partition(Successes);
 }
