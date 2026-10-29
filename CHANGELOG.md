@@ -94,6 +94,7 @@ additive work below into the first version.
   version stays `0.0.1` until a release is tagged; the published version is supplied by the `vX.Y.Z` tag or the
   workflow `version` input at pack time. The same steps remain runnable manually (`dotnet build` / `dotnet test` /
   `dotnet pack` / `dotnet nuget push`).
+- Allocation gate in the test suite (`PerformanceGuards/`): zero-byte assertions for the hot success and failure paths of `Result`, `Option` and `Either`, and per-call byte budgets (1.2x the measured value) for `Rop.Sequence`, `Rop.SequenceValidation` and `RopError.Combine`. Budgets are documented in `docs/performance-budgets.md`.
 
 ### Changed
 
@@ -132,7 +133,7 @@ additive work below into the first version.
 - Zero-warning build for `net10.0` and `net11.0` with warnings treated as errors.
 - Public API baseline enforced by `Microsoft.CodeAnalysis.PublicApiAnalyzers`.
 - Formatting verified with `dotnet format --verify-no-changes`.
-- TUnit test suite (1398 runs, 699 per target framework) covering algebraic laws, invariants, guards,
+- TUnit test suite (1426 runs, 713 per target framework) covering algebraic laws, invariants, guards,
   aggregation, LINQ, Option async parity, validation traversal, async boundaries, diagnostics, model bridges,
   custom error types, async/cancellation semantics, single enumeration and concurrent readers.
 - Code coverage measured with `Microsoft.Testing.Extensions.CodeCoverage` (100% lines / 99.84% branches on `net11.0`).

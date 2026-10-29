@@ -1,5 +1,5 @@
-# Normalize text files; .editorconfig requires CRLF for the working tree.
-* text=auto eol=crlf
+# Normalize text files to LF in the repository and in the working tree; .editorconfig requires end_of_line = lf.
+* text=auto eol=lf
 
 *.nupkg binary
 *.snupkg binary

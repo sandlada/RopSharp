@@ -10,7 +10,7 @@ Everything in this file is reproducible on a clean checkout. The commands are th
 | Restore | `dotnet restore --locked-mode` | success (test/benchmark lock files enforced) |
 | Formatting | `dotnet format RopSharp.sln --verify-no-changes --no-restore` | exit 0 |
 | Build | `dotnet build -c Release` | 0 warnings, 0 errors |
-| Tests | `dotnet test -c Release --no-build` | 1398 passed (699 on net10.0 + 699 on net11.0), 0 failed, 0 skipped |
+| Tests | `dotnet test -c Release --no-build` | 1426 passed (713 on net10.0 + 713 on net11.0), 0 failed, 0 skipped |
 | Coverage | see below | 100% line / 99.84% branch (library, net11.0) |
 | Pack | `dotnet pack -c Release` | `Sandlada.RopSharp.0.0.1.nupkg` + `.snupkg`; package validation enabled |
 | Consumer | local feed + fresh console apps | package restores on `net10.0` and `net11.0`, programs run |
@@ -22,7 +22,7 @@ Everything in this file is reproducible on a clean checkout. The commands are th
 
 ## Test matrix
 
-The test project targets `net10.0` and `net11.0`; `dotnet test` runs both (699 tests per target, 1398 runs). Consecutive runs were green with no flakes. Coverage includes:
+The test project targets `net10.0` and `net11.0`; `dotnet test` runs both (713 tests per target, 1426 runs). Consecutive runs were green with no flakes. Coverage includes:
 
 - construction/equality/invariants and null guards,
 - the algebraic laws (functor/monad laws for both tracks, plus seeded randomized checks),
