@@ -14,6 +14,14 @@ namespace Sandlada.RopSharp;
 /// <para>
 /// All conversions are explicit: the library never switches models implicitly (ADR 0001, D5).
 /// </para>
+/// <code><![CDATA[
+/// var outcome = Rop.Try(() => OrderFixtures.Charge(OrderFixtures.Sample), "E_CHARGE")
+///     .ToEither()
+///     .MapRight(static payment => payment.Id);
+///
+/// // Right("pay-ord-1001") when the charge succeeded,
+/// // Left(E_CHARGE) when it failed - the crossing keeps the payload on the right.
+/// ]]></code>
 /// </remarks>
 public static class EitherBridgeExtensions
 {
@@ -31,6 +39,14 @@ public static class EitherBridgeExtensions
     /// <remarks>
     /// The mapping is lossless in both directions; <see cref="Either{TLeft,TRight}.ToResult"/> recovers the original
     /// result when the left branch is converted back with an identity error factory.
+    /// <code><![CDATA[
+    /// var outcome = Rop.Try(() => OrderFixtures.Charge(OrderFixtures.Sample), "E_CHARGE")
+    ///     .ToEither()
+    ///     .MapRight(static payment => payment.Id);
+    ///
+    /// // Right("pay-ord-1001") when the charge succeeded,
+    /// // Left(E_CHARGE) when it failed - the crossing keeps the payload on the right.
+    /// ]]></code>
     /// </remarks>
     public static Either<TErr, TOk> ToEither<TOk, TErr>(this Result<TOk, TErr> result) =>
         result.TryGetOk(out var value)
@@ -49,6 +65,14 @@ public static class EitherBridgeExtensions
     /// <remarks>
     /// The left value is validated eagerly, even when the option is <c>Some</c>; use the factory overload when
     /// building it is expensive.
+    /// <code><![CDATA[
+    /// var outcome = Opt.FromNullable(OrderFixtures.Sample.Customer.Address)
+    ///     .ToEither("no shipping address on file")
+    ///     .MapRight(static shipping => shipping.City);
+    ///
+    /// // Right("London") when the address is present,
+    /// // Left(no shipping address on file) when it is missing - the crossing is explicit.
+    /// ]]></code>
     /// </remarks>
     public static Either<TLeft, T> ToEither<TLeft, T>(this Option<T> option, TLeft left)
     {
@@ -68,6 +92,18 @@ public static class EitherBridgeExtensions
     /// <returns><c>Right(value)</c> for <c>Some</c>; <c>Left(leftFactory())</c> for <c>None</c>.</returns>
     /// <exception cref="ArgumentNullException"><paramref name="leftFactory"/> is <see langword="null"/>.</exception>
     /// <exception cref="InvalidOperationException">The factory returned <see langword="null"/>.</exception>
+    /// <remarks>
+    /// The factory runs only on the empty track, so an expensive left value costs nothing when the option carries
+    /// a value.
+    /// <code><![CDATA[
+    /// var outcome = Opt.FromNullable(OrderFixtures.CustomerWithoutAddress.Address)
+    ///     .ToEither(static () => "no shipping address on file")
+    ///     .MapRight(static shipping => shipping.City);
+    ///
+    /// // Right(city) when the address is present,
+    /// // Left(no shipping address on file) when it is missing - the factory runs only for None.
+    /// ]]></code>
+    /// </remarks>
     public static Either<TLeft, T> ToEither<TLeft, T>(this Option<T> option, Func<TLeft> leftFactory)
     {
         ArgumentNullException.ThrowIfNull(leftFactory);

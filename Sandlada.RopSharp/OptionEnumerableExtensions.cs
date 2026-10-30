@@ -20,6 +20,14 @@ namespace Sandlada.RopSharp;
 /// <see cref="ArgumentNullException"/> instead of turning the null into <c>Some(null)</c> or a null list entry. Use
 /// <see cref="Opt.FromNullable{T}(T)"/> or filter the sequence when nulls are expected data.
 /// </para>
+/// <code><![CDATA[
+/// var firstLine = OrderFixtures.Sample.Lines
+///     .TryFirst(static line => line.Quantity > 0)
+///     .MapSome(static line => line.Sku);
+///
+/// // Some("SKU-1") when a matching line exists,
+/// // None when the sequence is empty or nothing matches.
+/// ]]></code>
 /// </remarks>
 public static class OptionEnumerableExtensions
 {
@@ -38,6 +46,17 @@ public static class OptionEnumerableExtensions
     /// <exception cref="ArgumentNullException">
     /// <paramref name="source"/> is <see langword="null"/>, or its first element is <see langword="null"/>.
     /// </exception>
+    /// <remarks>
+    /// The sequence is enumerated only as far as the first element, so the probe is cheap even on a long list.
+    /// <code><![CDATA[
+    /// var firstLine = OrderFixtures.Sample.Lines
+    ///     .TryFirst()
+    ///     .MapSome(static line => line.Sku);
+    ///
+    /// // Some("SKU-1") when the sequence has an element,
+    /// // None when it is empty - only the first element is read.
+    /// ]]></code>
+    /// </remarks>
     public static Option<T> TryFirst<T>(this IEnumerable<T> source)
     {
         ArgumentNullException.ThrowIfNull(source);
@@ -58,6 +77,17 @@ public static class OptionEnumerableExtensions
     /// <paramref name="source"/> or <paramref name="predicate"/> is <see langword="null"/>, or the matching element is
     /// <see langword="null"/>.
     /// </exception>
+    /// <remarks>
+    /// The sequence stops at the first match, so the predicate is not evaluated on the remaining elements.
+    /// <code><![CDATA[
+    /// var firstLine = OrderFixtures.Sample.Lines
+    ///     .TryFirst(static line => line.Quantity > 1)
+    ///     .MapSome(static line => line.Sku);
+    ///
+    /// // Some("SKU-1") when a matching line exists,
+    /// // None when nothing matches - the sequence stops at the first match.
+    /// ]]></code>
+    /// </remarks>
     public static Option<T> TryFirst<T>(this IEnumerable<T> source, Func<T, bool> predicate)
     {
         ArgumentNullException.ThrowIfNull(source);
@@ -82,6 +112,17 @@ public static class OptionEnumerableExtensions
     /// <exception cref="ArgumentNullException">
     /// <paramref name="source"/> is <see langword="null"/>, or its last element is <see langword="null"/>.
     /// </exception>
+    /// <remarks>
+    /// The whole sequence is enumerated, because the last element is only known at the end.
+    /// <code><![CDATA[
+    /// var lastLine = OrderFixtures.Sample.Lines
+    ///     .TryLast()
+    ///     .MapSome(static line => line.Sku);
+    ///
+    /// // Some("SKU-2") when the sequence has an element,
+    /// // None when it is empty - the whole sequence is read.
+    /// ]]></code>
+    /// </remarks>
     public static Option<T> TryLast<T>(this IEnumerable<T> source)
     {
         ArgumentNullException.ThrowIfNull(source);
@@ -107,6 +148,17 @@ public static class OptionEnumerableExtensions
     /// <paramref name="source"/> or <paramref name="predicate"/> is <see langword="null"/>, or the matching element is
     /// <see langword="null"/>.
     /// </exception>
+    /// <remarks>
+    /// The whole sequence is enumerated, because the last match is only known at the end.
+    /// <code><![CDATA[
+    /// var lastLine = OrderFixtures.Sample.Lines
+    ///     .TryLast(static line => line.Quantity > 0)
+    ///     .MapSome(static line => line.Sku);
+    ///
+    /// // Some("SKU-2") when a matching line exists,
+    /// // None when nothing matches - the whole sequence is read.
+    /// ]]></code>
+    /// </remarks>
     public static Option<T> TryLast<T>(this IEnumerable<T> source, Func<T, bool> predicate)
     {
         ArgumentNullException.ThrowIfNull(source);
@@ -136,6 +188,17 @@ public static class OptionEnumerableExtensions
     /// <exception cref="ArgumentNullException">
     /// <paramref name="source"/> is <see langword="null"/>, or the stored value is <see langword="null"/>.
     /// </exception>
+    /// <remarks>
+    /// The dictionary is not enumerated: the lookup is a single hash probe.
+    /// <code><![CDATA[
+    /// IReadOnlyDictionary<string, decimal> prices = new Dictionary<string, decimal> { ["SKU-1"] = 19.50m };
+    /// var price = prices.TryFind("SKU-1")
+    ///     .BindNoneValue(0m);
+    ///
+    /// // Some(19.50) when the key exists,
+    /// // None becomes 0m when it does not - the dictionary is not enumerated.
+    /// ]]></code>
+    /// </remarks>
     public static Option<TValue> TryFind<TKey, TValue>(
         this IReadOnlyDictionary<TKey, TValue> source,
         TKey key)
@@ -154,6 +217,17 @@ public static class OptionEnumerableExtensions
     /// <param name="source">The options to choose from. Enumerated once.</param>
     /// <returns>A read-only list of present values; empty when no option is <c>Some</c>.</returns>
     /// <exception cref="ArgumentNullException"><paramref name="source"/> is <see langword="null"/>.</exception>
+    /// <remarks>
+    /// <c>Choose</c> keeps the present values and drops the empty ones. The result is a list, so it is never
+    /// <see langword="null"/> and never empty-by-accident.
+    /// <code><![CDATA[
+    /// var skus = new[] { Opt.Some("SKU-1"), Opt.None<string>(), Opt.Some("SKU-2") }
+    ///     .Choose();
+    ///
+    /// // ["SKU-1", "SKU-2"] keeps the Some(sku) entries,
+    /// // None is dropped instead of failing - the result is never null.
+    /// ]]></code>
+    /// </remarks>
     public static IReadOnlyList<T> Choose<T>(this IEnumerable<Option<T>> source) => Opt.Values(source);
 
     /// <summary>
@@ -168,6 +242,17 @@ public static class OptionEnumerableExtensions
     /// <paramref name="source"/> or <paramref name="mapper"/> is <see langword="null"/>, or the mapper returned
     /// <see langword="null"/>.
     /// </exception>
+    /// <remarks>
+    /// The mapping happens only for the present values, and the mapper must not return null: an option never
+    /// contains null.
+    /// <code><![CDATA[
+    /// var totals = new[] { Opt.Some(OrderFixtures.Sample), Opt.None<Order>() }
+    ///     .Choose(static order => order.Total);
+    ///
+    /// // [44.00] keeps the Some(order) entries,
+    /// // None is dropped instead of failing - the mapper never sees an empty option.
+    /// ]]></code>
+    /// </remarks>
     public static IReadOnlyList<TOut> Choose<T, TOut>(
         this IEnumerable<Option<T>> source,
         Func<T, TOut> mapper)
@@ -193,6 +278,17 @@ public static class OptionEnumerableExtensions
     /// <param name="option">The source option.</param>
     /// <param name="action">The side effect. Exceptions propagate.</param>
     /// <exception cref="ArgumentNullException"><paramref name="action"/> is <see langword="null"/>.</exception>
+    /// <remarks>
+    /// <c>Execute</c> is the side-effecting counterpart of <see cref="OptionExtensions.TeeSome{T}(Option{T},Action{T})"/>:
+    /// it returns nothing, so it can only be the last statement of a pipeline.
+    /// <code><![CDATA[
+    /// Opt.FromNullable(OrderFixtures.Sample.Customer.Address)
+    ///     .Execute(static shipping => Console.WriteLine($"shipping to {shipping.City}"));
+    ///
+    /// // Some(address) runs the action,
+    /// // None does nothing - Execute returns no value.
+    /// ]]></code>
+    /// </remarks>
     public static void Execute<T>(this Option<T> option, Action<T> action)
     {
         ArgumentNullException.ThrowIfNull(action);
@@ -209,6 +305,16 @@ public static class OptionEnumerableExtensions
     /// <param name="option">The source option.</param>
     /// <param name="action">The side effect. Exceptions propagate.</param>
     /// <exception cref="ArgumentNullException"><paramref name="action"/> is <see langword="null"/>.</exception>
+    /// <remarks>
+    /// <c>ExecuteNoValue</c> is the empty-track counterpart of <see cref="Execute{T}(Option{T},Action{T})"/>.
+    /// <code><![CDATA[
+    /// Opt.FromNullable(OrderFixtures.CustomerWithoutAddress.Address)
+    ///     .ExecuteNoValue(static () => Console.WriteLine("no shipping address on file"));
+    ///
+    /// // None runs the action,
+    /// // Some(address) does nothing - ExecuteNoValue returns no value.
+    /// ]]></code>
+    /// </remarks>
     public static void ExecuteNoValue<T>(this Option<T> option, Action action)
     {
         ArgumentNullException.ThrowIfNull(action);
