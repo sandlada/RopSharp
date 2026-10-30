@@ -23,6 +23,15 @@ namespace Sandlada.RopSharp;
 /// (<c>mapper</c>, <c>binder</c>, <c>fallback</c>, <c>action</c> or <c>predicate</c>).
 /// </para>
 /// </remarks>
+/// <remarks>
+/// <code><![CDATA[
+/// var city = await Opt.FromNullable(OrderFixtures.Sample.Customer.Address)
+///     .MapSomeAsync(static shipping => Task.FromResult(shipping.City));
+///
+/// // Some("London") when the customer has a shipping address,
+/// // None when the address is missing - the async surface mirrors the synchronous one.
+/// ]]></code>
+/// </remarks>
 [SuppressMessage(
     "ApiDesign",
     "RS0026:Do not add multiple overloads with optional parameters",
@@ -35,6 +44,16 @@ public static class OptionAsyncExtensions
     /// <typeparam name="T">The value type.</typeparam>
     /// <param name="option">The source option.</param>
     /// <returns>A task that completes with <paramref name="option"/>.</returns>
+    /// <remarks>
+    /// <code><![CDATA[
+    /// var city = await Opt.FromNullable(OrderFixtures.Sample.Customer.Address)
+    ///     .AsTask()
+    ///     .MapSomeAsync(static shipping => shipping.City);
+    ///
+    /// // Some("London") when the customer has a shipping address,
+    /// // None when the address is missing - AsTask only re-wraps the option.
+    /// ]]></code>
+    /// </remarks>
     public static Task<Option<T>> AsTask<T>(this Option<T> option) => Task.FromResult(option);
 
     /// <summary>
@@ -46,6 +65,15 @@ public static class OptionAsyncExtensions
     /// <param name="mapper">Maps the value. Not evaluated for <c>None</c>.</param>
     /// <param name="cancellationToken">An optional cancellation token.</param>
     /// <returns><c>Some(mapper(value))</c> or <c>None</c>.</returns>
+    /// <remarks>
+    /// <code><![CDATA[
+    /// var city = await Task.FromResult(Opt.FromNullable(OrderFixtures.Sample.Customer.Address))
+    ///     .MapSomeAsync(static shipping => shipping.City);
+    ///
+    /// // Some("London") when the address is present,
+    /// // None when it is missing - the mapper never runs on the empty track.
+    /// ]]></code>
+    /// </remarks>
     [OverloadResolutionPriority(0)]
     public static async Task<Option<TOut>> MapSomeAsync<T, TOut>(
         this Task<Option<T>> task,
@@ -74,6 +102,15 @@ public static class OptionAsyncExtensions
     /// <param name="mapper">Maps the value asynchronously. Not evaluated for <c>None</c>.</param>
     /// <param name="cancellationToken">An optional cancellation token.</param>
     /// <returns><c>Some(mapped)</c> or <c>None</c>.</returns>
+    /// <remarks>
+    /// <code><![CDATA[
+    /// var city = await Task.FromResult(Opt.FromNullable(OrderFixtures.Sample.Customer.Address))
+    ///     .MapSomeAsync(static shipping => Task.FromResult(shipping.City));
+    ///
+    /// // Some("London") when the address is present,
+    /// // None when it is missing - the asynchronous mapper never runs on the empty track.
+    /// ]]></code>
+    /// </remarks>
     [OverloadResolutionPriority(1)]
     public static async Task<Option<TOut>> MapSomeAsync<T, TOut>(
         this Task<Option<T>> task,
@@ -102,6 +139,15 @@ public static class OptionAsyncExtensions
     /// <param name="mapper">Maps the value asynchronously, receiving the same token.</param>
     /// <param name="cancellationToken">An optional cancellation token.</param>
     /// <returns><c>Some(mapped)</c> or <c>None</c>.</returns>
+    /// <remarks>
+    /// <code><![CDATA[
+    /// var city = await Task.FromResult(Opt.FromNullable(OrderFixtures.Sample.Customer.Address))
+    ///     .MapSomeAsync(static (shipping, token) => Task.FromResult(shipping.City));
+    ///
+    /// // Some("London") when the address is present,
+    /// // None when it is missing - the mapper receives the same token.
+    /// ]]></code>
+    /// </remarks>
     [OverloadResolutionPriority(2)]
     public static async Task<Option<TOut>> MapSomeAsync<T, TOut>(
         this Task<Option<T>> task,
@@ -130,6 +176,15 @@ public static class OptionAsyncExtensions
     /// <param name="binder">Maps the value to an option asynchronously. Not evaluated for <c>None</c>.</param>
     /// <param name="cancellationToken">An optional cancellation token.</param>
     /// <returns>The bound option, or <c>None</c>.</returns>
+    /// <remarks>
+    /// <code><![CDATA[
+    /// var city = await Task.FromResult(Opt.FromNullable(OrderFixtures.Sample.Customer.Address))
+    ///     .BindSomeAsync(static shipping => Task.FromResult(Opt.Some(shipping.City)));
+    ///
+    /// // Some("London") when the address is present and the binding succeeded,
+    /// // None when it is missing - the binder never runs on the empty track.
+    /// ]]></code>
+    /// </remarks>
     [OverloadResolutionPriority(0)]
     public static async Task<Option<TOut>> BindSomeAsync<T, TOut>(
         this Task<Option<T>> task,
@@ -158,6 +213,15 @@ public static class OptionAsyncExtensions
     /// <param name="binder">Maps the value to an option asynchronously, receiving the same token.</param>
     /// <param name="cancellationToken">An optional cancellation token.</param>
     /// <returns>The bound option, or <c>None</c>.</returns>
+    /// <remarks>
+    /// <code><![CDATA[
+    /// var city = await Task.FromResult(Opt.FromNullable(OrderFixtures.Sample.Customer.Address))
+    ///     .BindSomeAsync(static (shipping, token) => Task.FromResult(Opt.Some(shipping.City)));
+    ///
+    /// // Some("London") when the address is present and the binding succeeded,
+    /// // None when it is missing - the binder receives the same token.
+    /// ]]></code>
+    /// </remarks>
     [OverloadResolutionPriority(1)]
     public static async Task<Option<TOut>> BindSomeAsync<T, TOut>(
         this Task<Option<T>> task,
@@ -186,6 +250,15 @@ public static class OptionAsyncExtensions
     /// <param name="binder">Maps the value to an option asynchronously.</param>
     /// <param name="cancellationToken">An optional cancellation token.</param>
     /// <returns>The bound option, or <c>None</c>.</returns>
+    /// <remarks>
+    /// <code><![CDATA[
+    /// var city = await Opt.FromNullable(OrderFixtures.Sample.Customer.Address)
+    ///     .BindSomeAsync(static shipping => Task.FromResult(Opt.Some(shipping.City)));
+    ///
+    /// // Some("London") when the address is present and the binding succeeded,
+    /// // None when it is missing - the binder never runs on the empty track.
+    /// ]]></code>
+    /// </remarks>
     [OverloadResolutionPriority(0)]
     public static async Task<Option<TOut>> BindSomeAsync<T, TOut>(
         this Option<T> option,
@@ -211,6 +284,15 @@ public static class OptionAsyncExtensions
     /// <param name="fallback">Produces the fallback option asynchronously. Not evaluated for <c>Some</c>.</param>
     /// <param name="cancellationToken">An optional cancellation token.</param>
     /// <returns>The original option, or the fallback option.</returns>
+    /// <remarks>
+    /// <code><![CDATA[
+    /// var city = await Task.FromResult(Opt.FromNullable(OrderFixtures.CustomerWithoutAddress.Address))
+    ///     .BindNoneAsync(static () => Task.FromResult(Opt.Some(OrderFixtures.Sample.Customer.Address!)));
+    ///
+    /// // Some(address) when the address is missing,
+    /// // Some(city) when it is present - the fallback never runs on the present track.
+    /// ]]></code>
+    /// </remarks>
     [OverloadResolutionPriority(0)]
     public static async Task<Option<T>> BindNoneAsync<T>(
         this Task<Option<T>> task,
@@ -238,6 +320,15 @@ public static class OptionAsyncExtensions
     /// <param name="fallback">Produces the fallback option asynchronously, receiving the same token.</param>
     /// <param name="cancellationToken">An optional cancellation token.</param>
     /// <returns>The original option, or the fallback option.</returns>
+    /// <remarks>
+    /// <code><![CDATA[
+    /// var city = await Task.FromResult(Opt.FromNullable(OrderFixtures.CustomerWithoutAddress.Address))
+    ///     .BindNoneAsync(static (token) => Task.FromResult(Opt.Some(OrderFixtures.Sample.Customer.Address!)));
+    ///
+    /// // Some(address) when the address is missing,
+    /// // Some(city) when it is present - the fallback receives the same token.
+    /// ]]></code>
+    /// </remarks>
     [OverloadResolutionPriority(1)]
     public static async Task<Option<T>> BindNoneAsync<T>(
         this Task<Option<T>> task,
@@ -265,6 +356,15 @@ public static class OptionAsyncExtensions
     /// <param name="action">The asynchronous side effect. Exceptions propagate.</param>
     /// <param name="cancellationToken">An optional cancellation token.</param>
     /// <returns>The same option value.</returns>
+    /// <remarks>
+    /// <code><![CDATA[
+    /// await Task.FromResult(Opt.FromNullable(OrderFixtures.Sample.Customer.Address))
+    ///     .TeeSomeAsync(static shipping => Task.CompletedTask);
+    ///
+    /// // Some(address) runs the side effect and keeps the option,
+    /// // None skips it - the option itself is never changed.
+    /// ]]></code>
+    /// </remarks>
     [OverloadResolutionPriority(0)]
     public static async Task<Option<T>> TeeSomeAsync<T>(
         this Task<Option<T>> task,
@@ -292,6 +392,15 @@ public static class OptionAsyncExtensions
     /// <param name="action">The asynchronous side effect, receiving the same token.</param>
     /// <param name="cancellationToken">An optional cancellation token.</param>
     /// <returns>The same option value.</returns>
+    /// <remarks>
+    /// <code><![CDATA[
+    /// await Task.FromResult(Opt.FromNullable(OrderFixtures.Sample.Customer.Address))
+    ///     .TeeSomeAsync(static (shipping, token) => Task.CompletedTask);
+    ///
+    /// // Some(address) runs the side effect and keeps the option,
+    /// // None skips it - the action receives the same token.
+    /// ]]></code>
+    /// </remarks>
     [OverloadResolutionPriority(1)]
     public static async Task<Option<T>> TeeSomeAsync<T>(
         this Task<Option<T>> task,
@@ -319,6 +428,15 @@ public static class OptionAsyncExtensions
     /// <param name="action">The asynchronous side effect. Exceptions propagate.</param>
     /// <param name="cancellationToken">An optional cancellation token.</param>
     /// <returns>The same option value.</returns>
+    /// <remarks>
+    /// <code><![CDATA[
+    /// await Task.FromResult(Opt.FromNullable(OrderFixtures.CustomerWithoutAddress.Address))
+    ///     .TeeNoneAsync(static () => Task.CompletedTask);
+    ///
+    /// // None runs the side effect and keeps the option,
+    /// // Some(address) skips it - the option itself is never changed.
+    /// ]]></code>
+    /// </remarks>
     [OverloadResolutionPriority(0)]
     public static async Task<Option<T>> TeeNoneAsync<T>(
         this Task<Option<T>> task,
@@ -346,6 +464,15 @@ public static class OptionAsyncExtensions
     /// <param name="action">The asynchronous side effect, receiving the same token.</param>
     /// <param name="cancellationToken">An optional cancellation token.</param>
     /// <returns>The same option value.</returns>
+    /// <remarks>
+    /// <code><![CDATA[
+    /// await Task.FromResult(Opt.FromNullable(OrderFixtures.CustomerWithoutAddress.Address))
+    ///     .TeeNoneAsync(static (token) => Task.CompletedTask);
+    ///
+    /// // None runs the side effect and keeps the option,
+    /// // Some(address) skips it - the action receives the same token.
+    /// ]]></code>
+    /// </remarks>
     [OverloadResolutionPriority(1)]
     public static async Task<Option<T>> TeeNoneAsync<T>(
         this Task<Option<T>> task,
@@ -373,6 +500,16 @@ public static class OptionAsyncExtensions
     /// <param name="predicate">The predicate. Not evaluated for <c>None</c>.</param>
     /// <param name="cancellationToken">An optional cancellation token.</param>
     /// <returns>The original option when the predicate holds; otherwise <c>None</c>.</returns>
+    /// <remarks>
+    /// <code><![CDATA[
+    /// var city = await Task.FromResult(Opt.FromNullable(OrderFixtures.Sample.Customer.Address))
+    ///     .FilterAsync(static shipping => shipping.Country is "GB")
+    ///     .MapSomeAsync(static shipping => shipping.City);
+    ///
+    /// // Some("London") when the address is in the UK,
+    /// // None when it is not - filtering never produces an error.
+    /// ]]></code>
+    /// </remarks>
     [OverloadResolutionPriority(0)]
     public static async Task<Option<T>> FilterAsync<T>(
         this Task<Option<T>> task,
@@ -400,6 +537,16 @@ public static class OptionAsyncExtensions
     /// <param name="predicate">The asynchronous predicate. Not evaluated for <c>None</c>.</param>
     /// <param name="cancellationToken">An optional cancellation token.</param>
     /// <returns>The original option when the predicate holds; otherwise <c>None</c>.</returns>
+    /// <remarks>
+    /// <code><![CDATA[
+    /// var city = await Task.FromResult(Opt.FromNullable(OrderFixtures.Sample.Customer.Address))
+    ///     .FilterAsync(static shipping => Task.FromResult(shipping.Country is "GB"))
+    ///     .MapSomeAsync(static shipping => shipping.City);
+    ///
+    /// // Some("London") when the address is in the UK,
+    /// // None when it is not - the asynchronous predicate never runs on the empty track.
+    /// ]]></code>
+    /// </remarks>
     [OverloadResolutionPriority(1)]
     public static async Task<Option<T>> FilterAsync<T>(
         this Task<Option<T>> task,
@@ -432,6 +579,15 @@ public static class OptionAsyncExtensions
     /// <returns><c>Some(mapped)</c> or <c>None</c>.</returns>
     /// <exception cref="OperationCanceledException">The token was cancelled before the mapper was invoked.</exception>
     /// <exception cref="InvalidOperationException">The mapper returned a null task.</exception>
+    /// <remarks>
+    /// <code><![CDATA[
+    /// var city = await Opt.FromNullable(OrderFixtures.Sample.Customer.Address)
+    ///     .MapSomeAsync(static shipping => Task.FromResult(shipping.City));
+    ///
+    /// // Some("London") when the address is present,
+    /// // None when it is missing - the asynchronous mapper never runs on the empty track.
+    /// ]]></code>
+    /// </remarks>
     [OverloadResolutionPriority(2)]
     public static async Task<Option<TOut>> MapSomeAsync<T, TOut>(
         this Option<T> option,
@@ -460,6 +616,15 @@ public static class OptionAsyncExtensions
     /// <returns><c>Some(mapped)</c> or <c>None</c>.</returns>
     /// <exception cref="OperationCanceledException">The token was cancelled before the mapper was invoked.</exception>
     /// <exception cref="InvalidOperationException">The mapper returned a null task.</exception>
+    /// <remarks>
+    /// <code><![CDATA[
+    /// var city = await Opt.FromNullable(OrderFixtures.Sample.Customer.Address)
+    ///     .MapSomeAsync(static (shipping, token) => Task.FromResult(shipping.City));
+    ///
+    /// // Some("London") when the address is present,
+    /// // None when it is missing - the mapper receives the same token.
+    /// ]]></code>
+    /// </remarks>
     [OverloadResolutionPriority(3)]
     public static async Task<Option<TOut>> MapSomeAsync<T, TOut>(
         this Option<T> option,
@@ -489,6 +654,15 @@ public static class OptionAsyncExtensions
     /// <returns>The bound option, or <c>None</c>.</returns>
     /// <exception cref="OperationCanceledException">The token was cancelled before the binder was invoked.</exception>
     /// <exception cref="InvalidOperationException">The binder returned a null task.</exception>
+    /// <remarks>
+    /// <code><![CDATA[
+    /// var city = await Opt.FromNullable(OrderFixtures.Sample.Customer.Address)
+    ///     .BindSomeAsync(static (shipping, token) => Task.FromResult(Opt.Some(shipping.City)));
+    ///
+    /// // Some("London") when the address is present and the binding succeeded,
+    /// // None when it is missing - the binder receives the same token.
+    /// ]]></code>
+    /// </remarks>
     [OverloadResolutionPriority(1)]
     public static async Task<Option<TOut>> BindSomeAsync<T, TOut>(
         this Option<T> option,
@@ -516,6 +690,15 @@ public static class OptionAsyncExtensions
     /// <returns>The original option, or the fallback option.</returns>
     /// <exception cref="OperationCanceledException">The token was cancelled before the fallback was invoked.</exception>
     /// <exception cref="InvalidOperationException">The fallback returned a null task.</exception>
+    /// <remarks>
+    /// <code><![CDATA[
+    /// var city = await Opt.FromNullable(OrderFixtures.CustomerWithoutAddress.Address)
+    ///     .BindNoneAsync(static () => Task.FromResult(Opt.Some(OrderFixtures.Sample.Customer.Address!)));
+    ///
+    /// // Some(address) when the address is missing,
+    /// // Some(city) when it is present - the fallback never runs on the present track.
+    /// ]]></code>
+    /// </remarks>
     [OverloadResolutionPriority(0)]
     public static async Task<Option<T>> BindNoneAsync<T>(
         this Option<T> option,
@@ -543,6 +726,15 @@ public static class OptionAsyncExtensions
     /// <returns>The original option, or the fallback option.</returns>
     /// <exception cref="OperationCanceledException">The token was cancelled before the fallback was invoked.</exception>
     /// <exception cref="InvalidOperationException">The fallback returned a null task.</exception>
+    /// <remarks>
+    /// <code><![CDATA[
+    /// var city = await Opt.FromNullable(OrderFixtures.CustomerWithoutAddress.Address)
+    ///     .BindNoneAsync(static (token) => Task.FromResult(Opt.Some(OrderFixtures.Sample.Customer.Address!)));
+    ///
+    /// // Some(address) when the address is missing,
+    /// // Some(city) when it is present - the fallback receives the same token.
+    /// ]]></code>
+    /// </remarks>
     [OverloadResolutionPriority(1)]
     public static async Task<Option<T>> BindNoneAsync<T>(
         this Option<T> option,
@@ -570,6 +762,15 @@ public static class OptionAsyncExtensions
     /// <returns>The same option value.</returns>
     /// <exception cref="OperationCanceledException">The token was cancelled before the action was invoked.</exception>
     /// <exception cref="InvalidOperationException">The action returned a null task.</exception>
+    /// <remarks>
+    /// <code><![CDATA[
+    /// await Opt.FromNullable(OrderFixtures.Sample.Customer.Address)
+    ///     .TeeSomeAsync(static shipping => Task.CompletedTask);
+    ///
+    /// // Some(address) runs the side effect and keeps the option,
+    /// // None skips it - the option itself is never changed.
+    /// ]]></code>
+    /// </remarks>
     [OverloadResolutionPriority(0)]
     public static async Task<Option<T>> TeeSomeAsync<T>(
         this Option<T> option,
@@ -597,6 +798,15 @@ public static class OptionAsyncExtensions
     /// <returns>The same option value.</returns>
     /// <exception cref="OperationCanceledException">The token was cancelled before the action was invoked.</exception>
     /// <exception cref="InvalidOperationException">The action returned a null task.</exception>
+    /// <remarks>
+    /// <code><![CDATA[
+    /// await Opt.FromNullable(OrderFixtures.Sample.Customer.Address)
+    ///     .TeeSomeAsync(static (shipping, token) => Task.CompletedTask);
+    ///
+    /// // Some(address) runs the side effect and keeps the option,
+    /// // None skips it - the action receives the same token.
+    /// ]]></code>
+    /// </remarks>
     [OverloadResolutionPriority(1)]
     public static async Task<Option<T>> TeeSomeAsync<T>(
         this Option<T> option,
@@ -624,6 +834,15 @@ public static class OptionAsyncExtensions
     /// <returns>The same option value.</returns>
     /// <exception cref="OperationCanceledException">The token was cancelled before the action was invoked.</exception>
     /// <exception cref="InvalidOperationException">The action returned a null task.</exception>
+    /// <remarks>
+    /// <code><![CDATA[
+    /// await Opt.FromNullable(OrderFixtures.CustomerWithoutAddress.Address)
+    ///     .TeeNoneAsync(static () => Task.CompletedTask);
+    ///
+    /// // None runs the side effect and keeps the option,
+    /// // Some(address) skips it - the option itself is never changed.
+    /// ]]></code>
+    /// </remarks>
     [OverloadResolutionPriority(0)]
     public static async Task<Option<T>> TeeNoneAsync<T>(
         this Option<T> option,
@@ -651,6 +870,15 @@ public static class OptionAsyncExtensions
     /// <returns>The same option value.</returns>
     /// <exception cref="OperationCanceledException">The token was cancelled before the action was invoked.</exception>
     /// <exception cref="InvalidOperationException">The action returned a null task.</exception>
+    /// <remarks>
+    /// <code><![CDATA[
+    /// await Opt.FromNullable(OrderFixtures.CustomerWithoutAddress.Address)
+    ///     .TeeNoneAsync(static (token) => Task.CompletedTask);
+    ///
+    /// // None runs the side effect and keeps the option,
+    /// // Some(address) skips it - the action receives the same token.
+    /// ]]></code>
+    /// </remarks>
     [OverloadResolutionPriority(1)]
     public static async Task<Option<T>> TeeNoneAsync<T>(
         this Option<T> option,
@@ -678,6 +906,16 @@ public static class OptionAsyncExtensions
     /// <returns>The original option when the predicate holds; otherwise <c>None</c>.</returns>
     /// <exception cref="OperationCanceledException">The token was cancelled before the predicate was invoked.</exception>
     /// <exception cref="InvalidOperationException">The predicate returned a null task.</exception>
+    /// <remarks>
+    /// <code><![CDATA[
+    /// var city = await Opt.FromNullable(OrderFixtures.Sample.Customer.Address)
+    ///     .FilterAsync(static shipping => Task.FromResult(shipping.Country is "GB"))
+    ///     .MapSomeAsync(static shipping => shipping.City);
+    ///
+    /// // Some("London") when the address is in the UK,
+    /// // None when it is not - the asynchronous predicate never runs on the empty track.
+    /// ]]></code>
+    /// </remarks>
     [OverloadResolutionPriority(1)]
     public static async Task<Option<T>> FilterAsync<T>(
         this Option<T> option,
@@ -707,6 +945,16 @@ public static class OptionAsyncExtensions
     /// <returns>The original option when the predicate holds; otherwise <c>None</c>.</returns>
     /// <exception cref="OperationCanceledException">The token was cancelled before the predicate was invoked.</exception>
     /// <exception cref="InvalidOperationException">The predicate returned a null task.</exception>
+    /// <remarks>
+    /// <code><![CDATA[
+    /// var city = await Opt.FromNullable(OrderFixtures.Sample.Customer.Address)
+    ///     .FilterAsync(static (shipping, token) => Task.FromResult(shipping.Country is "GB"))
+    ///     .MapSomeAsync(static shipping => shipping.City);
+    ///
+    /// // Some("London") when the address is in the UK,
+    /// // None when it is not - the predicate receives the same token.
+    /// ]]></code>
+    /// </remarks>
     [OverloadResolutionPriority(2)]
     public static async Task<Option<T>> FilterAsync<T>(
         this Option<T> option,
@@ -736,6 +984,16 @@ public static class OptionAsyncExtensions
     /// <returns>The original option when the predicate holds; otherwise <c>None</c>.</returns>
     /// <exception cref="OperationCanceledException">The token was cancelled before the predicate was invoked.</exception>
     /// <exception cref="InvalidOperationException">The predicate returned a null task.</exception>
+    /// <remarks>
+    /// <code><![CDATA[
+    /// var city = await Task.FromResult(Opt.FromNullable(OrderFixtures.Sample.Customer.Address))
+    ///     .FilterAsync(static (shipping, token) => Task.FromResult(shipping.Country is "GB"))
+    ///     .MapSomeAsync(static shipping => shipping.City);
+    ///
+    /// // Some("London") when the address is in the UK,
+    /// // None when it is not - the predicate receives the same token.
+    /// ]]></code>
+    /// </remarks>
     [OverloadResolutionPriority(2)]
     public static async Task<Option<T>> FilterAsync<T>(
         this Task<Option<T>> task,

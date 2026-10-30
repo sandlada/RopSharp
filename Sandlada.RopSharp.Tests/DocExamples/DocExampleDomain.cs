@@ -111,4 +111,28 @@ public static class OrderFixtures
 
         return new Shipment($"shp-{order.Id}", "Acme Express", $"TRK-{order.Id}-{payment.Id}");
     }
+
+    /// <summary>
+    /// The asynchronous form of <see cref="Charge"/>. The exception surfaces as a faulted task, which is what the
+    /// asynchronous boundaries are meant to capture.
+    /// </summary>
+    /// <param name="order">The order to charge.</param>
+    /// <returns>A task that completes with the captured payment.</returns>
+    public static async Task<Payment> ChargeAsync(Order order)
+    {
+        await Task.Yield();
+        return Charge(order);
+    }
+
+    /// <summary>
+    /// The asynchronous form of <see cref="Ship"/>. The exception surfaces as a faulted task.
+    /// </summary>
+    /// <param name="order">The order to ship.</param>
+    /// <param name="payment">The captured payment that authorizes the shipment.</param>
+    /// <returns>A task that completes with the created shipment.</returns>
+    public static async Task<Shipment> ShipAsync(Order order, Payment payment)
+    {
+        await Task.Yield();
+        return Ship(order, payment);
+    }
 }

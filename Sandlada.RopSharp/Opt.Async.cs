@@ -36,7 +36,19 @@ public static partial class Opt
     /// <param name="cancellationToken">An optional cancellation token.</param>
     /// <returns><c>Some(merger(a, b))</c> or <c>None</c>.</returns>
     /// <exception cref="OperationCanceledException">The token was cancelled while awaiting the inputs.</exception>
-    /// <remarks>Every input is awaited before the result is decided.</remarks>
+    /// <remarks>
+    /// Every input is awaited before the result is decided.
+    /// <code><![CDATA[
+    /// var summary = await Opt.CombineAsync(
+    ///         Task.FromResult(Opt.FromNullable(OrderFixtures.Sample.Customer.Address)),
+    ///         Task.FromResult(Opt.FromNullable(OrderFixtures.Sample.Customer.Name)),
+    ///         static (shipping, name) => $"{name} in {shipping.City}")
+    ///     .MapSomeAsync(static summary => summary.ToUpperInvariant());
+    ///
+    /// // Some("ADA LOVELACE IN LONDON") when both options carry a value,
+    /// // None when either is empty - the merger runs only when both are Some.
+    /// ]]></code>
+    /// </remarks>
     public static async Task<Option<TOut>> CombineAsync<T1, T2, TOut>(
         Task<Option<T1>> first,
         Task<Option<T2>> second,
@@ -69,7 +81,20 @@ public static partial class Opt
     /// <param name="cancellationToken">An optional cancellation token.</param>
     /// <returns><c>Some(merger(a, b, c))</c> or <c>None</c>.</returns>
     /// <exception cref="OperationCanceledException">The token was cancelled while awaiting the inputs.</exception>
-    /// <remarks>Every input is awaited before the result is decided.</remarks>
+    /// <remarks>
+    /// Every input is awaited before the result is decided.
+    /// <code><![CDATA[
+    /// var summary = await Opt.CombineAsync(
+    ///         Task.FromResult(Opt.FromNullable(OrderFixtures.Sample.Customer.Address)),
+    ///         Task.FromResult(Opt.FromNullable(OrderFixtures.Sample.Customer.Name)),
+    ///         Task.FromResult(Opt.FromNullableValue<int>(OrderFixtures.Sample.ItemCount)),
+    ///         static (shipping, name, count) => $"{name} in {shipping.City} ({count} items)")
+    ///     .MapSomeAsync(static summary => summary.ToUpperInvariant());
+    ///
+    /// // Some("ADA LOVELACE IN LONDON (3 ITEMS)") when all three carry a value,
+    /// // None when any of them is empty - the merger runs only when all are Some.
+    /// ]]></code>
+    /// </remarks>
     public static async Task<Option<TOut>> CombineAsync<T1, T2, T3, TOut>(
         Task<Option<T1>> first,
         Task<Option<T2>> second,
@@ -101,6 +126,18 @@ public static partial class Opt
     /// <param name="cancellationToken">An optional cancellation token.</param>
     /// <returns><c>Some((a, b))</c> or <c>None</c>.</returns>
     /// <exception cref="OperationCanceledException">The token was cancelled while awaiting the inputs.</exception>
+    /// <remarks>
+    /// <c>ZipAsync</c> is <see cref="CombineAsync{T1,T2,TOut}"/> with a tuple merger.
+    /// <code><![CDATA[
+    /// var name = await Opt.ZipAsync(
+    ///         Task.FromResult(Opt.FromNullable(OrderFixtures.Sample.Customer.Address)),
+    ///         Task.FromResult(Opt.FromNullable(OrderFixtures.Sample.Customer.Name)))
+    ///     .MapSomeAsync(static pair => pair.Item2);
+    ///
+    /// // Some("Ada Lovelace") when both options carry a value,
+    /// // None when either is empty - ZipAsync is CombineAsync with a tuple merger.
+    /// ]]></code>
+    /// </remarks>
     public static Task<Option<(T1, T2)>> ZipAsync<T1, T2>(
         Task<Option<T1>> first,
         Task<Option<T2>> second,
@@ -119,6 +156,19 @@ public static partial class Opt
     /// <param name="cancellationToken">An optional cancellation token.</param>
     /// <returns><c>Some((a, b, c))</c> or <c>None</c>.</returns>
     /// <exception cref="OperationCanceledException">The token was cancelled while awaiting the inputs.</exception>
+    /// <remarks>
+    /// <c>ZipAsync</c> is <see cref="CombineAsync{T1,T2,T3,TOut}"/> with a tuple merger.
+    /// <code><![CDATA[
+    /// var name = await Opt.ZipAsync(
+    ///         Task.FromResult(Opt.FromNullable(OrderFixtures.Sample.Customer.Address)),
+    ///         Task.FromResult(Opt.FromNullable(OrderFixtures.Sample.Customer.Name)),
+    ///         Task.FromResult(Opt.FromNullableValue<int>(OrderFixtures.Sample.ItemCount)))
+    ///     .MapSomeAsync(static triple => triple.Item2);
+    ///
+    /// // Some("Ada Lovelace") when all three options carry a value,
+    /// // None when any of them is empty - ZipAsync is CombineAsync with a tuple merger.
+    /// ]]></code>
+    /// </remarks>
     public static Task<Option<(T1, T2, T3)>> ZipAsync<T1, T2, T3>(
         Task<Option<T1>> first,
         Task<Option<T2>> second,
@@ -140,6 +190,14 @@ public static partial class Opt
     /// <remarks>
     /// Sequencing is deliberately sequential: options are awaited in enumeration order. Start the tasks eagerly at
     /// the call site if they should run concurrently. Tasks after the first <c>None</c> are not awaited.
+    /// <code><![CDATA[
+    /// var cities = await Opt.SequenceAsync(
+    ///         new[] { Task.FromResult(Opt.Some("London")), Task.FromResult(Opt.None<string>()) })
+    ///     .MapSomeAsync(static list => list.Count);
+    ///
+    /// // Some(1) when every option carries a value,
+    /// // None at the first empty option - SequenceAsync stops there.
+    /// ]]></code>
     /// </remarks>
     public static async Task<Option<IReadOnlyList<T>>> SequenceAsync<T>(
         IEnumerable<Task<Option<T>>> tasks,
@@ -182,7 +240,18 @@ public static partial class Opt
     /// The token was cancelled before the mapper was invoked for the next element (the mapper is then not called).
     /// </exception>
     /// <exception cref="InvalidOperationException">The mapper returned a null task.</exception>
-    /// <remarks>The mapper is not invoked after the first <c>None</c>.</remarks>
+    /// <remarks>
+    /// The mapper is not invoked after the first <c>None</c>.
+    /// <code><![CDATA[
+    /// var cities = await Opt.TraverseAsync(
+    ///         OrderFixtures.Sample.Lines,
+    ///         static line => Task.FromResult(Opt.Some(line.Sku)))
+    ///     .MapSomeAsync(static list => list.Count);
+    ///
+    /// // Some(2) when every element mapped to a value,
+    /// // None at the first empty option - the mapper is not invoked after it.
+    /// ]]></code>
+    /// </remarks>
     [OverloadResolutionPriority(0)]
     public static async Task<Option<IReadOnlyList<TOut>>> TraverseAsync<T, TOut>(
         IEnumerable<T> source,
@@ -229,7 +298,19 @@ public static partial class Opt
     /// The token was cancelled before the mapper was invoked for the next element (the mapper is then not called).
     /// </exception>
     /// <exception cref="InvalidOperationException">The mapper returned a null task.</exception>
-    /// <remarks>The mapper is not invoked after the first <c>None</c>.</remarks>
+    /// <remarks>
+    /// The mapper is not invoked after the first <c>None</c>.
+    /// <code><![CDATA[
+    /// var cities = await Opt.TraverseAsync(
+    ///         OrderFixtures.Sample.Lines,
+    ///         static (line, token) => Task.FromResult(Opt.Some(line.Sku)),
+    ///         CancellationToken.None)
+    ///     .MapSomeAsync(static list => list.Count);
+    ///
+    /// // Some(2) when every element mapped to a value,
+    /// // None at the first empty option - the mapper receives the same token.
+    /// ]]></code>
+    /// </remarks>
     [OverloadResolutionPriority(1)]
     public static async Task<Option<IReadOnlyList<TOut>>> TraverseAsync<T, TOut>(
         IEnumerable<T> source,

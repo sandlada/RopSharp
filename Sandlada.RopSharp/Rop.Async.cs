@@ -5,6 +5,21 @@ namespace Sandlada.RopSharp;
 /// <summary>
 /// Static entry point for the <see cref="Result{TOk,TErr}"/> domain: asynchronous boundaries and collection sequencing.
 /// </summary>
+/// <remarks>
+/// <para>
+/// The asynchronous boundary is <c>TryAsync</c>: it is the only place where a faulted task becomes a domain value.
+/// Everything else only reshapes the result.
+/// </para>
+/// <code><![CDATA[
+/// var receiptId = await Rop.TryAsync(
+///         () => OrderFixtures.ChargeAsync(OrderFixtures.Sample),
+///         "E_CHARGE")
+///     .MapOkAsync(static payment => payment.Id);
+///
+/// // Ok("pay-ord-1001") when the provider answered,
+/// // Err(E_CHARGE) when the task faulted - TryAsync is the asynchronous boundary.
+/// ]]></code>
+/// </remarks>
 public static partial class Rop
 {
     /// <summary>
@@ -29,6 +44,15 @@ public static partial class Rop
     /// <paramref name="func"/> when cancellation is required. A null payload throws
     /// <see cref="ArgumentNullException"/> from <see cref="Ok{TOk,TErr}"/>, exactly like the synchronous lift.
     /// </para>
+    /// <code><![CDATA[
+    /// Func<Order, Task<Result<Payment, RopError>>> charge = Rop.SwitchAsync<Order, Payment, RopError>(
+    ///     static order => OrderFixtures.ChargeAsync(order));
+    /// var receipt = await charge(OrderFixtures.Sample)
+    ///     .MapOkAsync(static payment => payment.Id);
+    ///
+    /// // Ok("pay-ord-1001") when the task completed,
+    /// // Err(E_ORDER) is the other track - the lifted function always returns Ok.
+    /// ]]></code>
     /// </remarks>
     public static Func<T, Task<Result<TOut, TErr>>> SwitchAsync<T, TOut, TErr>(Func<T, Task<TOut>> func)
     {
@@ -50,6 +74,16 @@ public static partial class Rop
     /// <remarks>
     /// The returned function delegates to <see cref="TryAsync{T}(Func{Task{T}},Func{Exception,RopError},CancellationToken)"/>,
     /// so a null task faults and a null payload produces <c>E_NULL_RESULT</c> exactly as that boundary does.
+    /// <code><![CDATA[
+    /// Func<Order, Task<Result<Payment, RopError>>> charge = Rop.TrySwitchAsync<Order, Payment>(
+    ///     static order => OrderFixtures.ChargeAsync(order),
+    ///     static exception => RopError.Create("E_CHARGE", exception.Message));
+    /// var receipt = await charge(OrderFixtures.Sample)
+    ///     .MapOkAsync(static payment => payment.Id);
+    ///
+    /// // Ok("pay-ord-1001") when the provider answered,
+    /// // Err(E_CHARGE) when the task faulted - TrySwitchAsync is the reusable boundary.
+    /// ]]></code>
     /// </remarks>
     public static Func<T, Task<Result<TOut, RopError>>> TrySwitchAsync<T, TOut>(
         Func<T, Task<TOut>> func,
@@ -78,6 +112,17 @@ public static partial class Rop
     /// The returned function delegates to
     /// <see cref="TryAsync{T,TErr}(Func{Task{T}},Func{Exception,TErr},Func{TErr},CancellationToken)"/>, so a null task
     /// faults and a null payload produces <c>Err(nullResultErrorFactory())</c> exactly as that boundary does.
+    /// <code><![CDATA[
+    /// Func<Order, Task<Result<Payment, string>>> charge = Rop.TrySwitchAsync<Order, Payment, string>(
+    ///     static order => OrderFixtures.ChargeAsync(order),
+    ///     static exception => exception.Message,
+    ///     static () => "the provider returned no payment");
+    /// var receipt = await charge(OrderFixtures.Sample)
+    ///     .MapOkAsync(static payment => payment.Id);
+    ///
+    /// // Ok("pay-ord-1001") when the provider answered,
+    /// // Err(the provider returned no payment) when it returned null - a custom error type.
+    /// ]]></code>
     /// </remarks>
     public static Func<T, Task<Result<TOut, TErr>>> TrySwitchAsync<T, TOut, TErr>(
         Func<T, Task<TOut>> func,
@@ -105,6 +150,15 @@ public static partial class Rop
     /// Use this overload for asynchronous side effects that produce no value; the success payload is
     /// <see cref="Unit"/>. Prefer this over <see cref="TryAsync{T}(Func{Task{T}},Func{Exception,RopError},CancellationToken)"/>
     /// with a discarded value, which would require inventing a placeholder payload.
+    /// <code><![CDATA[
+    /// var shipped = await Rop.TryAsync(
+    ///         () => OrderFixtures.ShipAsync(OrderFixtures.Sample, OrderFixtures.Charge(OrderFixtures.Sample)),
+    ///         static exception => RopError.Create("E_SHIP", exception.Message))
+    ///     .MapOkAsync(static _ => Unit.Value);
+    ///
+    /// // Ok(()) when the parcel was handed over,
+    /// // Err(E_SHIP) when the task faulted - the action overload returns Unit.
+    /// ]]></code>
     /// </remarks>
     [SuppressMessage(
         "Design",
@@ -169,6 +223,15 @@ public static partial class Rop
     /// <remarks>
     /// There is no null-result branch because an action produces no payload. Use this overload when the caller's
     /// error system is not <see cref="RopError"/>.
+    /// <code><![CDATA[
+    /// var shipped = await Rop.TryAsync(
+    ///         () => OrderFixtures.ShipAsync(OrderFixtures.Sample, OrderFixtures.Charge(OrderFixtures.Sample)),
+    ///         static exception => exception.Message)
+    ///     .MapOkAsync(static _ => Unit.Value);
+    ///
+    /// // Ok(()) when the parcel was handed over,
+    /// // Err(the carrier refused) when the task faulted - a custom error type.
+    /// ]]></code>
     /// </remarks>
     [SuppressMessage(
         "Design",
@@ -225,6 +288,18 @@ public static partial class Rop
     /// <param name="code">The error code to attach to captured exceptions.</param>
     /// <param name="cancellationToken">An optional cancellation token.</param>
     /// <returns><c>Ok(Unit.Value)</c> or <c>Err</c> as described by <see cref="TryAsync(Func{Task},Func{Exception,RopError},CancellationToken)"/>.</returns>
+    /// <remarks>
+    /// The shortest asynchronous boundary: the action runs, and a faulted task becomes a coded error.
+    /// <code><![CDATA[
+    /// var shipped = await Rop.TryAsync(
+    ///         () => OrderFixtures.ShipAsync(OrderFixtures.Sample, OrderFixtures.Charge(OrderFixtures.Sample)),
+    ///         "E_SHIP")
+    ///     .MapOkAsync(static _ => Unit.Value);
+    ///
+    /// // Ok(()) when the parcel was handed over,
+    /// // Err(E_SHIP) when the task faulted - the code overload attaches the exception.
+    /// ]]></code>
+    /// </remarks>
     public static Task<Result<Unit, RopError>> TryAsync(
         Func<Task> action,
         string code,
@@ -250,6 +325,19 @@ public static partial class Rop
     /// <exception cref="InvalidOperationException">
     /// The boundary function returned a null task, or the error factory returned null.
     /// </exception>
+    /// <remarks>
+    /// This is the asynchronous boundary for a function that produces a value. The task is awaited, and a fault
+    /// becomes an error instead of an exception.
+    /// <code><![CDATA[
+    /// var charged = await Rop.TryAsync(
+    ///         () => OrderFixtures.ChargeAsync(OrderFixtures.Sample),
+    ///         static exception => RopError.Create("E_PAYMENT", exception.Message))
+    ///     .MapOkAsync(static payment => payment.Id);
+    ///
+    /// // Ok("pay-ord-1001") when the provider answered,
+    /// // Err(E_PAYMENT) when the task faulted - TryAsync is the asynchronous boundary.
+    /// ]]></code>
+    /// </remarks>
     [SuppressMessage(
         "Design",
         "CA1031:Do not catch general exception types",
@@ -331,6 +419,16 @@ public static partial class Rop
     /// bypass a cancelled token. Argument validation surfaces through the returned task because the method is
     /// asynchronous.
     /// </para>
+    /// <code><![CDATA[
+    /// var charged = await Rop.TryAsync(
+    ///         () => OrderFixtures.ChargeAsync(OrderFixtures.Sample),
+    ///         static exception => exception.Message,
+    ///         static () => "the provider returned no payment")
+    ///     .MapOkAsync(static payment => payment.Id);
+    ///
+    /// // Ok("pay-ord-1001") when the provider answered,
+    /// // Err(the provider returned no payment) when it returned null - a custom error type.
+    /// ]]></code>
     /// </remarks>
     [SuppressMessage(
         "Design",
@@ -394,6 +492,18 @@ public static partial class Rop
     /// <param name="code">The error code to attach to captured exceptions.</param>
     /// <param name="cancellationToken">An optional cancellation token.</param>
     /// <returns><c>Ok(value)</c> or <c>Err</c> as described by <see cref="TryAsync{T}(Func{Task{T}},Func{Exception,RopError},CancellationToken)"/>.</returns>
+    /// <remarks>
+    /// The shortest asynchronous boundary for a function that produces a value.
+    /// <code><![CDATA[
+    /// var charged = await Rop.TryAsync(
+    ///         () => OrderFixtures.ChargeAsync(OrderFixtures.Sample),
+    ///         "E_PAYMENT")
+    ///     .MapOkAsync(static payment => payment.Id);
+    ///
+    /// // Ok("pay-ord-1001") when the provider answered,
+    /// // Err(E_PAYMENT) when the task faulted - the code overload attaches the exception.
+    /// ]]></code>
+    /// </remarks>
     public static Task<Result<T, RopError>> TryAsync<T>(
         Func<Task<T>> func,
         string code,
@@ -424,6 +534,14 @@ public static partial class Rop
     /// Cancellation is observed by the operation itself, not only by the awaited tasks: an already-completed task
     /// does not short-circuit the token check, so a cancelled token always cancels the sequence.
     /// </para>
+    /// <code><![CDATA[
+    /// var skus = await Rop.SequenceAsync(
+    ///         OrderFixtures.Sample.Lines.Select(static line => Task.FromResult(Rop.Ok(line.Sku))))
+    ///     .MapOkAsync(static list => list.Count);
+    ///
+    /// // Ok(2) when every task produced Ok,
+    /// // Err(E_LINE) with the first error - SequenceAsync stops at the first failure.
+    /// ]]></code>
     /// </remarks>
     public static async Task<Result<IReadOnlyList<T>, TErr>> SequenceAsync<T, TErr>(
         IEnumerable<Task<Result<T, TErr>>> tasks,
@@ -467,6 +585,18 @@ public static partial class Rop
     /// The token was cancelled before the mapper was invoked for the next element (the mapper is then not called).
     /// </exception>
     /// <exception cref="InvalidOperationException">The mapper returned a null task.</exception>
+    /// <remarks>
+    /// The mapper is invoked for every element in turn, and the traversal stops at the first failure.
+    /// <code><![CDATA[
+    /// var skus = await Rop.TraverseAsync(
+    ///         OrderFixtures.Sample.Lines,
+    ///         static line => Task.FromResult(Rop.Ok(line.Sku)))
+    ///     .MapOkAsync(static list => list.Count);
+    ///
+    /// // Ok(2) when every element mapped successfully,
+    /// // Err(E_LINE) with the first error - TraverseAsync stops at the first failure.
+    /// ]]></code>
+    /// </remarks>
     public static async Task<Result<IReadOnlyList<TOut>, TErr>> TraverseAsync<T, TOut, TErr>(
         IEnumerable<T> source,
         Func<T, Task<Result<TOut, TErr>>> mapper,
