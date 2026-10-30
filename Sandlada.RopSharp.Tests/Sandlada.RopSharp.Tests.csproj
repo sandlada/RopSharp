@@ -12,6 +12,8 @@
     <PackageReference Include="TUnit" />
     <PackageReference Include="TUnit.Assertions" />
     <PackageReference Include="Microsoft.Testing.Extensions.CodeCoverage" PrivateAssets="all" />
+    <!-- The documentation tests type check the XML documentation examples with Roslyn. -->
+    <PackageReference Include="Microsoft.CodeAnalysis.CSharp" />
   </ItemGroup>
 
   <ItemGroup>

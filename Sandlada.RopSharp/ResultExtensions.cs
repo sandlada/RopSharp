@@ -25,9 +25,23 @@ public static class ResultExtensions
     /// <param name="mapper">Maps the success value. Not evaluated on the failure track.</param>
     /// <returns><c>Ok(mapper(value))</c> or the original error.</returns>
     /// <remarks>
+    /// <para>
     /// If the mapper returns <see langword="null"/> for a nullable success type, the success track carries that null
     /// (the compiler annotation is preserved). Enforce non-nullness with <see cref="RequireNotNull{T}"/>, or use
     /// <c>Option</c> when absence is expected.
+    /// </para>
+    /// <para>
+    /// <c>MapOk</c> reshapes a payload without touching the error track, which makes it the step that turns a
+    /// boundary result into the value the caller actually asked for. It never runs on the failure track, so the
+    /// mapper is free to assume a non-null success value.
+    /// </para>
+    /// <code><![CDATA[
+    /// var receiptId = Rop.Try(() => OrderFixtures.Charge(OrderFixtures.Sample), "E_CHARGE")
+    ///     .MapOk(static payment => payment.Id);
+    ///
+    /// // Ok(receiptId) when the payment provider answered,
+    /// // Err(E_CHARGE) when the provider threw - the mapper is never evaluated on the error track.
+    /// ]]></code>
     /// </remarks>
     public static Result<TOut, TErr> MapOk<TOk, TOut, TErr>(
         this Result<TOk, TErr> result,
