@@ -25,23 +25,27 @@ public sealed class DocExampleCoverageTests
         {
             foreach (var member in EnumeratePublicMembers(type))
             {
-                var reference = member.DeclaringSyntaxReferences.FirstOrDefault();
+                var references = member.DeclaringSyntaxReferences.ToArray();
 
-                if (reference is null)
+                if (references.Length == 0)
                 {
                     // Implicitly declared members (a struct parameterless constructor, the enum backing field)
                     // carry no documentation of their own.
                     continue;
                 }
 
-                var node = reference.GetSyntax();
-                var documentation = node.GetLeadingTrivia()
-                    .Where(static trivia => trivia.IsKind(SyntaxKind.SingleLineDocumentationCommentTrivia))
-                    .Select(static trivia => trivia.ToFullString())
-                    .ToArray();
+                // A partial type is documented in one of its declarations; it is enough that one of them
+                // carries the example.
+                var documented = references.Any(reference =>
+                    reference.GetSyntax()
+                        .GetLeadingTrivia()
+                        .Where(static trivia => trivia.IsKind(SyntaxKind.SingleLineDocumentationCommentTrivia))
+                        .Select(static trivia => trivia.ToFullString())
+                        .Any(static text => text.Contains(DocExampleExtractor.CodeOpenTag, StringComparison.Ordinal)));
 
-                if (!documentation.Any(static text => text.Contains(DocExampleExtractor.CodeOpenTag, StringComparison.Ordinal)))
+                if (!documented)
                 {
+                    var reference = references[0];
                     missing.Add($"{Path.GetFileName(reference.SyntaxTree.FilePath)}: {Describe(member)}");
                 }
             }
@@ -63,13 +67,8 @@ public sealed class DocExampleCoverageTests
         {
             foreach (var member in EnumeratePublicMembers(type))
             {
-                var reference = member.DeclaringSyntaxReferences.FirstOrDefault();
-
-                if (reference is null)
-                {
-                    continue;
-                }
-
+                foreach (var reference in member.DeclaringSyntaxReferences)
+            {
                 var documentation = string.Concat(
                     reference.GetSyntax()
                         .GetLeadingTrivia()
@@ -91,6 +90,7 @@ public sealed class DocExampleCoverageTests
                 {
                     offenders.Add($"{Path.GetFileName(reference.SyntaxTree.FilePath)}: {Describe(member)}");
                 }
+            }
             }
         }
 
@@ -140,6 +140,12 @@ public sealed class DocExampleCoverageTests
 
                 if (type.DeclaredAccessibility is not Accessibility.Public || type.IsImplicitlyDeclared)
                 {
+                    continue;
+                }
+
+                if (type.IsTupleType)
+                {
+                    // A tuple is a return shape, not a type the caller can name.
                     continue;
                 }
 

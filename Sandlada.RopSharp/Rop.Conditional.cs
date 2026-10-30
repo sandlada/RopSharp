@@ -6,6 +6,22 @@ namespace Sandlada.RopSharp;
 /// Conditional construction and parsing helpers for the <see cref="Result{TOk,TErr}"/> and
 /// <see cref="Option{T}"/> domains.
 /// </summary>
+/// <remarks>
+/// <para>
+/// A condition decides the track of a result before the pipeline starts. It is the shortest way to turn a
+/// business rule such as "the order must have lines" into a value the rest of the code can compose with.
+/// </para>
+/// <code><![CDATA[
+/// var placed = Rop.SuccessIf(
+///         OrderFixtures.Sample.ItemCount > 0,
+///         OrderFixtures.Sample,
+///         RopError.Create("E_EMPTY_ORDER", "the order has no lines"))
+///     .MapOk(static order => order.Id);
+///
+/// // Ok("ord-1001") when the order has lines,
+/// // Err(E_EMPTY_ORDER) when it has none - the condition selects the track.
+/// ]]></code>
+/// </remarks>
 public static partial class Rop
 {
     /// <summary>
@@ -17,6 +33,20 @@ public static partial class Rop
     /// <param name="error">The error used when the condition does not hold. Must not be <see langword="null"/>.</param>
     /// <returns><c>Ok(value)</c> or <c>Err(error)</c>.</returns>
     /// <exception cref="ArgumentNullException"><paramref name="error"/> is <see langword="null"/>.</exception>
+    /// <remarks>
+    /// The error is supplied eagerly, so use it when the error value is cheap. Use the factory overload when it
+    /// is not.
+    /// <code><![CDATA[
+    /// var placed = Rop.SuccessIf(
+    ///         OrderFixtures.Sample.ItemCount > 0,
+    ///         OrderFixtures.Sample,
+    ///         RopError.Create("E_EMPTY_ORDER", "the order has no lines"))
+    ///     .MapOk(static order => order.Id);
+    ///
+    /// // Ok("ord-1001") when the order has lines,
+    /// // Err(E_EMPTY_ORDER) when it has none - the condition selects the track.
+    /// ]]></code>
+    /// </remarks>
     public static Result<T, RopError> SuccessIf<T>(bool condition, T value, RopError error)
     {
         ArgumentGuards.ThrowIfNull(error, nameof(error));
@@ -32,6 +62,19 @@ public static partial class Rop
     /// <param name="errorFactory">Builds the error. Evaluated only when the condition does not hold.</param>
     /// <returns><c>Ok(value)</c> or <c>Err(errorFactory())</c>.</returns>
     /// <exception cref="ArgumentNullException"><paramref name="errorFactory"/> is <see langword="null"/>.</exception>
+    /// <remarks>
+    /// The factory is lazy, so an expensive error is only built when the condition actually fails.
+    /// <code><![CDATA[
+    /// var placed = Rop.SuccessIf(
+    ///         OrderFixtures.Sample.ItemCount > 0,
+    ///         OrderFixtures.Sample,
+    ///         static () => RopError.Create("E_EMPTY_ORDER", "the order has no lines"))
+    ///     .MapOk(static order => order.Id);
+    ///
+    /// // Ok("ord-1001") when the order has lines,
+    /// // Err(E_EMPTY_ORDER) when it has none - the factory runs only on the failure track.
+    /// ]]></code>
+    /// </remarks>
     public static Result<T, RopError> SuccessIf<T>(bool condition, T value, Func<RopError> errorFactory)
     {
         ArgumentNullException.ThrowIfNull(errorFactory);
@@ -49,6 +92,19 @@ public static partial class Rop
     /// <param name="error">The error used when the condition does not hold. Must not be <see langword="null"/>.</param>
     /// <returns><c>Ok(value)</c> or <c>Err(error)</c>.</returns>
     /// <exception cref="ArgumentNullException"><paramref name="error"/> is <see langword="null"/>.</exception>
+    /// <remarks>
+    /// Use this overload when the caller's error system is not <see cref="RopError"/>.
+    /// <code><![CDATA[
+    /// var placed = Rop.SuccessIf<string, string>(
+    ///         OrderFixtures.Sample.ItemCount > 0,
+    ///         OrderFixtures.Sample.Id,
+    ///         "the order has no lines")
+    ///     .MapOk(static id => id.ToUpperInvariant());
+    ///
+    /// // Ok("ORD-1001") when the order has lines,
+    /// // Err(the order has no lines) when it has none - a custom error type keeps the reason verbatim.
+    /// ]]></code>
+    /// </remarks>
     public static Result<T, TErr> SuccessIf<T, TErr>(bool condition, T value, TErr error)
     {
         ArgumentGuards.ThrowIfNull(error, nameof(error));
@@ -67,6 +123,19 @@ public static partial class Rop
     /// <returns><c>Ok(value)</c> or <c>Err(errorFactory())</c>.</returns>
     /// <exception cref="ArgumentNullException"><paramref name="errorFactory"/> is <see langword="null"/>.</exception>
     /// <exception cref="InvalidOperationException">The factory returned <see langword="null"/>.</exception>
+    /// <remarks>
+    /// The factory is lazy, so an expensive error is only built when the condition actually fails.
+    /// <code><![CDATA[
+    /// var placed = Rop.SuccessIf<string, string>(
+    ///         OrderFixtures.Sample.ItemCount > 0,
+    ///         OrderFixtures.Sample.Id,
+    ///         static () => "the order has no lines")
+    ///     .MapOk(static id => id.ToUpperInvariant());
+    ///
+    /// // Ok("ORD-1001") when the order has lines,
+    /// // Err(the order has no lines) when it has none - the factory runs only on the failure track.
+    /// ]]></code>
+    /// </remarks>
     public static Result<T, TErr> SuccessIf<T, TErr>(bool condition, T value, Func<TErr> errorFactory)
     {
         ArgumentNullException.ThrowIfNull(errorFactory);
@@ -82,6 +151,20 @@ public static partial class Rop
     /// <param name="error">The error used when the condition holds. Must not be <see langword="null"/>.</param>
     /// <returns><c>Err(error)</c> or <c>Ok(value)</c>.</returns>
     /// <exception cref="ArgumentNullException"><paramref name="error"/> is <see langword="null"/>.</exception>
+    /// <remarks>
+    /// <c>FailureIf</c> inverts the usual success condition. It reads best when the failure is the exceptional
+    /// case that has to be spelled out.
+    /// <code><![CDATA[
+    /// var charged = Rop.FailureIf(
+    ///         OrderFixtures.Sample.Id.EndsWith("-declined", StringComparison.Ordinal),
+    ///         OrderFixtures.Sample,
+    ///         RopError.Create("E_PAYMENT_DECLINED", "the provider refused the order"))
+    ///     .MapOk(static order => order.Id);
+    ///
+    /// // Err(E_PAYMENT_DECLINED) when the condition holds,
+    /// // Ok("ord-1001") otherwise - FailureIf inverts the usual success condition.
+    /// ]]></code>
+    /// </remarks>
     public static Result<T, RopError> FailureIf<T>(bool condition, T value, RopError error)
     {
         ArgumentGuards.ThrowIfNull(error, nameof(error));
@@ -97,6 +180,19 @@ public static partial class Rop
     /// <param name="errorFactory">Builds the error. Evaluated only when the condition holds.</param>
     /// <returns><c>Err(errorFactory())</c> or <c>Ok(value)</c>.</returns>
     /// <exception cref="ArgumentNullException"><paramref name="errorFactory"/> is <see langword="null"/>.</exception>
+    /// <remarks>
+    /// The factory is lazy, so an expensive error is only built when the condition actually holds.
+    /// <code><![CDATA[
+    /// var charged = Rop.FailureIf(
+    ///         OrderFixtures.Sample.Id.EndsWith("-declined", StringComparison.Ordinal),
+    ///         OrderFixtures.Sample,
+    ///         static () => RopError.Create("E_PAYMENT_DECLINED", "the provider refused the order"))
+    ///     .MapOk(static order => order.Id);
+    ///
+    /// // Err(E_PAYMENT_DECLINED) when the condition holds,
+    /// // Ok("ord-1001") otherwise - the factory runs only on the failure track.
+    /// ]]></code>
+    /// </remarks>
     public static Result<T, RopError> FailureIf<T>(bool condition, T value, Func<RopError> errorFactory)
     {
         ArgumentNullException.ThrowIfNull(errorFactory);
@@ -114,6 +210,19 @@ public static partial class Rop
     /// <param name="error">The error used when the condition holds. Must not be <see langword="null"/>.</param>
     /// <returns><c>Err(error)</c> or <c>Ok(value)</c>.</returns>
     /// <exception cref="ArgumentNullException"><paramref name="error"/> is <see langword="null"/>.</exception>
+    /// <remarks>
+    /// Use this overload when the caller's error system is not <see cref="RopError"/>.
+    /// <code><![CDATA[
+    /// var charged = Rop.FailureIf<string, string>(
+    ///         OrderFixtures.Sample.Id.EndsWith("-declined", StringComparison.Ordinal),
+    ///         OrderFixtures.Sample.Id,
+    ///         "the provider refused the order")
+    ///     .MapOk(static id => id.ToUpperInvariant());
+    ///
+    /// // Err(the provider refused the order) when the condition holds,
+    /// // Ok("ORD-1001") otherwise - a custom error type keeps the reason verbatim.
+    /// ]]></code>
+    /// </remarks>
     public static Result<T, TErr> FailureIf<T, TErr>(bool condition, T value, TErr error)
     {
         ArgumentGuards.ThrowIfNull(error, nameof(error));
@@ -132,6 +241,19 @@ public static partial class Rop
     /// <returns><c>Err(errorFactory())</c> or <c>Ok(value)</c>.</returns>
     /// <exception cref="ArgumentNullException"><paramref name="errorFactory"/> is <see langword="null"/>.</exception>
     /// <exception cref="InvalidOperationException">The factory returned <see langword="null"/>.</exception>
+    /// <remarks>
+    /// The factory is lazy, so an expensive error is only built when the condition actually holds.
+    /// <code><![CDATA[
+    /// var charged = Rop.FailureIf<string, string>(
+    ///         OrderFixtures.Sample.Id.EndsWith("-declined", StringComparison.Ordinal),
+    ///         OrderFixtures.Sample.Id,
+    ///         static () => "the provider refused the order")
+    ///     .MapOk(static id => id.ToUpperInvariant());
+    ///
+    /// // Err(the provider refused the order) when the condition holds,
+    /// // Ok("ORD-1001") otherwise - the factory runs only on the failure track.
+    /// ]]></code>
+    /// </remarks>
     public static Result<T, TErr> FailureIf<T, TErr>(bool condition, T value, Func<TErr> errorFactory)
     {
         ArgumentNullException.ThrowIfNull(errorFactory);
@@ -151,6 +273,13 @@ public static partial class Rop
     /// <c>input=&lt;quoted&gt;</c>, so callers can correlate the error without logging the raw payload themselves. The
     /// echo is bounded and escapes control characters; <see langword="null"/> renders as the literal <c>null</c>
     /// instead of an empty pair of quotes.
+    /// <code><![CDATA[
+    /// var amount = Rop.Parse<decimal>("19.50")
+    ///     .MapOk(static value => value.ToString("0.00", CultureInfo.InvariantCulture));
+    ///
+    /// // Ok("19.50") when the text is a number,
+    /// // Err(E_PARSE) when it is not - the failing input is echoed in the error details.
+    /// ]]></code>
     /// </remarks>
     public static Result<T, RopError> Parse<T>(string? value, string code = "E_PARSE")
         where T : IParsable<T>
@@ -192,6 +321,13 @@ public static partial class Rop
     /// Use this overload when the caller's error system is not <see cref="RopError"/>; the <see cref="RopError"/>
     /// overload remains the default.
     /// </para>
+    /// <code><![CDATA[
+    /// var amount = Rop.Parse<decimal, string>("19.50", static failure => failure.Code)
+    ///     .MapOk(static value => value.ToString("0.00", CultureInfo.InvariantCulture));
+    ///
+    /// // Ok("19.50") when the text is a number,
+    /// // Err(E_PARSE) when it is not - the failure payload carries the diagnostics of the attempt.
+    /// ]]></code>
     /// </remarks>
     public static Result<T, TErr> Parse<T, TErr>(
         string? value,
@@ -225,6 +361,13 @@ public static partial class Rop
     /// A null <typeparamref name="T"/> result is treated as a failed parse rather than being lifted into
     /// <c>Some(null)</c>: an option never contains null, so a third-party <see cref="IParsable{T}"/> that reports
     /// success with a null value yields <c>None</c>.
+    /// <code><![CDATA[
+    /// var amount = Rop.TryParse<decimal>("19.50")
+    ///     .BindNoneValue(0m);
+    ///
+    /// // Some(19.50) when the text is a number,
+    /// // None becomes 0m - a parse failure is not an error, it is an absent value.
+    /// ]]></code>
     /// </remarks>
     public static Option<T> TryParse<T>(string? value)
         where T : IParsable<T>
