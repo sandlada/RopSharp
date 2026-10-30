@@ -82,10 +82,18 @@ public sealed class DocExampleCompilationTests
 
             if (referenced.Count < 2)
             {
+                var names = method.DescendantNodes()
+                    .OfType<SimpleNameSyntax>()
+                    .Select(identifier =>
+                        $"{identifier.Identifier.ValueText}=" +
+                        (compilation.SemanticModel.GetSymbolInfo(identifier).Symbol?.ToDisplayString() ?? "unresolved"))
+                    .ToArray();
+
                 offenders.Add(
                     $"{example.FileName}:{example.LineNumber} {example.MemberName}: " +
                     $"the example only touches {referenced.Count} library member(s) " +
-                    $"[{string.Join(", ", referenced)}]; it must show how the API composes with the rest of the library.");
+                    $"[{string.Join(", ", referenced)}]; it must show how the API composes with the rest of the library. " +
+                    $"Names: {string.Join(" | ", names)}");
             }
         }
 

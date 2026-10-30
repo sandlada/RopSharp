@@ -230,10 +230,7 @@ internal sealed class DocExampleCompilation
     {
         var source = BuildExampleSource(examples);
         LastGeneratedSource = source;
-
-        var directory = Path.Combine(RepositoryLayout.RootDirectory, "TestResults");
-        Directory.CreateDirectory(directory);
-        File.WriteAllText(Path.Combine(directory, "doc-examples.generated.cs"), source);
+        WriteGeneratedSource(source);
 
         var trees = new List<SyntaxTree>
         {
@@ -330,6 +327,26 @@ internal sealed class DocExampleCompilation
         using System.Threading.Tasks;
 
         """;
+
+    private static void WriteGeneratedSource(string source)
+    {
+        var directory = Path.Combine(RepositoryLayout.RootDirectory, "TestResults");
+        Directory.CreateDirectory(directory);
+
+        // The documentation tests run in parallel; the dump is a convenience, so a lost race is not a failure.
+        lock (GeneratedSourceLock)
+        {
+            try
+            {
+                File.WriteAllText(Path.Combine(directory, "doc-examples.generated.cs"), source);
+            }
+            catch (IOException)
+            {
+            }
+        }
+    }
+
+    private static readonly object GeneratedSourceLock = new();
 
     private static string BuildExampleSource(IReadOnlyList<DocExample> examples)
     {
