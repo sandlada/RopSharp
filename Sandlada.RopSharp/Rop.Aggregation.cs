@@ -6,6 +6,23 @@ namespace Sandlada.RopSharp;
 /// Static entry point for the <see cref="Result{TOk,TErr}"/> domain: construction, boundary lifting and
 /// combining operations that have no receiver.
 /// </summary>
+/// <remarks>
+/// <para>
+/// Two combination semantics live here and they are never mixed. <see cref="Combine{T1,T2,TOut,TErr}"/> and
+/// <see cref="Sequence{T,TErr}"/> short-circuit on the first error; <see cref="Validate{T1,T2,TOut,TErr}"/> and
+/// <see cref="SequenceValidation{T,TErr}"/> collect every error.
+/// </para>
+/// <code><![CDATA[
+/// var validated = Rop.Validate(
+///         Rop.Ok<Order, RopError>(OrderFixtures.Sample),
+///         Rop.Err<decimal>(RopError.Create("E_AMOUNT", "the amount must be positive")),
+///         static (order, amount) => order.Id)
+///     .ToSingleError(RopError.Combine);
+///
+/// // Ok(id) when every check passed,
+/// // Err(E_MULTIPLE) when a check failed - Validate collects, Combine short-circuits.
+/// ]]></code>
+/// </remarks>
 public static partial class Rop
 {
     /// <summary>
@@ -22,6 +39,16 @@ public static partial class Rop
     /// <remarks>
     /// Monadic (short-circuiting) semantics: the merger is not evaluated when either input failed, and only the
     /// first error is returned. Use <see cref="Validate{T1,T2,TOut,TErr}"/> when every error must be collected.
+    /// <code><![CDATA[
+    /// var placed = Rop.Combine(
+    ///         Rop.Ok<Order, RopError>(OrderFixtures.Sample),
+    ///         Rop.Ok<decimal, RopError>(OrderFixtures.Sample.Total),
+    ///         static (order, amount) => $"{order.Id}:{amount}")
+    ///     .MapErr(static error => error.WithCode("E_CHECKOUT"));
+    ///
+    /// // Ok("ord-1001:44") when both results are Ok,
+    /// // Err(E_CHECKOUT) with the first error - the merger never runs after a failure.
+    /// ]]></code>
     /// </remarks>
     public static Result<TOut, TErr> Combine<T1, T2, TOut, TErr>(
         Result<T1, TErr> first,
@@ -56,6 +83,20 @@ public static partial class Rop
     /// <param name="third">The third result.</param>
     /// <param name="merger">Combines all three success values. Evaluated only when all are <c>Ok</c>.</param>
     /// <returns><c>Ok(merger(a, b, c))</c>, or the first <c>Err</c>.</returns>
+    /// <remarks>
+    /// The same short-circuiting semantics as the two-argument overload, extended to three inputs.
+    /// <code><![CDATA[
+    /// var placed = Rop.Combine(
+    ///         Rop.Ok<Order, RopError>(OrderFixtures.Sample),
+    ///         Rop.Ok<decimal, RopError>(OrderFixtures.Sample.Total),
+    ///         Rop.Ok<int, RopError>(OrderFixtures.Sample.ItemCount),
+    ///         static (order, amount, count) => $"{order.Id}:{amount}:{count}")
+    ///     .MapErr(static error => error.WithCode("E_CHECKOUT"));
+    ///
+    /// // Ok("ord-1001:44:3") when all three results are Ok,
+    /// // Err(E_CHECKOUT) with the first error - the merger never runs after a failure.
+    /// ]]></code>
+    /// </remarks>
     public static Result<TOut, TErr> Combine<T1, T2, T3, TOut, TErr>(
         Result<T1, TErr> first,
         Result<T2, TErr> second,
@@ -91,6 +132,18 @@ public static partial class Rop
     /// <param name="first">The first result.</param>
     /// <param name="second">The second result.</param>
     /// <returns><c>Ok((a, b))</c>, or the first <c>Err</c>.</returns>
+    /// <remarks>
+    /// <c>Zip</c> is <see cref="Combine{T1,T2,TOut,TErr}"/> with a tuple merger. Use it when the two values
+    /// belong together but neither of them needs to be reshaped.
+    /// <code><![CDATA[
+    /// var pair = Rop.Zip(
+    ///     Rop.Ok<Order, RopError>(OrderFixtures.Sample),
+    ///     Rop.Ok<decimal, RopError>(OrderFixtures.Sample.Total));
+    ///
+    /// // Ok((order, 44)) when both results are Ok,
+    /// // Err(E_ORDER) with the first error - Zip is Combine with a tuple merger.
+    /// ]]></code>
+    /// </remarks>
     public static Result<(T1, T2), TErr> Zip<T1, T2, TErr>(Result<T1, TErr> first, Result<T2, TErr> second) =>
         Combine(first, second, static (a, b) => (a, b));
 
@@ -105,6 +158,18 @@ public static partial class Rop
     /// <param name="second">The second result.</param>
     /// <param name="third">The third result.</param>
     /// <returns><c>Ok((a, b, c))</c>, or the first <c>Err</c>.</returns>
+    /// <remarks>
+    /// <c>Zip</c> is <see cref="Combine{T1,T2,T3,TOut,TErr}"/> with a tuple merger.
+    /// <code><![CDATA[
+    /// var triple = Rop.Zip(
+    ///     Rop.Ok<Order, RopError>(OrderFixtures.Sample),
+    ///     Rop.Ok<decimal, RopError>(OrderFixtures.Sample.Total),
+    ///     Rop.Ok<int, RopError>(OrderFixtures.Sample.ItemCount));
+    ///
+    /// // Ok((order, 44, 3)) when all three results are Ok,
+    /// // Err(E_ORDER) with the first error - Zip is Combine with a tuple merger.
+    /// ]]></code>
+    /// </remarks>
     public static Result<(T1, T2, T3), TErr> Zip<T1, T2, T3, TErr>(
         Result<T1, TErr> first,
         Result<T2, TErr> second,
@@ -125,6 +190,15 @@ public static partial class Rop
     /// <remarks>
     /// Applicative (aggregating) semantics: every input is inspected, no short-circuit. Use
     /// <see cref="Combine{T1,T2,TOut,TErr}"/> when only the first error matters.
+    /// <code><![CDATA[
+    /// var validated = Rop.Validate(
+    ///         Rop.Ok<Order, RopError>(OrderFixtures.Sample),
+    ///         Rop.Err<decimal>(RopError.Create("E_AMOUNT", "the amount must be positive")),
+    ///         static (order, amount) => order.Id);
+    ///
+    /// // Ok("ord-1001") when both checks passed,
+    /// // Err([E_AMOUNT]) with every error - Validate never short-circuits.
+    /// ]]></code>
     /// </remarks>
     public static Result<TOut, IReadOnlyList<TErr>> Validate<T1, T2, TOut, TErr>(
         Result<T1, TErr> first,
@@ -162,6 +236,19 @@ public static partial class Rop
     /// <param name="third">The third result.</param>
     /// <param name="merger">Combines all success values. Evaluated only when all are <c>Ok</c>.</param>
     /// <returns><c>Ok(merger(a, b, c))</c>, or <c>Err</c> with all errors in argument order (never empty).</returns>
+    /// <remarks>
+    /// Every input is inspected, so a caller learns about all problems at once instead of one per round trip.
+    /// <code><![CDATA[
+    /// var validated = Rop.Validate(
+    ///         Rop.Ok<Order, RopError>(OrderFixtures.Sample),
+    ///         Rop.Err<decimal>(RopError.Create("E_AMOUNT", "the amount must be positive")),
+    ///         Rop.Err<int>(RopError.Create("E_QUANTITY", "the quantity must be positive")),
+    ///         static (order, amount, count) => order.Id);
+    ///
+    /// // Ok("ord-1001") when all three checks passed,
+    /// // Err([E_AMOUNT, E_QUANTITY]) with every error in argument order.
+    /// ]]></code>
+    /// </remarks>
     public static Result<TOut, IReadOnlyList<TErr>> Validate<T1, T2, T3, TOut, TErr>(
         Result<T1, TErr> first,
         Result<T2, TErr> second,
@@ -198,6 +285,17 @@ public static partial class Rop
     /// <typeparam name="TErr">The error type.</typeparam>
     /// <param name="results">The results to sequence. Enumerated exactly once, immediately.</param>
     /// <returns><c>Ok</c> with all success values in order, or the first <c>Err</c>. An empty source yields <c>Ok([])</c>.</returns>
+    /// <remarks>
+    /// The sequence stops at the first failure, so the remaining results are never inspected.
+    /// <code><![CDATA[
+    /// var skus = Rop.Sequence(
+    ///         OrderFixtures.Sample.Lines.Select(static line => Rop.Ok(line.Sku)))
+    ///     .MapOk(static list => list.Count);
+    ///
+    /// // Ok(2) when every result is Ok,
+    /// // Err(E_LINE) with the first error - Sequence stops at the first failure.
+    /// ]]></code>
+    /// </remarks>
     public static Result<IReadOnlyList<T>, TErr> Sequence<T, TErr>(IEnumerable<Result<T, TErr>> results)
     {
         ArgumentNullException.ThrowIfNull(results);
@@ -223,6 +321,21 @@ public static partial class Rop
     /// <typeparam name="TErr">The error type.</typeparam>
     /// <param name="results">The results to sequence. Enumerated exactly once, immediately.</param>
     /// <returns><c>Ok</c> with all success values, or <c>Err</c> with all errors (never empty).</returns>
+    /// <remarks>
+    /// The aggregating counterpart of <see cref="Sequence{T,TErr}"/>: every result is inspected and every error is
+    /// collected in element order.
+    /// <code><![CDATA[
+    /// var validated = Rop.SequenceValidation(
+    ///     new[]
+    ///     {
+    ///         Rop.Ok<string, RopError>("SKU-1"),
+    ///         Rop.Err<string, RopError>(RopError.Create("E_LINE", "the line is invalid")),
+    ///     });
+    ///
+    /// // Ok(["SKU-1"]) when every result is Ok,
+    /// // Err([E_LINE]) with every error - SequenceValidation never short-circuits.
+    /// ]]></code>
+    /// </remarks>
     public static Result<IReadOnlyList<T>, IReadOnlyList<TErr>> SequenceValidation<T, TErr>(
         IEnumerable<Result<T, TErr>> results)
     {
@@ -263,6 +376,14 @@ public static partial class Rop
     /// <remarks>
     /// Applicative (aggregating) semantics: the mapper is invoked for every element and no element is skipped after a
     /// failure. Use <see cref="Traverse{T,TOut,TErr}"/> when only the first error matters.
+    /// <code><![CDATA[
+    /// var validated = Rop.TraverseValidation(
+    ///         OrderFixtures.Sample.Lines,
+    ///         static line => Rop.Ok(line.Sku));
+    ///
+    /// // Ok(["SKU-1", "SKU-2"]) when every element maps successfully,
+    /// // Err([E_LINE]) with every error - the mapper runs for every element.
+    /// ]]></code>
     /// </remarks>
     public static Result<IReadOnlyList<TOut>, IReadOnlyList<TErr>> TraverseValidation<T, TOut, TErr>(
         IEnumerable<T> source,
@@ -300,6 +421,18 @@ public static partial class Rop
     /// <param name="source">The source elements. Enumerated exactly once, immediately.</param>
     /// <param name="mapper">Maps an element to a result.</param>
     /// <returns><c>Ok</c> with all success values in order, or the first <c>Err</c>.</returns>
+    /// <remarks>
+    /// The traversal stops at the first failure, so the remaining elements are never mapped.
+    /// <code><![CDATA[
+    /// var skus = Rop.Traverse(
+    ///         OrderFixtures.Sample.Lines,
+    ///         static line => Rop.Ok(line.Sku))
+    ///     .MapOk(static list => list.Count);
+    ///
+    /// // Ok(2) when every element maps successfully,
+    /// // Err(E_LINE) with the first error - Traverse stops at the first failure.
+    /// ]]></code>
+    /// </remarks>
     public static Result<IReadOnlyList<TOut>, TErr> Traverse<T, TOut, TErr>(
         IEnumerable<T> source,
         Func<T, Result<TOut, TErr>> mapper)
@@ -329,6 +462,21 @@ public static partial class Rop
     /// <typeparam name="TErr">The error type.</typeparam>
     /// <param name="results">The results to partition. Enumerated exactly once, immediately.</param>
     /// <returns>A tuple of all success values and all errors, preserving order.</returns>
+    /// <remarks>
+    /// <c>Partition</c> is the batch variant of the short-circuiting semantics: no row cancels another, so every
+    /// outcome of a batch is reported.
+    /// <code><![CDATA[
+    /// var (oks, errs) = Rop.Partition(
+    ///     new[]
+    ///     {
+    ///         Rop.Ok<string, RopError>("SKU-1"),
+    ///         Rop.Err<string, RopError>(RopError.Create("E_LINE", "the line is invalid")),
+    ///     });
+    ///
+    /// // Ok(["SKU-1"]) is the success half,
+    /// // Err([E_LINE]) is the error half - Partition never fails.
+    /// ]]></code>
+    /// </remarks>
     public static (IReadOnlyList<T> Oks, IReadOnlyList<TErr> Errs) Partition<T, TErr>(
         IEnumerable<Result<T, TErr>> results)
     {

@@ -6,9 +6,20 @@ namespace Sandlada.RopSharp;
 /// Asynchronous aggregation helpers for <see cref="Result{TOk,TErr}"/>.
 /// </summary>
 /// <remarks>
+/// <para>
 /// All inputs are awaited before the result is decided, so faults from every supplied task are observed even when
 /// an earlier result already failed. The merger is never invoked when any input failed. Error ordering and
 /// short-circuit versus aggregating semantics match the synchronous <see cref="Rop"/> counterparts.
+/// </para>
+/// <code><![CDATA[
+/// var placed = await Rop.CombineAsync(
+///         Task.FromResult(Rop.Ok<Order, RopError>(OrderFixtures.Sample)),
+///         Task.FromResult(Rop.Ok<decimal, RopError>(OrderFixtures.Sample.Total)),
+///         static (order, amount) => $"{order.Id}:{amount}");
+///
+/// // Ok("ord-1001:44") when both tasks produced Ok,
+/// // Err(E_ORDER) with the first error - every task is awaited before the result is decided.
+/// ]]></code>
 /// </remarks>
 [SuppressMessage(
     "ApiDesign",
@@ -29,6 +40,19 @@ public static partial class Rop
     /// <param name="cancellationToken">An optional cancellation token.</param>
     /// <returns><c>Ok(merger(a, b))</c> or the first <c>Err</c>.</returns>
     /// <exception cref="OperationCanceledException">The token was cancelled while awaiting the inputs.</exception>
+    /// <remarks>
+    /// Both tasks are awaited before the result is decided, so a fault in the second task is observed even when the
+    /// first one already failed.
+    /// <code><![CDATA[
+    /// var placed = await Rop.CombineAsync(
+    ///         Task.FromResult(Rop.Ok<Order, RopError>(OrderFixtures.Sample)),
+    ///         Task.FromResult(Rop.Ok<decimal, RopError>(OrderFixtures.Sample.Total)),
+    ///         static (order, amount) => $"{order.Id}:{amount}");
+    ///
+    /// // Ok("ord-1001:44") when both tasks produced Ok,
+    /// // Err(E_ORDER) with the first error - the merger never runs after a failure.
+    /// ]]></code>
+    /// </remarks>
     public static async Task<Result<TOut, TErr>> CombineAsync<T1, T2, TOut, TErr>(
         Task<Result<T1, TErr>> first,
         Task<Result<T2, TErr>> second,
@@ -61,6 +85,19 @@ public static partial class Rop
     /// <param name="cancellationToken">An optional cancellation token.</param>
     /// <returns><c>Ok(merger(a, b, c))</c> or the first <c>Err</c>.</returns>
     /// <exception cref="OperationCanceledException">The token was cancelled while awaiting the inputs.</exception>
+    /// <remarks>
+    /// The same short-circuiting semantics as the two-input overload, extended to three tasks.
+    /// <code><![CDATA[
+    /// var placed = await Rop.CombineAsync(
+    ///         Task.FromResult(Rop.Ok<Order, RopError>(OrderFixtures.Sample)),
+    ///         Task.FromResult(Rop.Ok<decimal, RopError>(OrderFixtures.Sample.Total)),
+    ///         Task.FromResult(Rop.Ok<int, RopError>(OrderFixtures.Sample.ItemCount)),
+    ///         static (order, amount, count) => $"{order.Id}:{amount}:{count}");
+    ///
+    /// // Ok("ord-1001:44:3") when all three tasks produced Ok,
+    /// // Err(E_ORDER) with the first error - the merger never runs after a failure.
+    /// ]]></code>
+    /// </remarks>
     public static async Task<Result<TOut, TErr>> CombineAsync<T1, T2, T3, TOut, TErr>(
         Task<Result<T1, TErr>> first,
         Task<Result<T2, TErr>> second,
@@ -92,6 +129,17 @@ public static partial class Rop
     /// <param name="cancellationToken">An optional cancellation token.</param>
     /// <returns><c>Ok((a, b))</c> or the first <c>Err</c>.</returns>
     /// <exception cref="OperationCanceledException">The token was cancelled while awaiting the inputs.</exception>
+    /// <remarks>
+    /// <c>ZipAsync</c> is <see cref="CombineAsync{T1,T2,TOut,TErr}"/> with a tuple merger.
+    /// <code><![CDATA[
+    /// var pair = await Rop.ZipAsync(
+    ///     Task.FromResult(Rop.Ok<Order, RopError>(OrderFixtures.Sample)),
+    ///     Task.FromResult(Rop.Ok<decimal, RopError>(OrderFixtures.Sample.Total)));
+    ///
+    /// // Ok((order, 44)) when both tasks produced Ok,
+    /// // Err(E_ORDER) with the first error - ZipAsync is CombineAsync with a tuple merger.
+    /// ]]></code>
+    /// </remarks>
     public static Task<Result<(T1, T2), TErr>> ZipAsync<T1, T2, TErr>(
         Task<Result<T1, TErr>> first,
         Task<Result<T2, TErr>> second,
@@ -111,6 +159,18 @@ public static partial class Rop
     /// <param name="cancellationToken">An optional cancellation token.</param>
     /// <returns><c>Ok((a, b, c))</c> or the first <c>Err</c>.</returns>
     /// <exception cref="OperationCanceledException">The token was cancelled while awaiting the inputs.</exception>
+    /// <remarks>
+    /// <c>ZipAsync</c> is <see cref="CombineAsync{T1,T2,T3,TOut,TErr}"/> with a tuple merger.
+    /// <code><![CDATA[
+    /// var triple = await Rop.ZipAsync(
+    ///     Task.FromResult(Rop.Ok<Order, RopError>(OrderFixtures.Sample)),
+    ///     Task.FromResult(Rop.Ok<decimal, RopError>(OrderFixtures.Sample.Total)),
+    ///     Task.FromResult(Rop.Ok<int, RopError>(OrderFixtures.Sample.ItemCount)));
+    ///
+    /// // Ok((order, 44, 3)) when all three tasks produced Ok,
+    /// // Err(E_ORDER) with the first error - ZipAsync is CombineAsync with a tuple merger.
+    /// ]]></code>
+    /// </remarks>
     public static Task<Result<(T1, T2, T3), TErr>> ZipAsync<T1, T2, T3, TErr>(
         Task<Result<T1, TErr>> first,
         Task<Result<T2, TErr>> second,
@@ -131,6 +191,19 @@ public static partial class Rop
     /// <param name="cancellationToken">An optional cancellation token.</param>
     /// <returns><c>Ok(merger(a, b))</c> or <c>Err</c> with all errors in argument order.</returns>
     /// <exception cref="OperationCanceledException">The token was cancelled while awaiting the inputs.</exception>
+    /// <remarks>
+    /// The asynchronous counterpart of <see cref="Rop.Validate{T1,T2,TOut,TErr}"/>: both tasks are awaited and
+    /// every error is collected.
+    /// <code><![CDATA[
+    /// var validated = await Rop.ValidateAsync(
+    ///         Task.FromResult(Rop.Ok<Order, RopError>(OrderFixtures.Sample)),
+    ///         Task.FromResult(Rop.Err<decimal>(RopError.Create("E_AMOUNT", "the amount must be positive"))),
+    ///         static (order, amount) => order.Id);
+    ///
+    /// // Ok("ord-1001") when both tasks produced Ok,
+    /// // Err([E_AMOUNT]) with every error - ValidateAsync never short-circuits.
+    /// ]]></code>
+    /// </remarks>
     public static async Task<Result<TOut, IReadOnlyList<TErr>>> ValidateAsync<T1, T2, TOut, TErr>(
         Task<Result<T1, TErr>> first,
         Task<Result<T2, TErr>> second,
@@ -164,6 +237,20 @@ public static partial class Rop
     /// <param name="cancellationToken">An optional cancellation token.</param>
     /// <returns><c>Ok(merger(a, b, c))</c> or <c>Err</c> with all errors in argument order.</returns>
     /// <exception cref="OperationCanceledException">The token was cancelled while awaiting the inputs.</exception>
+    /// <remarks>
+    /// Every task is awaited and every error is collected, exactly like the synchronous three-input
+    /// <see cref="Rop.Validate{T1,T2,T3,TOut,TErr}"/>.
+    /// <code><![CDATA[
+    /// var validated = await Rop.ValidateAsync(
+    ///         Task.FromResult(Rop.Ok<Order, RopError>(OrderFixtures.Sample)),
+    ///         Task.FromResult(Rop.Err<decimal>(RopError.Create("E_AMOUNT", "the amount must be positive"))),
+    ///         Task.FromResult(Rop.Err<int>(RopError.Create("E_QUANTITY", "the quantity must be positive"))),
+    ///         static (order, amount, count) => order.Id);
+    ///
+    /// // Ok("ord-1001") when all three tasks produced Ok,
+    /// // Err([E_AMOUNT, E_QUANTITY]) with every error in argument order.
+    /// ]]></code>
+    /// </remarks>
     public static async Task<Result<TOut, IReadOnlyList<TErr>>> ValidateAsync<T1, T2, T3, TOut, TErr>(
         Task<Result<T1, TErr>> first,
         Task<Result<T2, TErr>> second,
@@ -199,6 +286,17 @@ public static partial class Rop
     /// Null tasks are rejected with <see cref="InvalidOperationException"/>, matching
     /// <see cref="SequenceValidationAsync{T,TErr}"/> and <see cref="TraverseValidationAsync{T,TOut,TErr}(IEnumerable{T},Func{T,Task{Result{TOut,TErr}}},CancellationToken)"/>,
     /// so every aggregation helper reports the same programming error.
+    /// <code><![CDATA[
+    /// var (oks, errs) = await Rop.PartitionAsync(
+    ///     new[]
+    ///     {
+    ///         Task.FromResult(Rop.Ok<string, RopError>("SKU-1")),
+    ///         Task.FromResult(Rop.Err<string, RopError>(RopError.Create("E_LINE", "the line is invalid"))),
+    ///     });
+    ///
+    /// // Ok(["SKU-1"]) is the success half,
+    /// // Err([E_LINE]) is the error half - PartitionAsync never fails.
+    /// ]]></code>
     /// </remarks>
     public static async Task<(IReadOnlyList<T> Oks, IReadOnlyList<TErr> Errs)> PartitionAsync<T, TErr>(
         IEnumerable<Task<Result<T, TErr>>> tasks,
@@ -239,6 +337,17 @@ public static partial class Rop
     /// Aggregating semantics require every input, so all tasks are awaited instead of short-circuiting. All faults are
     /// observed; when more than one task faults, the first fault wins. Use
     /// <see cref="Rop.SequenceAsync{T,TErr}"/> when only the first error matters.
+    /// <code><![CDATA[
+    /// var validated = await Rop.SequenceValidationAsync(
+    ///     new[]
+    ///     {
+    ///         Task.FromResult(Rop.Ok<string, RopError>("SKU-1")),
+    ///         Task.FromResult(Rop.Err<string, RopError>(RopError.Create("E_LINE", "the line is invalid"))),
+    ///     });
+    ///
+    /// // Ok(["SKU-1"]) when every task produced Ok,
+    /// // Err([E_LINE]) with every error - every task is awaited.
+    /// ]]></code>
     /// </remarks>
     public static async Task<Result<IReadOnlyList<T>, IReadOnlyList<TErr>>> SequenceValidationAsync<T, TErr>(
         IEnumerable<Task<Result<T, TErr>>> tasks,
@@ -284,6 +393,14 @@ public static partial class Rop
     /// <remarks>
     /// The mapper is invoked for every element because aggregation never short-circuits. Use
     /// <see cref="Rop.TraverseAsync{T,TOut,TErr}"/> when only the first error matters.
+    /// <code><![CDATA[
+    /// var validated = await Rop.TraverseValidationAsync(
+    ///         OrderFixtures.Sample.Lines,
+    ///         static line => Task.FromResult(Rop.Ok(line.Sku)));
+    ///
+    /// // Ok(["SKU-1", "SKU-2"]) when every element maps successfully,
+    /// // Err([E_LINE]) with every error - the mapper runs for every element.
+    /// ]]></code>
     /// </remarks>
     public static async Task<Result<IReadOnlyList<TOut>, IReadOnlyList<TErr>>> TraverseValidationAsync<T, TOut, TErr>(
         IEnumerable<T> source,
@@ -328,6 +445,15 @@ public static partial class Rop
     /// <remarks>
     /// The mapper is invoked for every element because aggregation never short-circuits. Use
     /// <see cref="Rop.TraverseAsync{T,TOut,TErr}"/> when only the first error matters.
+    /// <code><![CDATA[
+    /// var validated = await Rop.TraverseValidationAsync(
+    ///         OrderFixtures.Sample.Lines,
+    ///         static (line, token) => Task.FromResult(Rop.Ok(line.Sku)),
+    ///         CancellationToken.None);
+    ///
+    /// // Ok(["SKU-1", "SKU-2"]) when every element maps successfully,
+    /// // Err([E_LINE]) with every error - the mapper receives the same token.
+    /// ]]></code>
     /// </remarks>
     public static async Task<Result<IReadOnlyList<TOut>, IReadOnlyList<TErr>>> TraverseValidationAsync<T, TOut, TErr>(
         IEnumerable<T> source,
