@@ -10,21 +10,43 @@ aliases, performs no reflection, and is AOT/trim friendly.
 ```csharp
 using Sandlada.RopSharp;
 
-Result<string, RopError> greeting =
-    Rop.Ok(user)
-       .BindOk(u => ValidateName(u.Name))
-       .MapOk(name => name.Trim())
-       .TeeOk(name => Log(name))
-       .MapErr(e => e.WithCode("E_USER_NAME"));
+// An order is priced, charged and finally shipped. Every failure is a value.
+Result<string, RopError> receipt =
+    Rop.Try(() => ChargeAsync(order), "E_CHARGE")
+       .BindOk(payment => Rop.Ok(payment.Id))
+       .Ensure(id => id.Length > 0, RopError.Create("E_RECEIPT", "the receipt id is empty"))
+       .TeeOk(id => Log(id))
+       .MapErr(e => e.WithCode("E_PAYMENT"));
 
-string text = greeting.Match(
-    ok: name => $"hello {name}",
+string text = receipt.Match(
+    ok: id => $"receipt {id}",
     err: e => $"fail {e.Code}: {e.Message}");
 ```
 
 - **Targets:** `net10.0` and `net11.0` only.
 - **Package:** `Sandlada.RopSharp` (MIT).
 - **Dependencies:** none.
+
+## The order fulfillment storyline
+
+Every example in this repository — in the README, in the XML documentation of the library and in the Traditional
+Chinese guide — is drawn from one small domain, so a reader keeps watching the same program grow instead of a
+series of unrelated fragments:
+
+| Type | Role |
+| --- | --- |
+| `Customer` | The buyer. The shipping address is optional, so the absence path can be shown. |
+| `Address` | A postal address. |
+| `Order` | The order to fulfill, with its lines. `Total` and `ItemCount` are derived. |
+| `OrderLine` | One ordered line, with a derived `Amount`. |
+| `Payment` | A payment attempt against an order. |
+| `PaymentStatus` | The lifecycle state of a payment. |
+| `Shipment` | A parcel handed over to a carrier. |
+
+The types live in
+[`Sandlada.RopSharp.Tests/DocExamples/DocExampleDomain.cs`](Sandlada.RopSharp.Tests/DocExamples/DocExampleDomain.cs)
+and are compiled into the test assembly. `OrderFixtures` stands in for the external systems: `Charge` throws for a
+declined order, so a boundary built on top of it shows both tracks deterministically.
 
 ## Install
 
@@ -46,9 +68,9 @@ result convention:
 
 ```csharp
 Result<Address, RopError> address =
-    Opt.FromNullable(user.Profile)
-       .BindSome(p => Opt.FromNullable(p.Address))
-       .RequireSome(() => RopError.Create("E_ADDRESS", "address required"));
+    Opt.FromNullable(order.Customer.Address)
+       .BindSome(shipping => Opt.Some(shipping))
+       .RequireSome(() => RopError.Create("E_ADDRESS", "the customer has no shipping address"));
 ```
 
 ## Result quick start
@@ -78,17 +100,17 @@ int lazy     = result.BindErrValue(() => ComputeDefault());
 ## Option quick start
 
 ```csharp
-Option<string> some = Opt.Some("x");
-Option<string> none = Opt.None<string>();
+Option<Address> some = Opt.Some(order.Customer.Address!);
+Option<Address> none = Opt.None<Address>();
 
-string? maybe = null;
-Option<string> lifted = Opt.FromNullable(maybe);              // reference types
-Option<int>    age    = Opt.FromNullableValue(maybeAge);      // Nullable<T>
+Address? maybeAddress = null;
+Option<Address> lifted = Opt.FromNullable(maybeAddress);          // reference types
+Option<int>    count   = Opt.FromNullableValue(maybeItemCount);   // Nullable<T>
 
-string text = some.Match(some: v => v, none: () => "anonymous");
+string city = some.Match(some: a => a.City, none: () => "unknown");
 
 // default(Option<T>) is contractually None — safe in arrays, fields and generic containers
-Option<Order>[] slots = new Option<Order>[3];                 // all None
+Option<Order>[] slots = new Option<Order>[3];                      // all None
 ```
 
 ## Mental model
@@ -117,10 +139,10 @@ Every combinator is **data-last** (mapper/binder/predicate/action last), so chai
 Crossing between the three models is always explicit, and every bridge names which side becomes which:
 
 ```csharp
-Either<RopError, int> fromResult = Rop.Ok(42).ToEither();              // Ok -> Right, Err -> Left
-Result<int, RopError> back      = fromResult.ToResult(error => error); // Left -> Err, Right -> Ok
-Either<string, int>  fromOption = Opt.None<int>().ToEither("missing"); // None -> Left, Some -> Right
-Option<int>          present    = Either.Right<string, int>(1).ToOption(); // Left is discarded
+Either<RopError, Payment> fromResult = Rop.Ok(payment).ToEither();      // Ok -> Right, Err -> Left
+Result<Payment, RopError> back      = fromResult.ToResult(error => error); // Left -> Err, Right -> Ok
+Either<string, Payment>  fromOption = Opt.None<Payment>().ToEither("missing"); // None -> Left, Some -> Right
+Option<Payment>          present    = Either.Right<string, Payment>(payment).ToOption(); // Left is discarded
 ```
 
 `ToOption` on `Result` and `Either` deliberately drops the reason; use `RequireSome` or `ToResult` when it must
@@ -132,14 +154,14 @@ survive the crossing.
 
 ```csharp
 RopError error = RopError.Create(
-    code: "E_USER_NOT_FOUND",     // stable, machine-readable, safe to switch on
-    message: "user 42 not found", // human-readable, display only
+    code: "E_ORDER_NOT_FOUND",     // stable, machine-readable, safe to switch on
+    message: "order 42 does not exist", // human-readable, display only
     details: "id=42");            // optional machine/diagnostic payload
 
 RopError fromBoundary = RopError.FromException(exception, "E_IO"); // Cause is captured here only
-RopError retagged     = error.WithCode("E_USER");
+RopError retagged     = error.WithCode("E_ORDER_404");
 
-RopError aggregate = RopError.Combine([nameError, amountError]);
+RopError aggregate = RopError.Combine([notFound, outOfStock]);
 IReadOnlyList<RopError> leaves = aggregate.InnerErrors; // the originals, in supplied order
 ```
 
@@ -166,8 +188,8 @@ aggregation helper and LINQ operator already works with any `TErr`. The convenie
 ```csharp
 public sealed record AppError(string Code, string Message);
 
-Result<int, AppError> parsed =
-    Rop.Parse<int, AppError>(raw, failure => new AppError(failure.Code, failure.Message));
+Result<decimal, AppError> parsed =
+    Rop.Parse<decimal, AppError>(raw, failure => new AppError(failure.Code, failure.Message));
 
 Result<Order, AppError> loaded =
     Rop.Try(() => LoadOrder(id),
@@ -196,13 +218,13 @@ The two models are deliberately separate and never mix implicitly:
 // Short-circuit: first error wins, later functions are not executed
 Result<Order, RopError> order =
     Rop.Ok(raw)
-       .BindOk(CheckName)     // stops here on failure
+       .BindOk(CheckCustomer)     // stops here on failure
        .BindOk(CheckAmount);
 
 // Aggregating: every input is inspected, all errors are collected in argument order
 Result<Order, IReadOnlyList<RopError>> validated =
-    Rop.Validate(CheckName(raw), CheckAmount(raw), CheckStock(raw),
-                 (name, amount, stock) => new Order(name, amount, stock));
+    Rop.Validate(CheckCustomer(raw), CheckAmount(raw), CheckStock(raw),
+                 (customer, amount, stock) => new Order("ord-1001", customer, stock));
 
 // Explicit conversions between the tracks
 Result<Order, IReadOnlyList<RopError>> lifted = order.ToValidation();
@@ -222,13 +244,13 @@ because errors describe domain failures.
 
 ```csharp
 Task<Result<string, RopError>> chained =
-    GetUserAsync(id, ct)
-        .MapOkAsync(u => u.Name, ct)
-        .BindOkAsync(u => GetOrderAsync(u.Id, ct), ct);
+    ChargeAsync(order, ct)
+        .MapOkAsync(payment => payment.Id, ct)
+        .BindOkAsync(id => GetShipmentAsync(id, ct), ct);
 
 // Cancellation-aware mapper receives the same token; the library never creates its own CTS
 Task<Result<string, RopError>> ct2 =
-    GetUserAsync(id, ct).MapOkAsync((u, token) => FetchNameAsync(u, token), ct);
+    ChargeAsync(order, ct).MapOkAsync((payment, token) => FetchReceiptAsync(payment, token), ct);
 ```
 
 Semantics:
@@ -253,12 +275,12 @@ task and return every error in source order. A faulted task surfaces as an excep
 several tasks fault the first fault wins while the rest are still observed.
 
 ```csharp
-Result<IReadOnlyList<Order>, IReadOnlyList<RopError>> validated =
-    await Rop.TraverseValidationAsync(lines, (line, token) => ParseLineAsync(line, token), ct);
+Result<IReadOnlyList<OrderLine>, IReadOnlyList<RopError>> validated =
+    await Rop.TraverseValidationAsync(order.Lines, (line, token) => ValidateLineAsync(line, token), ct);
 
 // Same aggregation without async work
-Result<IReadOnlyList<Order>, IReadOnlyList<RopError>> sync =
-    Rop.TraverseValidation(lines, ParseLine);
+Result<IReadOnlyList<OrderLine>, IReadOnlyList<RopError>> sync =
+    Rop.TraverseValidation(order.Lines, ValidateLine);
 ```
 
 `Option` mirrors that surface for map/bind/tee/filter, aggregation and LINQ. A synchronous `Option<T>` can be
@@ -269,8 +291,8 @@ await in order and stop at the first `None`. `Task<Option<T>>` supports query sy
 `Select` / `SelectMany` / `Where`:
 
 ```csharp
-Option<string> name = await GetUserAsync(id, ct)
-    .MapSomeAsync(user => user.Name, ct)
+Option<string> city = await GetAddressAsync(customer.Id, ct)
+    .MapSomeAsync(address => address.City, ct)
     .FilterAsync(value => value.Length > 0, ct);
 ```
 
@@ -279,15 +301,15 @@ Option<string> name = await GetUserAsync(id, ct)
 Exceptions become domain values in exactly one place:
 
 ```csharp
-Result<int, RopError> parsed = Rop.Try(() => int.Parse(text), ex => RopError.FromException(ex, "E_PARSE"));
-Result<int, RopError> byCode = Rop.Try(() => int.Parse(text), code: "E_PARSE");
+Result<decimal, RopError> parsed = Rop.Try(() => decimal.Parse(text), ex => RopError.FromException(ex, "E_PARSE"));
+Result<decimal, RopError> byCode = Rop.Try(() => decimal.Parse(text), code: "E_PARSE");
 
 // Side-effecting boundaries keep the result composable via Unit
 Result<Unit, RopError> saved = Rop.Try(() => repository.Save(order), ex => RopError.FromException(ex, "E_SAVE"));
 Task<Result<Unit, RopError>> sent = Rop.TryAsync(() => gateway.SendAsync(order, ct), "E_SEND", ct);
 
-Result<string, RopError> required = Rop.FromNullable(maybeName, () => RopError.Create("E_NULL", "name required"));
-Result<int, RopError> requiredAge  = Rop.FromNullableValue(maybeAge, () => RopError.Create("E_AGE", "age required"));
+Result<Address, RopError> required = Rop.FromNullable(customer.Address, () => RopError.Create("E_ADDRESS", "the customer has no shipping address"));
+Result<int, RopError> requiredCount = Rop.FromNullableValue(maybeItemCount, () => RopError.Create("E_COUNT", "the order has no item count"));
 ```
 
 - `OperationCanceledException` is always rethrown, never converted.
@@ -308,8 +330,8 @@ A parse failure echoes the offending input in the message and in `Details` as `i
 self-describing without logging the raw payload separately.
 
 ```csharp
-Result<int, RopError> quantity = Rop.Parse<int>(raw, "E_QUANTITY");
-// Err: Code=E_QUANTITY, Message='abc' is not a valid Int32., Details=input="abc"
+Result<decimal, RopError> amount = Rop.Parse<decimal>(raw, "E_AMOUNT");
+// Err: Code=E_AMOUNT, Message='19,50' is not a valid Decimal., Details=input="19,50"
 ```
 
 The echo is bounded to 64 characters, truncates on a code-point boundary, and escapes quotes, backslashes and
@@ -320,15 +342,15 @@ control characters. `null` renders as the literal `null` instead of an empty pai
 
 ```csharp
 // Result: select + from (no where — there is no error value to produce for a predicate)
-var total = from user in GetUser(id)
-            from order in GetOrder(user.Id)
+var total = from customer in GetCustomer(id)
+            from order in GetOrder(customer.Id)
             select order.Total;
 
 // Option: select + from + where (where is just Filter)
-var sum = from a in Opt.Some(1)
-          from b in Opt.Some(2)
-          where a < b
-          select a + b;
+var total = from address in Opt.FromNullable(customer.Address)
+            from line in Opt.Some(order.Lines[0])
+            where line.Quantity > 0
+            select line.Amount;
 ```
 
 ## Nullability rules
@@ -344,10 +366,10 @@ var sum = from a in Opt.Some(1)
   producing `Some(null)` or a null list entry. Filter the sequence or lift with `Opt.FromNullable` first.
 
 ```csharp
-Result<string, RopError> name =
-    GetUser(id)
-        .MapOk(u => u.Name)                                     // string?
-        .RequireNotNull(() => RopError.Create("E_NULL", "name required"));
+Result<Address, RopError> address =
+    GetOrder(id)
+        .MapOk(o => o.Customer.Address)                          // Address?
+        .RequireNotNull(() => RopError.Create("E_ADDRESS", "the customer has no shipping address"));
 ```
 
 ## Design rules
@@ -523,6 +545,8 @@ CONTRIBUTING.md / SECURITY.md   contribution rules and vulnerability policy
 ```
 
 Traditional Chinese guide: [`docs/zh-TW/getting-started.md`](docs/zh-TW/getting-started.md).
+Documentation-example rules (how the XML examples are written and kept compiling):
+[`docs/doc-examples.md`](docs/doc-examples.md).
 Benchmark baselines: [`docs/benchmarks.md`](docs/benchmarks.md).
 Verification gates (including the trim-published run): [`docs/verification.md`](docs/verification.md).
 

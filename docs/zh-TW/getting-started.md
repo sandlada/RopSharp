@@ -11,31 +11,52 @@ dotnet add package Sandlada.RopSharp
 
 目標框架：`net10.0`、`net11.0`。無外部相依。核心型別為 `readonly struct`，AOT/trim 安全，熱路徑無反射。
 
-## 兩個型別，兩個問題
+## 訂單履約主線
+
+本文件、README 與程式庫的 XML 文件說明共用同一條「訂單履約」主線，因此讀者一路看著同一個程式長大，而不是
+一堆互不相干的片段：
+
+| 型別 | 角色 |
+| --- | --- |
+| `Customer` | 買家。收件地址可為空，因此能示範「缺少值」的路徑。 |
+| `Address` | 郵遞地址。 |
+| `Order` | 待履約的訂單，內含訂單行；`Total` 與 `ItemCount` 為衍生值。 |
+| `OrderLine` | 單一訂單行，`Amount` 為衍生值。 |
+| `Payment` | 對應訂單的付款嘗試。 |
+| `PaymentStatus` | 付款的生命週期狀態。 |
+| `Shipment` | 交給承運商的包裹。 |
+
+這些型別位於
+[`Sandlada.RopSharp.Tests/DocExamples/DocExampleDomain.cs`](../../Sandlada.RopSharp.Tests/DocExamples/DocExampleDomain.cs)，
+並編譯進測試組件。`OrderFixtures` 代替外部系統：`Charge` 對遭拒付的訂單會丟出例外，因此建立在它之上的邊界
+可以確定性地展示兩條軌道。
+
+## 三個型別，三個問題
 
 | 問題 | 型別 | 成功 | 缺少／失敗 |
 | --- | --- | --- | --- |
 | 「失敗了嗎？為什麼？」 | `Result<TOk, TErr>` | `Ok(value)` | `Err(error)` |
 | 「有值嗎？」 | `Option<T>` | `Some(value)` | `None` |
+| 「兩個都是一般值時選哪一個？」 | `Either<TLeft, TRight>` | `Left(left)` | `Right(right)` |
 
 `Option` 不攜帶原因。需要原因時，在邊界顯式轉換：
 
 ```csharp
 Result<Address, RopError> address =
-    Opt.FromNullable(user.Profile)
-       .BindSome(profile => Opt.FromNullable(profile.Address))
-       .RequireSome(() => RopError.Create("E_ADDRESS", "address required"));
+    Opt.FromNullable(order.Customer.Address)
+       .BindSome(shipping => Opt.Some(shipping))
+       .RequireSome(() => RopError.Create("E_ADDRESS", "the customer has no shipping address"));
 ```
 
 ## Result 快速上手
 
 ```csharp
 // 生產默認：Err 固定為 RopError
-Result<int, RopError> ok = Rop.Ok(42);
-Result<int, RopError> err = Rop.Err<int>(RopError.Create("E_X", "bad"));
+Result<Payment, RopError> ok = Rop.Ok(payment);
+Result<Payment, RopError> err = Rop.Err<Payment>(RopError.Create("E_CHARGE", "the provider refused"));
 
 // 自訂 Err 型別（測試／interop）
-Result<int, string> custom = Rop.Ok<int, string>(42);
+Result<Payment, string> custom = Rop.Ok<Payment, string>(payment);
 
 // 不拋例外的分支查詢
 if (result.TryGetOk(out var value)) { /* ... */ }
@@ -55,14 +76,14 @@ int lazily  = result.BindErrValue(() => ComputeDefault());
 
 ```csharp
 RopError error = RopError.Create(
-    code: "E_USER_NOT_FOUND",      // 穩定、可 switch
-    message: "user 42 not found",  // 只做展示
+    code: "E_ORDER_NOT_FOUND",     // 穩定、可 switch
+    message: "order 42 does not exist", // 只做展示
     details: "id=42");             // 選用
 
 RopError boundary = RopError.FromException(exception, "E_IO"); // 只有這裡會帶 Cause
-RopError retagged = error.WithCode("E_USER");
+RopError retagged = error.WithCode("E_ORDER_404");
 
-RopError aggregate = RopError.Combine([nameError, amountError]);
+RopError aggregate = RopError.Combine([notFound, outOfStock]);
 IReadOnlyList<RopError> leaves = aggregate.InnerErrors; // 原始錯誤，依傳入順序
 ```
 
@@ -82,13 +103,13 @@ IReadOnlyList<RopError> leaves = aggregate.InnerErrors; // 原始錯誤，依傳
 // 短路：首錯即停，後續函數不執行
 Result<Order, RopError> order =
     Rop.Ok(raw)
-       .BindOk(CheckName)
+       .BindOk(CheckCustomer)
        .BindOk(CheckAmount);
 
 // 聚合：全部檢查，收集所有錯誤（依參數順序）
 Result<Order, IReadOnlyList<RopError>> validated =
-    Rop.Validate(CheckName(raw), CheckAmount(raw), CheckStock(raw),
-                 (name, amount, stock) => new Order(name, amount, stock));
+    Rop.Validate(CheckCustomer(raw), CheckAmount(raw), CheckStock(raw),
+                 (customer, amount, stock) => new Order("ord-1001", customer, stock));
 
 // 顯式轉換
 Result<Order, IReadOnlyList<RopError>> lifted = order.ToValidation();
@@ -102,17 +123,17 @@ Result<Order, RopError> merged = validated.ToSingleError(RopError.Combine);
 ## Option 快速上手
 
 ```csharp
-Option<string> some = Opt.Some("x");
-Option<string> none = Opt.None<string>();
+Option<Address> some = Opt.Some(order.Customer.Address!);
+Option<Address> none = Opt.None<Address>();
 
-string? maybeName = null;
-Option<string> lifted = Opt.FromNullable(maybeName);       // 引用型別
-Option<int> age       = Opt.FromNullableValue(maybeAge);   // Nullable<T>
+Address? maybeAddress = null;
+Option<Address> lifted = Opt.FromNullable(maybeAddress);       // 引用型別
+Option<int> count      = Opt.FromNullableValue(maybeItemCount); // Nullable<T>
 
-string text = some.Match(some: v => v, none: () => "anonymous");
+string city = some.Match(some: a => a.City, none: () => "unknown");
 
 // default(Option<T>) 契約為 None，可安全放陣列／欄位
-Option<Order>[] slots = new Option<Order>[3];              // 全部 None
+Option<Order>[] slots = new Option<Order>[3];                  // 全部 None
 ```
 
 Option 沒有 `MapNone`：None 沒有值可映射；None 側只有恢復（`BindNone`／`BindNoneValue`）與觀察（`TeeNone`）。
@@ -121,26 +142,26 @@ Option 沒有 `MapNone`：None 沒有值可映射；None 側只有恢復（`Bind
 
 ```csharp
 // Option -> Result：唯一橋樑
-Result<int, RopError> required = Opt.None<int>().RequireSome(RopError.Create("E_NONE", "missing"));
+Result<Payment, RopError> required = Opt.None<Payment>().RequireSome(RopError.Create("E_NONE", "missing"));
 
 // Result -> Option：丟棄錯誤
-Option<int> optional = Rop.Err<int>(error).ToOption();
+Option<Payment> optional = Rop.Err<Payment>(error).ToOption();
 
 // Result/Option -> Either：Ok/Some -> Right，Err/None -> Left
-Either<RopError, int> fromResult = Rop.Ok(42).ToEither();
-Either<string, int>  fromOption = Opt.None<int>().ToEither("missing");
-Result<int, RopError> roundTrip = fromResult.ToResult(reason => reason);
+Either<RopError, Payment> fromResult = Rop.Ok(payment).ToEither();
+Either<string, Payment>  fromOption = Opt.None<Payment>().ToEither("missing");
+Result<Payment, RopError> roundTrip = fromResult.ToResult(reason => reason);
 
 // Either -> Option：只保留 Right，Left 會被丟棄
-Option<int> present = Either.Right<string, int>(1).ToOption();
+Option<Payment> present = Either.Right<string, Payment>(payment).ToOption();
 
 // Option <-> Nullable
-string? back = Opt.Some("x").ToNullable();          // 引用型別
-int? count  = Opt.Some(1).ToNullableValue();        // 值型別
+Address? back = Opt.Some(address).ToNullable();          // 引用型別
+int? count  = Opt.Some(1).ToNullableValue();             // 值型別
 
 // Option<->Result 翻轉
-Result<Option<int>, RopError> flipped = Opt.Some(Rop.Ok(1)).Transpose();
-Option<Result<int, RopError>> back2   = Rop.Ok(Opt.Some(1)).Transpose();
+Result<Option<Payment>, RopError> flipped = Opt.Some(Rop.Ok(payment)).Transpose();
+Option<Result<Payment, RopError>> back2   = Rop.Ok(Opt.Some(payment)).Transpose();
 ```
 
 ## 非同步與取消
@@ -150,13 +171,13 @@ Option<Result<int, RopError>> back2   = Rop.Ok(Opt.Some(1)).Transpose();
 
 ```csharp
 Task<Result<string, RopError>> chained =
-    GetUserAsync(id, ct)
-        .MapOkAsync(user => user.Name, ct)
-        .BindOkAsync(user => GetOrderAsync(user.Id, ct), ct);
+    ChargeAsync(order, ct)
+        .MapOkAsync(payment => payment.Id, ct)
+        .BindOkAsync(id => GetShipmentAsync(id, ct), ct);
 
 // CT-aware 重載：同一個 token 透傳
 Task<Result<string, RopError>> ctAware =
-    GetUserAsync(id, ct).MapOkAsync((user, token) => FetchNameAsync(user, token), ct);
+    ChargeAsync(order, ct).MapOkAsync((payment, token) => FetchReceiptAsync(payment, token), ct);
 ```
 
 語義：
@@ -182,18 +203,18 @@ await，確保回報的錯誤具決定性（要並行請在呼叫端先啟動 Ta
 ## 邊界：例外只在此處變成值
 
 ```csharp
-Result<int, RopError> parsed = Rop.Try(() => int.Parse(text), ex => RopError.FromException(ex, "E_PARSE"));
-Result<int, RopError> byCode = Rop.Try(() => int.Parse(text), code: "E_PARSE");
+Result<decimal, RopError> parsed = Rop.Try(() => decimal.Parse(text), ex => RopError.FromException(ex, "E_PARSE"));
+Result<decimal, RopError> byCode = Rop.Try(() => decimal.Parse(text), code: "E_PARSE");
 
 // 沒有回傳值的邊界：用 Unit 保持結果可組合
 Result<Unit, RopError> saved = Rop.Try(() => repository.Save(order), ex => RopError.FromException(ex, "E_SAVE"));
 Task<Result<Unit, RopError>> sent = Rop.TryAsync(() => gateway.SendAsync(order, ct), "E_SEND", ct);
 
-Result<string, RopError> name =
-    Rop.FromNullable(maybeName, () => RopError.Create("E_NULL", "name required"));
+Result<Address, RopError> address =
+    Rop.FromNullable(customer.Address, () => RopError.Create("E_ADDRESS", "the customer has no shipping address"));
 
-Result<int, RopError> age =
-    Rop.FromNullableValue(maybeAge, () => RopError.Create("E_AGE", "age required"));
+Result<int, RopError> count =
+    Rop.FromNullableValue(maybeItemCount, () => RopError.Create("E_COUNT", "the order has no item count"));
 ```
 
 - `OperationCanceledException` 永遠原樣拋出。
@@ -209,8 +230,8 @@ Result<int, RopError> age =
 `Details`（`input=<quoted>`）回顯原始輸入，讓錯誤本身就能定位問題，不必另外記錄原始 payload。
 
 ```csharp
-Result<int, RopError> quantity = Rop.Parse<int>(raw, "E_QUANTITY");
-// Err: Code=E_QUANTITY, Message='abc' is not a valid Int32., Details=input="abc"
+Result<decimal, RopError> amount = Rop.Parse<decimal>(raw, "E_AMOUNT");
+// Err: Code=E_AMOUNT, Message='19,50' is not a valid Decimal., Details=input="19,50"
 ```
 
 回顯上限為 64 個 code point，會在不切開 surrogate pair 的前提下截斷，並轉義引號、反斜線與控制字元；
@@ -220,15 +241,15 @@ Result<int, RopError> quantity = Rop.Parse<int>(raw, "E_QUANTITY");
 
 ```csharp
 // Result：select + from（沒有 where，因為謂詞失敗沒有錯誤值可產生）
-var total = from user in GetUser(id)
-            from order in GetOrder(user.Id)
+var total = from customer in GetCustomer(id)
+            from order in GetOrder(customer.Id)
             select order.Total;
 
 // Option：select + from + where（where = Filter）
-var sum = from a in Opt.Some(1)
-          from b in Opt.Some(2)
-          where a < b
-          select a + b;
+var total = from address in Opt.FromNullable(customer.Address)
+            from line in Opt.Some(order.Lines[0])
+            where line.Quantity > 0
+            select line.Amount;
 ```
 
 ## 可空性規則
@@ -237,10 +258,10 @@ var sum = from a in Opt.Some(1)
 - mapper 可以回傳可空 payload：`Result<string?, RopError>`；用 `RequireNotNull` 收斂：
 
 ```csharp
-Result<string, RopError> name =
-    GetUser(id)
-        .MapOk(user => user.Name)   // string?
-        .RequireNotNull(() => RopError.Create("E_NULL", "name required"));
+Result<Address, RopError> address =
+    GetOrder(id)
+        .MapOk(order => order.Customer.Address)   // Address?
+        .RequireNotNull(() => RopError.Create("E_ADDRESS", "the customer has no shipping address"));
 ```
 
 - `Option<T>` 永不含 `null`；可空映射請用 `BindSomeNullable`／`BindSomeNullableValue`。
@@ -305,3 +326,6 @@ FromNullableValue / ToNullableValue / BindSomeNullableValue
 class 版本維持 `FromNullable`／`ToNullable`／`BindSomeNullable`。`TryGetOk`／`TryGetErr`／`TryGetValue`
 以 struct 實例方法提供。完整 API 與設計理由見 [`README.md`](../../README.md) 與
 [`ADR 0001`](../adr/0001-core-design-decisions.md)、[`ADR 0002`](../adr/0002-api-gap-remediation.md)。
+
+XML 文件範例的撰寫規則（以及保證它們真的能編譯的守門測試）見
+[`docs/doc-examples.md`](../doc-examples.md)。
