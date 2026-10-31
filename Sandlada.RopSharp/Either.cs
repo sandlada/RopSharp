@@ -483,7 +483,7 @@ public static class Either
     /// </remarks>
     public static Either<TLeft, TRight> Left<TLeft, TRight>(TLeft value)
     {
-        if (value is null)
+        if (ArgumentGuards.IsNull(value))
         {
             throw new ArgumentNullException(nameof(value), "A left value must not be null.");
         }
@@ -514,7 +514,7 @@ public static class Either
     /// </remarks>
     public static Either<TLeft, TRight> Right<TLeft, TRight>(TRight value)
     {
-        if (value is null)
+        if (ArgumentGuards.IsNull(value))
         {
             throw new ArgumentNullException(nameof(value), "A right value must not be null.");
         }

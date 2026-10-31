@@ -103,7 +103,7 @@ public static class OptionBridgeExtensions
             return Option.None<T>();
         }
 
-        return value is not null ? Option.Some(value) : Option.None<T>();
+        return !ArgumentGuards.IsNull(value) ? Option.Some(value) : Option.None<T>();
     }
 
     /// <summary>

@@ -162,7 +162,7 @@ public readonly struct Option<T> : IEquatable<Option<T>>
     /// ]]></code>
     /// </remarks>
     public override int GetHashCode() =>
-        _isSome && _value is not null
+        _isSome && !ArgumentGuards.IsNull(_value)
             ? HashCode.Combine(true, EqualityComparer<T>.Default.GetHashCode(_value))
             : 0;
 

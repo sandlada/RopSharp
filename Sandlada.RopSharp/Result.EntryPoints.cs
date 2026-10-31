@@ -57,7 +57,7 @@ public static partial class Result
     /// </remarks>
     public static Result<TOk, TErr> Ok<TOk, TErr>(TOk value)
     {
-        if (value is null)
+        if (ArgumentGuards.IsNull(value))
         {
             throw new ArgumentNullException(
                 nameof(value),
@@ -113,7 +113,7 @@ public static partial class Result
     /// </remarks>
     public static Result<TOk, TErr> Err<TOk, TErr>(TErr error)
     {
-        if (error is null)
+        if (ArgumentGuards.IsNull(error))
         {
             throw new ArgumentNullException(nameof(error), "An error value must not be null.");
         }

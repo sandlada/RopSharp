@@ -52,7 +52,7 @@ public static partial class Option
     /// </remarks>
     public static Option<T> Some<T>(T value)
     {
-        if (value is null)
+        if (ArgumentGuards.IsNull(value))
         {
             throw new ArgumentNullException(
                 nameof(value),
