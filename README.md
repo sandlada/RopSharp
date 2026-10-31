@@ -26,6 +26,8 @@ string text = receipt.Match(
 - **Targets:** `net10.0` and `net11.0` only.
 - **Package:** `Sandlada.RopSharp` (MIT).
 - **Dependencies:** none.
+- **Entry points:** `Result` builds a `Result<TOk, TErr>`, `Option` builds an `Option<T>`
+  ([ADR 0012](docs/adr/0012-result-and-option-entry-points.md)).
 
 ## The order fulfillment storyline
 
