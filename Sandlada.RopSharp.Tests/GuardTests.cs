@@ -23,6 +23,24 @@ public sealed class GuardTests
     }
 
     [Test]
+    public async Task Factories_RejectAnEmptyPayload_ButAcceptAValueTypePayload()
+    {
+        // The null check of the factories must not box the payload: a value type is never null, and a nullable
+        // value type is null only when it carries no value.
+        await AssertArgumentNullAsync(() => Result.Ok<int?, RopError>(null));
+        await AssertArgumentNullAsync(() => Option.Some<int?>(null));
+        await AssertArgumentNullAsync(() => Result.Err<int, string?>(null));
+
+        var zero = Result.Ok(0);
+        var nullable = Result.Ok<int?, RopError>(0);
+        var some = Option.Some(0);
+
+        await Assert.That(zero.IsOk).IsTrue();
+        await Assert.That(nullable.IsOk).IsTrue();
+        await Assert.That(some.IsSome).IsTrue();
+    }
+
+    [Test]
     public async Task ResultCombinators_EnsureWithNullError_ThrowsEagerlyAndDeterministically()
     {
         // The guard runs at entry, so a null error is reported even when the predicate passes and even on the
