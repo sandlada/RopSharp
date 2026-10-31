@@ -114,6 +114,23 @@ public sealed class AllocationGuardTests
         await Assert.That(bytes).IsEqualTo(ZeroBytes);
     }
 
+    [Test]
+    public async Task ResultOk_WithValueTypePayload_AllocatesNothing()
+    {
+        // The null guard of the factories must not box the payload: the box survives in unoptimized code.
+        var bytes = AllocationMeter.BytesPerRun(_ => Sink.Consume(Result.Ok(42)));
+
+        await Assert.That(bytes).IsEqualTo(ZeroBytes);
+    }
+
+    [Test]
+    public async Task OptionSome_WithValueTypePayload_AllocatesNothing()
+    {
+        var bytes = AllocationMeter.BytesPerRun(_ => Sink.Consume(Option.Some(42)));
+
+        await Assert.That(bytes).IsEqualTo(ZeroBytes);
+    }
+
     // ---------------------------------------------------------------- bounded hot paths (bytes per call)
 
     [Test]

@@ -13,6 +13,13 @@ public sealed class PerformanceSmokeTests
 
     private static int _sink;
 
+    // The delegates are hoisted on purpose: a delegate that is created inside the measured loop measures the
+    // compiler's lambda caching instead of the library, and the caching is a release-only optimization.
+    private static readonly Func<int, int> AddOne = static value => value + 1;
+    private static readonly Func<int, Result<int, RopError>> DoubleAndWrap = static value => Result.Ok(value * 2);
+    private static readonly Func<int, bool> IsNonNegative = static value => value >= 0;
+    private static readonly Func<int, bool> IsPositive = static value => value > 0;
+
     [Test]
     [NotInParallel]
     public async Task ResultPipeline_DoesNotAllocatePerIteration()
@@ -22,16 +29,16 @@ public sealed class PerformanceSmokeTests
         // Warm up JIT and static delegate caches before measuring.
         for (var index = 0; index < Iterations; index++)
         {
-            Consume(Result.Ok(index).MapOk(static value => value + 1).BindOk(static value => Result.Ok(value * 2)));
+            Consume(Result.Ok(index).MapOk(AddOne).BindOk(DoubleAndWrap));
         }
 
         var before = GC.GetAllocatedBytesForCurrentThread();
         for (var index = 0; index < Iterations; index++)
         {
             Consume(Result.Ok(index)
-                .MapOk(static value => value + 1)
-                .BindOk(static value => Result.Ok(value * 2))
-                .Ensure(static value => value >= 0, unreachable));
+                .MapOk(AddOne)
+                .BindOk(DoubleAndWrap)
+                .Ensure(IsNonNegative, unreachable));
         }
 
         var allocated = GC.GetAllocatedBytesForCurrentThread() - before;
@@ -45,15 +52,15 @@ public sealed class PerformanceSmokeTests
     {
         for (var index = 0; index < Iterations; index++)
         {
-            Consume(Option.Some(index).MapSome(static value => value + 1).Filter(static value => value > 0));
+            Consume(Option.Some(index).MapSome(AddOne).Filter(IsPositive));
         }
 
         var before = GC.GetAllocatedBytesForCurrentThread();
         for (var index = 0; index < Iterations; index++)
         {
             Consume(Option.Some(index)
-                .MapSome(static value => value + 1)
-                .Filter(static value => value > 0)
+                .MapSome(AddOne)
+                .Filter(IsPositive)
                 .BindNoneValue(0));
         }
 
