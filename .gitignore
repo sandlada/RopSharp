@@ -12,6 +12,16 @@ BenchmarkDotNet.Artifacts/
 *.nupkg
 *.snupkg
 
+# Markdown: ignore by default, whitelist essential docs
+*.md
+!README.md
+!LICENSE.md
+!CONTRIBUTING.md
+!SECURITY.md
+!AGENTS.md
+!CHANGELOG.md
+!docs/adr/*.md
+
 # AI
 .codex
 .claude
