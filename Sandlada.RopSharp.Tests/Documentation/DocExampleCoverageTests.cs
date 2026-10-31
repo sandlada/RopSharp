@@ -68,29 +68,29 @@ public sealed class DocExampleCoverageTests
             foreach (var member in EnumeratePublicMembers(type))
             {
                 foreach (var reference in member.DeclaringSyntaxReferences)
-            {
-                var documentation = string.Concat(
-                    reference.GetSyntax()
-                        .GetLeadingTrivia()
-                        .Where(static trivia => trivia.IsKind(SyntaxKind.SingleLineDocumentationCommentTrivia))
-                        .Select(static trivia => trivia.ToFullString()));
-
-                var open = documentation.IndexOf("<code>", StringComparison.Ordinal);
-
-                if (open < 0)
                 {
-                    continue;
-                }
+                    var documentation = string.Concat(
+                        reference.GetSyntax()
+                            .GetLeadingTrivia()
+                            .Where(static trivia => trivia.IsKind(SyntaxKind.SingleLineDocumentationCommentTrivia))
+                            .Select(static trivia => trivia.ToFullString()));
 
-                var close = documentation.IndexOf("</code>", open, StringComparison.Ordinal);
-                var body = documentation.Substring(open, close + "</code>".Length - open);
+                    var open = documentation.IndexOf("<code>", StringComparison.Ordinal);
 
-                if (!body.Contains(DocExampleExtractor.CodeOpenTag, StringComparison.Ordinal)
-                    || !body.Contains(DocExampleExtractor.CodeCloseTag, StringComparison.Ordinal))
-                {
-                    offenders.Add($"{Path.GetFileName(reference.SyntaxTree.FilePath)}: {Describe(member)}");
+                    if (open < 0)
+                    {
+                        continue;
+                    }
+
+                    var close = documentation.IndexOf("</code>", open, StringComparison.Ordinal);
+                    var body = documentation.Substring(open, close + "</code>".Length - open);
+
+                    if (!body.Contains(DocExampleExtractor.CodeOpenTag, StringComparison.Ordinal)
+                        || !body.Contains(DocExampleExtractor.CodeCloseTag, StringComparison.Ordinal))
+                    {
+                        offenders.Add($"{Path.GetFileName(reference.SyntaxTree.FilePath)}: {Describe(member)}");
+                    }
                 }
-            }
             }
         }
 
