@@ -12,7 +12,7 @@ using Sandlada.RopSharp;
 
 // An order is priced, charged and finally shipped. Every failure is a value.
 Result<string, RopError> receipt =
-    Result.Try(() => ChargeAsync(order), "E_CHARGE")
+    Result.Try(() => Charge(order), "E_CHARGE")
        .BindOk(payment => Result.Ok(payment.Id))
        .Ensure(id => id.Length > 0, RopError.Create("E_RECEIPT", "the receipt id is empty"))
        .TeeOk(id => Log(id))
