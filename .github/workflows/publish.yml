@@ -41,6 +41,7 @@ jobs:
         run: |
           dotnet msbuild Sandlada.RopSharp/Sandlada.RopSharp.csproj \
             -t:Pack -p:Configuration=Release \
+            ${{ inputs.version && format('-p:Version={0}', inputs.version) || '' }} \
             -p:PackageOutputPath="${{ github.workspace }}/artifacts"
 
       - name: List artifacts
