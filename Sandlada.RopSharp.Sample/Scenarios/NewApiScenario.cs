@@ -10,10 +10,10 @@ internal static class NewApiScenario
 {
     public static async Task RunAsync()
     {
-        var parsed = Rop.Parse<int>("41");
-        var weighted = await Rop.CombineAsync(
+        var parsed = Result.Parse<int>("41");
+        var weighted = await Result.CombineAsync(
             Task.FromResult(parsed),
-            Task.FromResult(Rop.Ok(2)),
+            Task.FromResult(Result.Ok(2)),
             (value, factor) => value * factor);
 
         weighted
@@ -27,7 +27,7 @@ internal static class NewApiScenario
         var either = Either.Left<string, int>("refund");
         Console.WriteLine($"   either: {either.Match(left => left, right => right.ToString())}");
 
-        var last = new[] { Opt.Some(1), Opt.None<int>(), Opt.Some(3) }.Choose().TryLast();
+        var last = new[] { Option.Some(1), Option.None<int>(), Option.Some(3) }.Choose().TryLast();
         Console.WriteLine($"   option last: {last.Match(value => value.ToString(), () => "none")}");
     }
 }

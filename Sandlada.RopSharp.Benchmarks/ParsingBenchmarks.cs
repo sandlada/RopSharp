@@ -24,26 +24,26 @@ public class ParsingBenchmarks
     }
 
     [Benchmark(Baseline = true)]
-    public Result<int, RopError> Parse_Int_Success() => Rop.Parse<int>(_valid);
+    public Result<int, RopError> Parse_Int_Success() => Result.Parse<int>(_valid);
 
     [Benchmark]
-    public Result<int, RopError> Parse_Int_Failure() => Rop.Parse<int>(_invalid);
+    public Result<int, RopError> Parse_Int_Failure() => Result.Parse<int>(_invalid);
 
     [Benchmark]
-    public Result<int, RopError> Parse_Int_LongFailure() => Rop.Parse<int>(_longInvalid);
+    public Result<int, RopError> Parse_Int_LongFailure() => Result.Parse<int>(_longInvalid);
 
     [Benchmark]
-    public Result<long, RopError> Parse_Long_Success() => Rop.Parse<long>("9223372036854775807");
+    public Result<long, RopError> Parse_Long_Success() => Result.Parse<long>("9223372036854775807");
 
     [Benchmark]
-    public Option<int> TryParse_Int_Success() => Rop.TryParse<int>(_valid);
+    public Option<int> TryParse_Int_Success() => Result.TryParse<int>(_valid);
 
     [Benchmark]
-    public Option<int> TryParse_Int_Failure() => Rop.TryParse<int>(_invalid);
+    public Option<int> TryParse_Int_Failure() => Result.TryParse<int>(_invalid);
 
     [Benchmark]
-    public Result<Guid, RopError> Parse_Guid_Success() => Rop.Parse<Guid>("6f9619ff-8b86-d011-b42d-00c04fc964ff");
+    public Result<Guid, RopError> Parse_Guid_Success() => Result.Parse<Guid>("6f9619ff-8b86-d011-b42d-00c04fc964ff");
 
     [Benchmark]
-    public Result<DateTime, RopError> Parse_DateTime_Success() => Rop.Parse<DateTime>("2026-10-29T00:00:00Z");
+    public Result<DateTime, RopError> Parse_DateTime_Success() => Result.Parse<DateTime>("2026-10-29T00:00:00Z");
 }

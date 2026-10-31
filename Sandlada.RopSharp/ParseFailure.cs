@@ -1,7 +1,7 @@
 namespace Sandlada.RopSharp;
 
 /// <summary>
-/// The complete diagnostic payload produced when <see cref="Rop.Parse{T,TErr}(string?,System.Func{ParseFailure,TErr},string)"/>
+/// The complete diagnostic payload produced when <see cref="Result.Parse{T,TErr}(string?,System.Func{ParseFailure,TErr},string)"/>
 /// cannot parse its input.
 /// </summary>
 /// <remarks>
@@ -20,7 +20,7 @@ namespace Sandlada.RopSharp;
 /// <see cref="TypeName"/> are <see langword="null"/>. Instances are created by the library.
 /// </para>
 /// <code><![CDATA[
-/// var parsed = Rop.Parse<decimal, string>("19.50", static failure => failure.Code)
+/// var parsed = Result.Parse<decimal, string>("19.50", static failure => failure.Code)
 ///     .MapOk(static amount => amount.ToString("0.00", CultureInfo.InvariantCulture));
 ///
 /// // Ok("19.50") when the text is a number,
@@ -49,7 +49,7 @@ public readonly record struct ParseFailure
     /// </para>
     /// <code><![CDATA[
     /// var failure = new ParseFailure("E_AMOUNT_PARSE", "the amount is not a number", "19,50", "decimal");
-    /// var placed = Rop.Err<decimal>(RopError.Create(failure.Code, failure.Message));
+    /// var placed = Result.Err<decimal>(RopError.Create(failure.Code, failure.Message));
     ///
     /// // Err(E_AMOUNT_PARSE) is the stable code of the failure,
     /// // Ok(19.50) is the other track of the same result.

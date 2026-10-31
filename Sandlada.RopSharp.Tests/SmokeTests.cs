@@ -7,7 +7,7 @@ public sealed class SmokeTests
     [Test]
     public async Task Result_Ok_ExposesValue()
     {
-        var result = Rop.Ok(42);
+        var result = Result.Ok(42);
 
         await Assert.That(result.IsOk).IsTrue();
         await Assert.That(result.IsErr).IsFalse();
@@ -17,6 +17,6 @@ public sealed class SmokeTests
     [Test]
     public async Task LoadedAssembly_IsTheLibrary()
     {
-        await Assert.That(typeof(Rop).Assembly.GetName().Name).IsEqualTo("Sandlada.RopSharp");
+        await Assert.That(typeof(Result).Assembly.GetName().Name).IsEqualTo("Sandlada.RopSharp");
     }
 }

@@ -11,7 +11,7 @@ namespace Sandlada.RopSharp;
 /// <typeparam name="TErr">The error value type. Production code should use <see cref="RopError"/>.</typeparam>
 /// <remarks>
 /// <para>
-/// Create values through <see cref="Rop.Ok{TOk,TErr}(TOk)"/> and <see cref="Rop.Err{TOk,TErr}(TErr)"/>.
+/// Create values through <see cref="Result.Ok{TOk,TErr}(TOk)"/> and <see cref="Result.Err{TOk,TErr}(TErr)"/>.
 /// The parameterless <see langword="default"/> value is not a valid result: it reports <see cref="IsErr"/> but
 /// carries no error. Reading that error through <see cref="TryGetErr"/> or a terminal/error-track combinator
 /// throws <see cref="InvalidOperationException"/> instead of exposing a null error.
@@ -25,8 +25,8 @@ namespace Sandlada.RopSharp;
 /// <see cref="ResultExtensions.Match{TOk,TErr,T}(Result{TOk,TErr},Func{TOk,T},Func{TErr,T})"/>.
 /// </para>
 /// <code><![CDATA[
-/// var placed = Rop.Ok(OrderFixtures.Sample)
-///     .BindOk(static order => Rop.Ok(order.Total))
+/// var placed = Result.Ok(OrderFixtures.Sample)
+///     .BindOk(static order => Result.Ok(order.Total))
 ///     .MapOk(static total => total.ToString("0.00", CultureInfo.InvariantCulture));
 ///
 /// // Ok("44.00") when the order could be priced,
@@ -56,7 +56,7 @@ public readonly struct Result<TOk, TErr> : IEquatable<Result<TOk, TErr>>
     /// not about the payload: to read the payload, use <see cref="TryGetOk"/>.
     /// </para>
     /// <code><![CDATA[
-    /// var charged = Rop.Try(() => OrderFixtures.Charge(OrderFixtures.Sample), "E_CHARGE");
+    /// var charged = Result.Try(() => OrderFixtures.Charge(OrderFixtures.Sample), "E_CHARGE");
     /// var succeeded = charged.IsOk;
     ///
     /// // Ok(payment) makes IsOk true,
@@ -74,7 +74,7 @@ public readonly struct Result<TOk, TErr> : IEquatable<Result<TOk, TErr>>
     /// failure reports <see langword="true"/>. It never inspects the error value itself.
     /// </para>
     /// <code><![CDATA[
-    /// var charged = Rop.Try(() => OrderFixtures.Charge(OrderFixtures.Declined), "E_CHARGE");
+    /// var charged = Result.Try(() => OrderFixtures.Charge(OrderFixtures.Declined), "E_CHARGE");
     /// var failed = charged.IsErr;
     ///
     /// // Err(E_CHARGE) makes IsErr true,
@@ -97,7 +97,7 @@ public readonly struct Result<TOk, TErr> : IEquatable<Result<TOk, TErr>>
     /// On the failure track the output stays at its default, so always check the return value before using it.
     /// </para>
     /// <code><![CDATA[
-    /// var charged = Rop.Try(() => OrderFixtures.Charge(OrderFixtures.Sample), "E_CHARGE");
+    /// var charged = Result.Try(() => OrderFixtures.Charge(OrderFixtures.Sample), "E_CHARGE");
     /// if (charged.TryGetOk(out var payment))
     /// {
     ///     var receipt = payment.Id;
@@ -123,7 +123,7 @@ public readonly struct Result<TOk, TErr> : IEquatable<Result<TOk, TErr>>
     /// <returns><see langword="true"/> when the result is <c>Err</c>; otherwise <see langword="false"/>.</returns>
     /// <exception cref="InvalidOperationException">
     /// The result is an uninitialized <see langword="default"/> value. The default is not a valid result;
-    /// construct values with <see cref="Rop.Ok{TOk,TErr}(TOk)"/> or <see cref="Rop.Err{TOk,TErr}(TErr)"/>.
+    /// construct values with <see cref="Result.Ok{TOk,TErr}(TOk)"/> or <see cref="Result.Err{TOk,TErr}(TErr)"/>.
     /// </exception>
     /// <remarks>
     /// <para>
@@ -133,7 +133,7 @@ public readonly struct Result<TOk, TErr> : IEquatable<Result<TOk, TErr>>
     /// an ordinary <c>Err</c> never throws.
     /// </para>
     /// <code><![CDATA[
-    /// var charged = Rop.Try(() => OrderFixtures.Charge(OrderFixtures.Declined), "E_CHARGE");
+    /// var charged = Result.Try(() => OrderFixtures.Charge(OrderFixtures.Declined), "E_CHARGE");
     /// if (charged.TryGetErr(out var error))
     /// {
     ///     var code = error.Code;
@@ -161,7 +161,7 @@ public readonly struct Result<TOk, TErr> : IEquatable<Result<TOk, TErr>>
     /// a zero amount in a report.
     /// </para>
     /// <code><![CDATA[
-    /// var charged = Rop.Try(() => OrderFixtures.Charge(OrderFixtures.Sample), "E_CHARGE");
+    /// var charged = Result.Try(() => OrderFixtures.Charge(OrderFixtures.Sample), "E_CHARGE");
     /// var amount = charged.MapOk(static payment => payment.Amount).OkOrDefault();
     ///
     /// // Ok(44.00) yields 44.00,
@@ -189,7 +189,7 @@ public readonly struct Result<TOk, TErr> : IEquatable<Result<TOk, TErr>>
         if (!IsInitialized)
         {
             throw new InvalidOperationException(
-                "The result is an uninitialized default value; construct results with Rop.Ok or Rop.Err.");
+                "The result is an uninitialized default value; construct results with Result.Ok or Result.Err.");
         }
     }
 
@@ -200,8 +200,8 @@ public readonly struct Result<TOk, TErr> : IEquatable<Result<TOk, TErr>>
     /// result be used as a dictionary key or compared inside a test.
     /// </para>
     /// <code><![CDATA[
-    /// var first = Rop.Ok(OrderFixtures.Sample).MapOk(static order => order.Id);
-    /// var second = Rop.Ok(OrderFixtures.Sample).MapOk(static order => order.Id);
+    /// var first = Result.Ok(OrderFixtures.Sample).MapOk(static order => order.Id);
+    /// var second = Result.Ok(OrderFixtures.Sample).MapOk(static order => order.Id);
     /// var same = first.Equals(second);
     ///
     /// // Ok("ord-1001") equals Ok("ord-1001") because the payloads are equal,
@@ -227,7 +227,7 @@ public readonly struct Result<TOk, TErr> : IEquatable<Result<TOk, TErr>>
     /// <see cref="object"/> still compares by value and not by reference.
     /// </para>
     /// <code><![CDATA[
-    /// var charged = Rop.Try(() => OrderFixtures.Charge(OrderFixtures.Sample), "E_CHARGE")
+    /// var charged = Result.Try(() => OrderFixtures.Charge(OrderFixtures.Sample), "E_CHARGE")
     ///     .MapOk(static payment => payment.Id);
     /// var same = charged.Equals((object)charged);
     ///
@@ -244,7 +244,7 @@ public readonly struct Result<TOk, TErr> : IEquatable<Result<TOk, TErr>>
     /// a hash code and can be used as dictionary keys.
     /// </para>
     /// <code><![CDATA[
-    /// var placed = Rop.Ok(OrderFixtures.Sample).MapOk(static order => order.Id);
+    /// var placed = Result.Ok(OrderFixtures.Sample).MapOk(static order => order.Id);
     /// var bucket = placed.GetHashCode() % 16;
     ///
     /// // Ok("ord-1001") hashes by its payload,
@@ -263,7 +263,7 @@ public readonly struct Result<TOk, TErr> : IEquatable<Result<TOk, TErr>>
     /// the combinators instead of parsing this string.
     /// </para>
     /// <code><![CDATA[
-    /// var charged = Rop.Try(() => OrderFixtures.Charge(OrderFixtures.Sample), "E_CHARGE")
+    /// var charged = Result.Try(() => OrderFixtures.Charge(OrderFixtures.Sample), "E_CHARGE")
     ///     .MapOk(static payment => payment.Id);
     /// var text = charged.ToString();
     ///
@@ -283,8 +283,8 @@ public readonly struct Result<TOk, TErr> : IEquatable<Result<TOk, TErr>>
     /// cache lookup naturally reaches for.
     /// </para>
     /// <code><![CDATA[
-    /// var placed = Rop.Ok(OrderFixtures.Sample).MapOk(static order => order.Id);
-    /// var same = placed == Rop.Ok(OrderFixtures.Sample).MapOk(static order => order.Id);
+    /// var placed = Result.Ok(OrderFixtures.Sample).MapOk(static order => order.Id);
+    /// var same = placed == Result.Ok(OrderFixtures.Sample).MapOk(static order => order.Id);
     ///
     /// // Ok("ord-1001") == Ok("ord-1001") because the payloads are equal,
     /// // Err(E_X) == Err(E_Y) only when the two errors are equal.
@@ -302,8 +302,8 @@ public readonly struct Result<TOk, TErr> : IEquatable<Result<TOk, TErr>>
     /// told apart in a test assertion.
     /// </para>
     /// <code><![CDATA[
-    /// var placed = Rop.Ok(OrderFixtures.Sample).MapOk(static order => order.Id);
-    /// var other = Rop.Ok(OrderFixtures.Sample).MapOk(static order => order.Id + "-retry");
+    /// var placed = Result.Ok(OrderFixtures.Sample).MapOk(static order => order.Id);
+    /// var other = Result.Ok(OrderFixtures.Sample).MapOk(static order => order.Id + "-retry");
     /// var differs = placed != other;
     ///
     /// // Ok("ord-1001") != Ok("ord-1001-retry") because the payloads differ,

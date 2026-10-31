@@ -8,7 +8,7 @@ namespace Sandlada.RopSharp;
 /// Conversions are always explicit: short-circuiting APIs never aggregate and aggregating APIs never
 /// short-circuit, so the two models are never mixed implicitly.
 /// <code><![CDATA[
-/// var collapsed = Rop.Try(() => OrderFixtures.Charge(OrderFixtures.Declined), "E_CHARGE")
+/// var collapsed = Result.Try(() => OrderFixtures.Charge(OrderFixtures.Declined), "E_CHARGE")
 ///     .ToValidation()
 ///     .ToSingleError(RopError.Combine);
 ///
@@ -29,7 +29,7 @@ public static class ResultValidationExtensions
     /// A success that carries <see langword="null"/> after a nullable mapping is preserved as is; lifting a track
     /// never re-validates the payload.
     /// <code><![CDATA[
-    /// var aggregated = Rop.Try(() => OrderFixtures.Charge(OrderFixtures.Declined), "E_CHARGE")
+    /// var aggregated = Result.Try(() => OrderFixtures.Charge(OrderFixtures.Declined), "E_CHARGE")
     ///     .ToValidation();
     ///
     /// // Ok(payment) stays on the success track,
@@ -38,8 +38,8 @@ public static class ResultValidationExtensions
     /// </remarks>
     public static Result<T, IReadOnlyList<TErr>> ToValidation<T, TErr>(this Result<T, TErr> result) =>
         result.TryGetOk(out var value)
-            ? Rop.OkUnchecked<T, IReadOnlyList<TErr>>(value)
-            : Rop.Err<T, IReadOnlyList<TErr>>([result.ErrUnsafe]);
+            ? Result.OkUnchecked<T, IReadOnlyList<TErr>>(value)
+            : Result.Err<T, IReadOnlyList<TErr>>([result.ErrUnsafe]);
 
     /// <summary>
     /// Collapses an aggregating result by keeping the first error.
@@ -51,7 +51,7 @@ public static class ResultValidationExtensions
     /// <remarks>
     /// This is the default collapse: the first error is the one the caller cares about, and the rest is dropped.
     /// <code><![CDATA[
-    /// var aggregated = Rop.Try(() => OrderFixtures.Charge(OrderFixtures.Declined), "E_CHARGE")
+    /// var aggregated = Result.Try(() => OrderFixtures.Charge(OrderFixtures.Declined), "E_CHARGE")
     ///     .ToValidation();
     /// var collapsed = aggregated.ToSingleError();
     ///
@@ -75,7 +75,7 @@ public static class ResultValidationExtensions
     /// strategy is required, use <see cref="ToSingleError{T,TErr}(Result{T,IReadOnlyList{TErr}},Func{IReadOnlyList{TErr},TErr})"/>.
     /// <code><![CDATA[
     /// Result<Order, IReadOnlyList<string>> aggregated =
-    ///     Rop.Err<Order, IReadOnlyList<string>>(["the order has no lines"]);
+    ///     Result.Err<Order, IReadOnlyList<string>>(["the order has no lines"]);
     /// var collapsed = aggregated.ToSingleError<Order, string>();
     ///
     /// // Ok(order) stays untouched,
@@ -99,9 +99,9 @@ public static class ResultValidationExtensions
     /// The strategy decides what the aggregated failures become. <see cref="RopError.Combine"/> keeps every
     /// individual failure reachable through <see cref="RopError.InnerErrors"/>.
     /// <code><![CDATA[
-    /// var collapsed = Rop.Validate(
-    ///         Rop.Ok<Order, RopError>(OrderFixtures.Sample),
-    ///         Rop.Err<decimal>(RopError.Create("E_AMOUNT", "the amount must be positive")),
+    /// var collapsed = Result.Validate(
+    ///         Result.Ok<Order, RopError>(OrderFixtures.Sample),
+    ///         Result.Err<decimal>(RopError.Create("E_AMOUNT", "the amount must be positive")),
     ///         static (order, amount) => order.Id)
     ///     .ToSingleError(RopError.Combine);
     ///
@@ -116,7 +116,7 @@ public static class ResultValidationExtensions
         ArgumentNullException.ThrowIfNull(combine);
         if (result.TryGetOk(out var value))
         {
-            return Rop.OkUnchecked<T, TErr>(value);
+            return Result.OkUnchecked<T, TErr>(value);
         }
 
         var errors = result.ErrUnsafe;
@@ -126,6 +126,6 @@ public static class ResultValidationExtensions
                 "An aggregating result must carry at least one error when it is on the failure track.");
         }
 
-        return Rop.Err<T, TErr>(Rop.RequireError(combine(errors)));
+        return Result.Err<T, TErr>(Result.RequireError(combine(errors)));
     }
 }

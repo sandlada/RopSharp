@@ -23,8 +23,8 @@ namespace Sandlada.RopSharp;
 /// the result world through <see cref="OptionBridgeExtensions.RequireSome{T,TErr}(Option{T},Func{TErr})"/>.
 /// </para>
 /// <code><![CDATA[
-/// var city = Opt.FromNullable(OrderFixtures.Sample.Customer.Address)
-///     .BindSome(static shipping => Opt.Some(shipping.City))
+/// var city = Option.FromNullable(OrderFixtures.Sample.Customer.Address)
+///     .BindSome(static shipping => Option.Some(shipping.City))
 ///     .MapSome(static name => name.ToUpperInvariant());
 ///
 /// // Some("LONDON") when the customer has a shipping address,
@@ -56,7 +56,7 @@ public readonly struct Option<T> : IEquatable<Option<T>>
     /// branch before deciding how to continue.
     /// </para>
     /// <code><![CDATA[
-    /// var address = Opt.FromNullable(OrderFixtures.Sample.Customer.Address);
+    /// var address = Option.FromNullable(OrderFixtures.Sample.Customer.Address);
     /// var present = address.IsSome;
     ///
     /// // Some(address) makes IsSome true,
@@ -74,7 +74,7 @@ public readonly struct Option<T> : IEquatable<Option<T>>
     /// skipped rather than that something went wrong.
     /// </para>
     /// <code><![CDATA[
-    /// var address = Opt.FromNullable(OrderFixtures.CustomerWithoutAddress.Address);
+    /// var address = Option.FromNullable(OrderFixtures.CustomerWithoutAddress.Address);
     /// var missing = address.IsNone;
     ///
     /// // None makes IsNone true,
@@ -97,7 +97,7 @@ public readonly struct Option<T> : IEquatable<Option<T>>
     /// to be checked before the value is used.
     /// </para>
     /// <code><![CDATA[
-    /// var address = Opt.FromNullable(OrderFixtures.Sample.Customer.Address);
+    /// var address = Option.FromNullable(OrderFixtures.Sample.Customer.Address);
     /// if (address.TryGetValue(out var shipping))
     /// {
     ///     var city = shipping.City;
@@ -120,8 +120,8 @@ public readonly struct Option<T> : IEquatable<Option<T>>
     /// because an option has nothing else.
     /// </para>
     /// <code><![CDATA[
-    /// var address = Opt.FromNullable(OrderFixtures.Sample.Customer.Address);
-    /// var same = address.Equals(Opt.Some(OrderFixtures.Sample.Customer.Address!));
+    /// var address = Option.FromNullable(OrderFixtures.Sample.Customer.Address);
+    /// var same = address.Equals(Option.Some(OrderFixtures.Sample.Customer.Address!));
     ///
     /// // Some(address) equals Some(address) because the values are equal,
     /// // None equals None because both are empty.
@@ -138,8 +138,8 @@ public readonly struct Option<T> : IEquatable<Option<T>>
     /// <see cref="object"/> still compares by value.
     /// </para>
     /// <code><![CDATA[
-    /// var address = Opt.FromNullable(OrderFixtures.Sample.Customer.Address);
-    /// var same = address.Equals((object)Opt.Some(OrderFixtures.Sample.Customer.Address!));
+    /// var address = Option.FromNullable(OrderFixtures.Sample.Customer.Address);
+    /// var same = address.Equals((object)Option.Some(OrderFixtures.Sample.Customer.Address!));
     ///
     /// // Some(address) equals its own boxed copy,
     /// // None equals its own boxed copy - the boxed form compares by value.
@@ -154,7 +154,7 @@ public readonly struct Option<T> : IEquatable<Option<T>>
     /// dictionary keys.
     /// </para>
     /// <code><![CDATA[
-    /// var address = Opt.FromNullable(OrderFixtures.Sample.Customer.Address);
+    /// var address = Option.FromNullable(OrderFixtures.Sample.Customer.Address);
     /// var bucket = address.GetHashCode() % 16;
     ///
     /// // Some(address) hashes by its value,
@@ -173,7 +173,7 @@ public readonly struct Option<T> : IEquatable<Option<T>>
     /// the combinators instead of parsing this string.
     /// </para>
     /// <code><![CDATA[
-    /// var city = Opt.FromNullable(OrderFixtures.CustomerWithoutAddress.Address)
+    /// var city = Option.FromNullable(OrderFixtures.CustomerWithoutAddress.Address)
     ///     .MapSome(static shipping => shipping.City);
     /// var text = city.ToString();
     ///
@@ -193,8 +193,8 @@ public readonly struct Option<T> : IEquatable<Option<T>>
     /// test assertion naturally reaches for.
     /// </para>
     /// <code><![CDATA[
-    /// var address = Opt.FromNullable(OrderFixtures.Sample.Customer.Address);
-    /// var same = address == Opt.Some(OrderFixtures.Sample.Customer.Address!);
+    /// var address = Option.FromNullable(OrderFixtures.Sample.Customer.Address);
+    /// var same = address == Option.Some(OrderFixtures.Sample.Customer.Address!);
     ///
     /// // Some(address) == Some(address) because the values are equal,
     /// // None == None because both are empty.
@@ -212,8 +212,8 @@ public readonly struct Option<T> : IEquatable<Option<T>>
     /// known expected value.
     /// </para>
     /// <code><![CDATA[
-    /// var address = Opt.FromNullable(OrderFixtures.CustomerWithoutAddress.Address);
-    /// var differs = address != Opt.Some(OrderFixtures.Sample.Customer.Address!);
+    /// var address = Option.FromNullable(OrderFixtures.CustomerWithoutAddress.Address);
+    /// var differs = address != Option.Some(OrderFixtures.Sample.Customer.Address!);
     ///
     /// // None != Some(address) because one is empty and the other is not,
     /// // Some(a) != Some(b) as soon as the two values are not equal.

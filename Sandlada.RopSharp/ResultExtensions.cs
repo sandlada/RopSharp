@@ -18,7 +18,7 @@ namespace Sandlada.RopSharp;
 /// and the shape of the errors says where it can still go.
 /// </para>
 /// <code><![CDATA[
-/// var receiptId = Rop.Try(() => OrderFixtures.Charge(OrderFixtures.Sample), "E_CHARGE")
+/// var receiptId = Result.Try(() => OrderFixtures.Charge(OrderFixtures.Sample), "E_CHARGE")
 ///     .MapOk(static payment => payment.Id)
 ///     .Ensure(static id => id.Length > 0, static id => RopError.Create("E_RECEIPT", "the receipt id is empty"));
 ///
@@ -49,7 +49,7 @@ public static class ResultExtensions
     /// mapper is free to assume a non-null success value.
     /// </para>
     /// <code><![CDATA[
-    /// var receiptId = Rop.Try(() => OrderFixtures.Charge(OrderFixtures.Sample), "E_CHARGE")
+    /// var receiptId = Result.Try(() => OrderFixtures.Charge(OrderFixtures.Sample), "E_CHARGE")
     ///     .MapOk(static payment => payment.Id);
     ///
     /// // Ok(receiptId) when the payment provider answered,
@@ -62,8 +62,8 @@ public static class ResultExtensions
     {
         ArgumentNullException.ThrowIfNull(mapper);
         return result.TryGetOk(out var value)
-            ? Rop.OkUnchecked<TOut, TErr>(mapper(value))
-            : Rop.Err<TOut, TErr>(result.ErrUnsafe);
+            ? Result.OkUnchecked<TOut, TErr>(mapper(value))
+            : Result.Err<TOut, TErr>(result.ErrUnsafe);
     }
 
     /// <summary>
@@ -87,7 +87,7 @@ public static class ResultExtensions
     /// different type for a caller that does not speak <see cref="RopError"/>.
     /// </para>
     /// <code><![CDATA[
-    /// var placed = Rop.Try(() => OrderFixtures.Charge(OrderFixtures.Declined), "E_CHARGE")
+    /// var placed = Result.Try(() => OrderFixtures.Charge(OrderFixtures.Declined), "E_CHARGE")
     ///     .MapErr(static error => error.WithCode("E_PAYMENT_DECLINED"));
     ///
     /// // Err(E_PAYMENT_DECLINED) when the provider refused the order,
@@ -100,8 +100,8 @@ public static class ResultExtensions
     {
         ArgumentNullException.ThrowIfNull(mapper);
         return result.TryGetErr(out var error)
-            ? Rop.Err<TOk, TErr2>(Rop.RequireError(mapper(error)))
-            : Rop.OkUnchecked<TOk, TErr2>(result.OkUnsafe);
+            ? Result.Err<TOk, TErr2>(Result.RequireError(mapper(error)))
+            : Result.OkUnchecked<TOk, TErr2>(result.OkUnsafe);
     }
 
     /// <summary>
@@ -114,7 +114,7 @@ public static class ResultExtensions
     /// <returns>The same result value.</returns>
     /// <remarks>Only for logging and metrics; the execution order of side effects is not part of the contract.
     /// <code><![CDATA[
-    /// var charged = Rop.Try(() => OrderFixtures.Charge(OrderFixtures.Sample), "E_CHARGE")
+    /// var charged = Result.Try(() => OrderFixtures.Charge(OrderFixtures.Sample), "E_CHARGE")
     ///     .TeeOk(static payment => Console.WriteLine($"captured {payment.Id}"));
     ///
     /// // Ok(payment) runs the side effect and keeps the result,
@@ -146,7 +146,7 @@ public static class ResultExtensions
     /// <returns>The same result value.</returns>
     /// <remarks>Only for logging and metrics; the execution order of side effects is not part of the contract.
     /// <code><![CDATA[
-    /// var charged = Rop.Try(() => OrderFixtures.Charge(OrderFixtures.Declined), "E_CHARGE")
+    /// var charged = Result.Try(() => OrderFixtures.Charge(OrderFixtures.Declined), "E_CHARGE")
     ///     .TeeErr(static error => Console.WriteLine($"failed {error.Code}"));
     ///
     /// // Err(E_CHARGE) runs the side effect and keeps the result,
@@ -178,7 +178,7 @@ public static class ResultExtensions
     /// <c>Ensure</c> is the assertion of a result pipeline: it states an invariant that the success payload has
     /// to satisfy. It is the shortest way to reject a value that would break a later step.
     /// <code><![CDATA[
-    /// var charged = Rop.Try(() => OrderFixtures.Charge(OrderFixtures.Sample), "E_CHARGE")
+    /// var charged = Result.Try(() => OrderFixtures.Charge(OrderFixtures.Sample), "E_CHARGE")
     ///     .Ensure(static payment => payment.Amount > 0m, RopError.Create("E_AMOUNT", "the amount must be positive"));
     ///
     /// // Ok(payment) when the amount is positive,
@@ -198,7 +198,7 @@ public static class ResultExtensions
             return result;
         }
 
-        return predicate(value) ? result : Rop.Err<TOk, TErr>(error);
+        return predicate(value) ? result : Result.Err<TOk, TErr>(error);
     }
 
     /// <summary>
@@ -214,7 +214,7 @@ public static class ResultExtensions
     /// <exception cref="InvalidOperationException">The factory returned <see langword="null"/>.</exception>
     /// <remarks>Prefer this overload on hot paths: the message is only formatted on the failing branch.
     /// <code><![CDATA[
-    /// var charged = Rop.Try(() => OrderFixtures.Charge(OrderFixtures.Sample), "E_CHARGE")
+    /// var charged = Result.Try(() => OrderFixtures.Charge(OrderFixtures.Sample), "E_CHARGE")
     ///     .Ensure(
     ///         static payment => payment.Amount > 0m,
     ///         static payment => RopError.Create("E_AMOUNT", $"the amount {payment.Amount} must be positive"));
@@ -238,7 +238,7 @@ public static class ResultExtensions
 
         return predicate(value)
             ? result
-            : Rop.Err<TOk, TErr>(Rop.RequireError(errorFactory(value)));
+            : Result.Err<TOk, TErr>(Result.RequireError(errorFactory(value)));
     }
 
     /// <summary>
@@ -253,7 +253,7 @@ public static class ResultExtensions
     /// <exception cref="ArgumentNullException"><paramref name="value"/> is <see langword="null"/>.</exception>
     /// <remarks>To discard a value and keep only success/failure, use <c>MapOkValue(Unit.Value)</c>.
     /// <code><![CDATA[
-    /// var charged = Rop.Try(() => OrderFixtures.Charge(OrderFixtures.Sample), "E_CHARGE")
+    /// var charged = Result.Try(() => OrderFixtures.Charge(OrderFixtures.Sample), "E_CHARGE")
     ///     .MapOkValue(Unit.Value);
     ///
     /// // Ok(()) when the charge succeeded,
@@ -264,8 +264,8 @@ public static class ResultExtensions
     {
         ArgumentGuards.ThrowIfNull(value, nameof(value));
         return result.TryGetOk(out _)
-            ? Rop.Ok<TOut, TErr>(value)
-            : Rop.Err<TOut, TErr>(result.ErrUnsafe);
+            ? Result.Ok<TOut, TErr>(value)
+            : Result.Err<TOut, TErr>(result.ErrUnsafe);
     }
 
     /// <summary>
@@ -279,7 +279,7 @@ public static class ResultExtensions
     /// This is the bridge from a nullable payload back to a trustworthy one. It is the counterpart of
     /// <c>MapOk</c>, which may legitimately produce a null success value.
     /// <code><![CDATA[
-    /// var placed = Rop.Ok<Order?, RopError>(OrderFixtures.Sample)
+    /// var placed = Result.Ok<Order?, RopError>(OrderFixtures.Sample)
     ///     .RequireNotNull(() => RopError.Create("E_ORDER", "the order is missing"))
     ///     .MapOk(static order => order.Id);
     ///
@@ -295,12 +295,12 @@ public static class ResultExtensions
         ArgumentNullException.ThrowIfNull(errorFactory);
         if (!result.TryGetOk(out var value))
         {
-            return Rop.Err<T, RopError>(result.ErrUnsafe);
+            return Result.Err<T, RopError>(result.ErrUnsafe);
         }
 
         return value is null
-            ? Rop.Err<T, RopError>(Rop.MaterializeError(errorFactory))
-            : Rop.Ok<T, RopError>(value);
+            ? Result.Err<T, RopError>(Result.MaterializeError(errorFactory))
+            : Result.Ok<T, RopError>(value);
     }
 
     /// <summary>
@@ -317,7 +317,7 @@ public static class ResultExtensions
     /// Use this overload when the caller's error system is not <see cref="RopError"/>. The factory is evaluated only
     /// on the null-success branch.
     /// <code><![CDATA[
-    /// var placed = Rop.Ok<Order?, string>(OrderFixtures.Sample)
+    /// var placed = Result.Ok<Order?, string>(OrderFixtures.Sample)
     ///     .RequireNotNull(() => "the order is missing")
     ///     .MapOk(static order => order.Id);
     ///
@@ -333,12 +333,12 @@ public static class ResultExtensions
         ArgumentNullException.ThrowIfNull(errorFactory);
         if (!result.TryGetOk(out var value))
         {
-            return Rop.Err<T, TErr>(result.ErrUnsafe);
+            return Result.Err<T, TErr>(result.ErrUnsafe);
         }
 
         return value is null
-            ? Rop.Err<T, TErr>(Rop.MaterializeError(errorFactory))
-            : Rop.Ok<T, TErr>(value);
+            ? Result.Err<T, TErr>(Result.MaterializeError(errorFactory))
+            : Result.Ok<T, TErr>(value);
     }
 
     /// <summary>
@@ -355,8 +355,8 @@ public static class ResultExtensions
     /// right. Use it when the next step of the pipeline can fail, and <see cref="MapOk{TOk,TOut,TErr}"/> when it
     /// cannot.
     /// <code><![CDATA[
-    /// var receiptId = Rop.Try(() => OrderFixtures.Charge(OrderFixtures.Sample), "E_CHARGE")
-    ///     .BindOk(static payment => Rop.Ok(payment.Id));
+    /// var receiptId = Result.Try(() => OrderFixtures.Charge(OrderFixtures.Sample), "E_CHARGE")
+    ///     .BindOk(static payment => Result.Ok(payment.Id));
     ///
     /// // Ok(receiptId) when the charge succeeded and the follow-up step succeeded,
     /// // Err(E_CHARGE) when the charge failed - the binder never runs on the failure track.
@@ -369,7 +369,7 @@ public static class ResultExtensions
         ArgumentNullException.ThrowIfNull(binder);
         return result.TryGetOk(out var value)
             ? binder(value)
-            : Rop.Err<TOut, TErr>(result.ErrUnsafe);
+            : Result.Err<TOut, TErr>(result.ErrUnsafe);
     }
 
     /// <summary>
@@ -384,8 +384,8 @@ public static class ResultExtensions
     /// <c>BindErr</c> is the recovery step: the fallback returns a whole new result, so it may fail again. It is
     /// how a pipeline handles a known failure without giving up the success track.
     /// <code><![CDATA[
-    /// var receiptId = Rop.Try(() => OrderFixtures.Charge(OrderFixtures.Declined), "E_CHARGE")
-    ///     .BindErr(static error => Rop.Ok<Payment, RopError>(OrderFixtures.Charge(OrderFixtures.Sample)))
+    /// var receiptId = Result.Try(() => OrderFixtures.Charge(OrderFixtures.Declined), "E_CHARGE")
+    ///     .BindErr(static error => Result.Ok<Payment, RopError>(OrderFixtures.Charge(OrderFixtures.Sample)))
     ///     .MapOk(static payment => payment.Id);
     ///
     /// // Ok(receiptId) when the fallback succeeded,
@@ -415,7 +415,7 @@ public static class ResultExtensions
     /// The constant fallback is the cheapest recovery: the pipeline continues with a known value instead of
     /// failing. Use it when the caller can live with a default.
     /// <code><![CDATA[
-    /// var receiptId = Rop.Try(() => OrderFixtures.Charge(OrderFixtures.Declined), "E_CHARGE")
+    /// var receiptId = Result.Try(() => OrderFixtures.Charge(OrderFixtures.Declined), "E_CHARGE")
     ///     .BindErrValue(OrderFixtures.Charge(OrderFixtures.Sample))
     ///     .MapOk(static payment => payment.Id);
     ///
@@ -427,7 +427,7 @@ public static class ResultExtensions
     {
         ArgumentGuards.ThrowIfNull(fallback, nameof(fallback));
         return result.TryGetErr(out _)
-            ? Rop.Ok<TOk, TErr>(fallback)
+            ? Result.Ok<TOk, TErr>(fallback)
             : result;
     }
 
@@ -442,7 +442,7 @@ public static class ResultExtensions
     /// <remarks>
     /// The factory is lazy, so an expensive fallback is only built when the pipeline actually failed.
     /// <code><![CDATA[
-    /// var receiptId = Rop.Try(() => OrderFixtures.Charge(OrderFixtures.Declined), "E_CHARGE")
+    /// var receiptId = Result.Try(() => OrderFixtures.Charge(OrderFixtures.Declined), "E_CHARGE")
     ///     .BindErrValue(static () => OrderFixtures.Charge(OrderFixtures.Sample))
     ///     .MapOk(static payment => payment.Id);
     ///
@@ -456,7 +456,7 @@ public static class ResultExtensions
     {
         ArgumentNullException.ThrowIfNull(fallbackFactory);
         return result.TryGetErr(out _)
-            ? Rop.Ok<TOk, TErr>(fallbackFactory())
+            ? Result.Ok<TOk, TErr>(fallbackFactory())
             : result;
     }
 
@@ -474,7 +474,7 @@ public static class ResultExtensions
     /// <c>Match</c> is the total exit of a result: it handles both tracks, so nothing is ever left behind. This
     /// is the only exit production code should use.
     /// <code><![CDATA[
-    /// var text = Rop.Try(() => OrderFixtures.Charge(OrderFixtures.Sample), "E_CHARGE")
+    /// var text = Result.Try(() => OrderFixtures.Charge(OrderFixtures.Sample), "E_CHARGE")
     ///     .Match(
     ///         ok: static payment => $"captured {payment.Id}",
     ///         err: static error => $"failed {error.Code}");
@@ -503,7 +503,7 @@ public static class ResultExtensions
     /// <exception cref="InvalidOperationException">The result is an error or an uninitialized default.</exception>
     /// <remarks>Intended for tests and boundaries only; production code should use <see cref="Match{TOk,TErr,T}"/>.
     /// <code><![CDATA[
-    /// var charged = Rop.Try(() => OrderFixtures.Charge(OrderFixtures.Sample), "E_CHARGE");
+    /// var charged = Result.Try(() => OrderFixtures.Charge(OrderFixtures.Sample), "E_CHARGE");
     /// var receipt = charged.OrThrow();
     ///
     /// // Ok(payment) yields the payment,
@@ -531,7 +531,7 @@ public static class ResultExtensions
     /// <exception cref="InvalidOperationException">The result is an error or an uninitialized default.</exception>
     /// <remarks>This is the explicitly named form of <see cref="OrThrow{TOk,TErr}"/>.
     /// <code><![CDATA[
-    /// var charged = Rop.Try(() => OrderFixtures.Charge(OrderFixtures.Sample), "E_CHARGE");
+    /// var charged = Result.Try(() => OrderFixtures.Charge(OrderFixtures.Sample), "E_CHARGE");
     /// var receipt = charged.OkOrThrow();
     ///
     /// // Ok(payment) yields the payment,
@@ -550,7 +550,7 @@ public static class ResultExtensions
     /// <exception cref="InvalidOperationException">The result is a success or an uninitialized default.</exception>
     /// <remarks>Intended for tests and boundaries only; production code should use <see cref="Match{TOk,TErr,T}"/>.
     /// <code><![CDATA[
-    /// var charged = Rop.Try(() => OrderFixtures.Charge(OrderFixtures.Declined), "E_CHARGE");
+    /// var charged = Result.Try(() => OrderFixtures.Charge(OrderFixtures.Declined), "E_CHARGE");
     /// var error = charged.ErrOrThrow();
     ///
     /// // Err(E_CHARGE) yields the error,

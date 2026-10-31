@@ -16,7 +16,7 @@ public sealed class CustomErrorTypeTests
     {
         var error = App("E_INVALID", "invalid input");
 
-        Result<int, AppError> result = Rop.Err<int, AppError>(error);
+        Result<int, AppError> result = Result.Err<int, AppError>(error);
 
         await Assert.That(result.IsErr).IsTrue();
         await Assert.That(result.IsOk).IsFalse();
@@ -27,8 +27,8 @@ public sealed class CustomErrorTypeTests
     [Test]
     public async Task Result_WithCustomClassError_UsesTheErrorValueEquality()
     {
-        var left = Rop.Err<int, AppError>(new AppError("E", "m"));
-        var right = Rop.Err<int, AppError>(new AppError("E", "m"));
+        var left = Result.Err<int, AppError>(new AppError("E", "m"));
+        var right = Result.Err<int, AppError>(new AppError("E", "m"));
 
         await Assert.That(left).IsEqualTo(right);
         await Assert.That(left.GetHashCode()).IsEqualTo(right.GetHashCode());
@@ -37,13 +37,13 @@ public sealed class CustomErrorTypeTests
     [Test]
     public async Task Result_WithCustomClassError_SupportsTheCombinatorSurface()
     {
-        Result<int, AppError> source = Rop.Ok<int, AppError>(2);
+        Result<int, AppError> source = Result.Ok<int, AppError>(2);
 
         Result<string, AppError> result = source
             .MapOk(value => value * 3)
             .BindOk(value => value > 0
-                ? Rop.Ok<string, AppError>($"v{value}")
-                : Rop.Err<string, AppError>(App("E_NEG")))
+                ? Result.Ok<string, AppError>($"v{value}")
+                : Result.Err<string, AppError>(App("E_NEG")))
             .Ensure(value => value.Length > 1, App("E_SHORT"))
             .MapErr(error => error with { Code = "E_MAPPED" });
 
@@ -53,7 +53,7 @@ public sealed class CustomErrorTypeTests
     [Test]
     public async Task Result_WithCustomClassError_MapErrChangesOnlyTheErrorTrack()
     {
-        Result<int, AppError> failed = Rop.Err<int, AppError>(App("E_ORIGINAL"));
+        Result<int, AppError> failed = Result.Err<int, AppError>(App("E_ORIGINAL"));
 
         var mapped = failed.MapErr(error => error with { Message = "mapped" });
 
@@ -64,8 +64,8 @@ public sealed class CustomErrorTypeTests
     [Test]
     public async Task Result_WithCustomStructError_UsesValueEquality()
     {
-        var left = Rop.Err<int, StructError>(new StructError("E", 400));
-        var right = Rop.Err<int, StructError>(new StructError("E", 400));
+        var left = Result.Err<int, StructError>(new StructError("E", 400));
+        var right = Result.Err<int, StructError>(new StructError("E", 400));
 
         await Assert.That(left).IsEqualTo(right);
         await Assert.That(left.GetHashCode()).IsEqualTo(right.GetHashCode());
@@ -74,7 +74,7 @@ public sealed class CustomErrorTypeTests
     [Test]
     public async Task Result_WithCustomStructError_AcceptsTheDefaultErrorValue()
     {
-        var result = Rop.Err<int, StructError>(default);
+        var result = Result.Err<int, StructError>(default);
 
         await Assert.That(result.IsErr).IsTrue();
         await Assert.That(result.TryGetErr(out var error)).IsTrue();
@@ -87,8 +87,8 @@ public sealed class CustomErrorTypeTests
         string? missing = null;
         string? present = "value";
 
-        var err = Rop.FromNullable(missing, () => App("E_NULL"));
-        var ok = Rop.FromNullable(present, () => App("E_NULL"));
+        var err = Result.FromNullable(missing, () => App("E_NULL"));
+        var ok = Result.FromNullable(present, () => App("E_NULL"));
 
         await Assert.That(err.ErrOrThrow().Code).IsEqualTo("E_NULL");
         await Assert.That(ok.OrThrow()).IsEqualTo("value");
@@ -100,8 +100,8 @@ public sealed class CustomErrorTypeTests
         int? missing = null;
         int? present = 5;
 
-        var err = Rop.FromNullableValue(missing, () => App("E_MISSING"));
-        var ok = Rop.FromNullableValue(present, () => App("E_MISSING"));
+        var err = Result.FromNullableValue(missing, () => App("E_MISSING"));
+        var ok = Result.FromNullableValue(present, () => App("E_MISSING"));
 
         await Assert.That(err.ErrOrThrow().Code).IsEqualTo("E_MISSING");
         await Assert.That(ok.OrThrow()).IsEqualTo(5);
@@ -110,10 +110,10 @@ public sealed class CustomErrorTypeTests
     [Test]
     public async Task SuccessIfAndFailureIf_WithCustomError()
     {
-        var success = Rop.SuccessIf(true, 1, App("E_CONDITION"));
-        var successFailure = Rop.SuccessIf(false, 1, App("E_CONDITION"));
-        var failure = Rop.FailureIf(true, 2, App("E_REJECT"));
-        var failureSuccess = Rop.FailureIf(false, 2, App("E_REJECT"));
+        var success = Result.SuccessIf(true, 1, App("E_CONDITION"));
+        var successFailure = Result.SuccessIf(false, 1, App("E_CONDITION"));
+        var failure = Result.FailureIf(true, 2, App("E_REJECT"));
+        var failureSuccess = Result.FailureIf(false, 2, App("E_REJECT"));
 
         await Assert.That(success.OrThrow()).IsEqualTo(1);
         await Assert.That(successFailure.ErrOrThrow().Code).IsEqualTo("E_CONDITION");
@@ -126,7 +126,7 @@ public sealed class CustomErrorTypeTests
     {
         var called = false;
 
-        var result = Rop.SuccessIf(true, 1, () =>
+        var result = Result.SuccessIf(true, 1, () =>
         {
             called = true;
             return App();
@@ -140,7 +140,7 @@ public sealed class CustomErrorTypeTests
     public async Task RequireNotNull_WithCustomError()
     {
         Result<string?, AppError> source =
-            Rop.Ok<string, AppError>("x").MapOk<string, string?, AppError>(_ => null);
+            Result.Ok<string, AppError>("x").MapOk<string, string?, AppError>(_ => null);
 
         var result = source.RequireNotNull(() => App("E_NULL", "name required"));
 
@@ -150,7 +150,7 @@ public sealed class CustomErrorTypeTests
     [Test]
     public async Task RequireNotNull_WithCustomError_PassesTheOriginalErrorThrough()
     {
-        Result<string?, AppError> source = Rop.Err<string?, AppError>(App("E_ORIGINAL"));
+        Result<string?, AppError> source = Result.Err<string?, AppError>(App("E_ORIGINAL"));
 
         var result = source.RequireNotNull(() => App("E_NULL"));
 
@@ -173,10 +173,10 @@ public sealed class CustomErrorTypeTests
     [Test]
     public async Task Validate_WithCustomError_AggregatesEveryErrorInArgumentOrder()
     {
-        Result<int, AppError> first = Rop.Err<int, AppError>(App("E_A"));
-        Result<int, AppError> second = Rop.Err<int, AppError>(App("E_B"));
+        Result<int, AppError> first = Result.Err<int, AppError>(App("E_A"));
+        Result<int, AppError> second = Result.Err<int, AppError>(App("E_B"));
 
-        var validated = Rop.Validate(first, second, (a, b) => a + b);
+        var validated = Result.Validate(first, second, (a, b) => a + b);
 
         await Assert.That(validated.TryGetErr(out var errors)).IsTrue();
         var captured = errors!;
@@ -190,12 +190,12 @@ public sealed class CustomErrorTypeTests
     {
         Result<int, AppError>[] results =
         [
-            Rop.Err<int, AppError>(App("E_A")),
-            Rop.Ok<int, AppError>(2),
-            Rop.Err<int, AppError>(App("E_B")),
+            Result.Err<int, AppError>(App("E_A")),
+            Result.Ok<int, AppError>(2),
+            Result.Err<int, AppError>(App("E_B")),
         ];
 
-        var sequence = Rop.SequenceValidation(results);
+        var sequence = Result.SequenceValidation(results);
 
         await Assert.That(sequence.TryGetErr(out var errors)).IsTrue();
         var captured = errors!;
@@ -209,11 +209,11 @@ public sealed class CustomErrorTypeTests
     {
         Result<int, AppError>[] results =
         [
-            Rop.Err<int, AppError>(App("E_A")),
-            Rop.Err<int, AppError>(App("E_B")),
+            Result.Err<int, AppError>(App("E_A")),
+            Result.Err<int, AppError>(App("E_B")),
         ];
 
-        var single = Rop.SequenceValidation(results).ToSingleError();
+        var single = Result.SequenceValidation(results).ToSingleError();
 
         await Assert.That(single.ErrOrThrow().Code).IsEqualTo("E_A");
     }
@@ -223,11 +223,11 @@ public sealed class CustomErrorTypeTests
     {
         Result<int, AppError>[] results =
         [
-            Rop.Err<int, AppError>(App("E_A")),
-            Rop.Err<int, AppError>(App("E_B")),
+            Result.Err<int, AppError>(App("E_A")),
+            Result.Err<int, AppError>(App("E_B")),
         ];
 
-        var single = Rop.SequenceValidation(results)
+        var single = Result.SequenceValidation(results)
             .ToSingleError(errors => new AppError("E_MULTIPLE", string.Join(";", errors.Select(error => error.Code))));
 
         await Assert.That(single.ErrOrThrow().Code).IsEqualTo("E_MULTIPLE");
@@ -237,12 +237,12 @@ public sealed class CustomErrorTypeTests
     [Test]
     public async Task Linq_WithCustomError_ShortCircuitsOnTheErrorTrack()
     {
-        var sum = from a in Rop.Ok<int, AppError>(1)
-                  from b in Rop.Ok<int, AppError>(2)
+        var sum = from a in Result.Ok<int, AppError>(1)
+                  from b in Result.Ok<int, AppError>(2)
                   select a + b;
 
-        var failed = from a in Rop.Err<int, AppError>(App("E_LINQ"))
-                     from b in Rop.Ok<int, AppError>(2)
+        var failed = from a in Result.Err<int, AppError>(App("E_LINQ"))
+                     from b in Result.Ok<int, AppError>(2)
                      select a + b;
 
         await Assert.That(sum.OrThrow()).IsEqualTo(3);
@@ -252,7 +252,7 @@ public sealed class CustomErrorTypeTests
     [Test]
     public async Task Try_WithCustomError_ReturnsOk()
     {
-        var result = Rop.Try(() => 42, _ => App("E_FAIL"), () => App("E_NULL"));
+        var result = Result.Try(() => 42, _ => App("E_FAIL"), () => App("E_NULL"));
 
         await Assert.That(result.OrThrow()).IsEqualTo(42);
     }
@@ -260,7 +260,7 @@ public sealed class CustomErrorTypeTests
     [Test]
     public async Task Try_WithCustomError_ConvertsExceptions()
     {
-        var result = Rop.Try<int, AppError>(
+        var result = Result.Try<int, AppError>(
             () => throw new FormatException("bad"),
             exception => App("E_PARSE", exception.Message),
             () => App("E_NULL"));
@@ -274,7 +274,7 @@ public sealed class CustomErrorTypeTests
     {
         var called = 0;
 
-        var result = Rop.Try<string, AppError>(
+        var result = Result.Try<string, AppError>(
             () => null!,
             _ => App("E_FAIL"),
             () =>
@@ -291,7 +291,7 @@ public sealed class CustomErrorTypeTests
     public async Task Try_WithCustomError_RethrowsOperationCanceledException()
     {
         var exception = TestSupport.Catch(() =>
-            Rop.Try<int, AppError>(
+            Result.Try<int, AppError>(
                 () => throw new OperationCanceledException(),
                 _ => App(),
                 () => App()));
@@ -303,11 +303,11 @@ public sealed class CustomErrorTypeTests
     public async Task Try_WithCustomError_GuardsEveryArgument()
     {
         var nullFunction = TestSupport.Catch(() =>
-            Rop.Try<int, AppError>(null!, _ => App(), () => App()));
+            Result.Try<int, AppError>(null!, _ => App(), () => App()));
         var nullFactory = TestSupport.Catch(() =>
-            Rop.Try<int, AppError>(() => 1, null!, () => App()));
+            Result.Try<int, AppError>(() => 1, null!, () => App()));
         var nullResultFactory = TestSupport.Catch(() =>
-            Rop.Try<int, AppError>(() => 1, _ => App(), null!));
+            Result.Try<int, AppError>(() => 1, _ => App(), null!));
 
         await Assert.That(nullFunction is ArgumentNullException).IsTrue();
         await Assert.That(nullFactory is ArgumentNullException).IsTrue();
@@ -318,7 +318,7 @@ public sealed class CustomErrorTypeTests
     public async Task Try_WithCustomError_ThrowsWhenTheFactoryReturnsNull()
     {
         var exception = TestSupport.Catch(() =>
-            Rop.Try<int, AppError>(
+            Result.Try<int, AppError>(
                 () => throw new InvalidOperationException("boom"),
                 _ => null!,
                 () => App()));
@@ -331,7 +331,7 @@ public sealed class CustomErrorTypeTests
     {
         var executed = false;
 
-        var result = Rop.Try(() => { executed = true; }, exception => App("E_ACTION", exception.Message));
+        var result = Result.Try(() => { executed = true; }, exception => App("E_ACTION", exception.Message));
 
         await Assert.That(executed).IsTrue();
         await Assert.That(result.IsOk).IsTrue();
@@ -341,7 +341,7 @@ public sealed class CustomErrorTypeTests
     [Test]
     public async Task TryAction_WithCustomError_ConvertsExceptions()
     {
-        var result = Rop.Try(
+        var result = Result.Try(
             () => throw new FormatException("bad"),
             exception => App("E_ACTION", exception.Message));
 
@@ -351,7 +351,7 @@ public sealed class CustomErrorTypeTests
     [Test]
     public async Task TrySwitch_WithCustomError_LiftsTheFunction()
     {
-        var lifted = Rop.TrySwitch<string, int, AppError>(
+        var lifted = Result.TrySwitch<string, int, AppError>(
             text => int.Parse(text, CultureInfo.InvariantCulture),
             exception => App("E_PARSE", exception.Message),
             () => App("E_NULL"));
@@ -366,7 +366,7 @@ public sealed class CustomErrorTypeTests
     [Test]
     public async Task TrySwitch_WithCustomError_UsesTheNullResultFactory()
     {
-        var lifted = Rop.TrySwitch<string, string, AppError>(
+        var lifted = Result.TrySwitch<string, string, AppError>(
             _ => null!,
             _ => App("E_FAIL"),
             () => App("E_NULL"));
@@ -379,7 +379,7 @@ public sealed class CustomErrorTypeTests
     [Test]
     public async Task TryAsync_WithCustomError_ReturnsOk()
     {
-        var result = await Rop.TryAsync<int, AppError>(
+        var result = await Result.TryAsync<int, AppError>(
             () => Task.FromResult(42),
             _ => App("E_FAIL"),
             () => App("E_NULL"));
@@ -390,7 +390,7 @@ public sealed class CustomErrorTypeTests
     [Test]
     public async Task TryAsync_WithCustomError_ConvertsExceptions()
     {
-        var result = await Rop.TryAsync<int, AppError>(
+        var result = await Result.TryAsync<int, AppError>(
             () => Task.FromException<int>(new FormatException("bad")),
             exception => App("E_PARSE", exception.Message),
             () => App("E_NULL"));
@@ -401,7 +401,7 @@ public sealed class CustomErrorTypeTests
     [Test]
     public async Task TryAsync_WithCustomError_UsesTheNullResultFactory()
     {
-        var result = await Rop.TryAsync<string, AppError>(
+        var result = await Result.TryAsync<string, AppError>(
             () => Task.FromResult<string>(null!),
             _ => App("E_FAIL"),
             () => App("E_NULL", "null result"));
@@ -413,7 +413,7 @@ public sealed class CustomErrorTypeTests
     public async Task TryAsync_WithCustomError_ThrowsForANullTask()
     {
         var exception = await TestSupport.CatchAsync(() =>
-            Rop.TryAsync<int, AppError>(() => null!, _ => App(), () => App()));
+            Result.TryAsync<int, AppError>(() => null!, _ => App(), () => App()));
 
         await Assert.That(exception is InvalidOperationException).IsTrue();
     }
@@ -425,7 +425,7 @@ public sealed class CustomErrorTypeTests
         await source.CancelAsync();
 
         var exception = await TestSupport.CatchAsync(() =>
-            Rop.TryAsync<int, AppError>(
+            Result.TryAsync<int, AppError>(
                 () => Task.FromResult(1),
                 _ => App(),
                 () => App(),
@@ -440,7 +440,7 @@ public sealed class CustomErrorTypeTests
         var pending = new TaskCompletionSource<int>(TaskCreationOptions.RunContinuationsAsynchronously);
         using var source = new CancellationTokenSource();
 
-        var task = Rop.TryAsync<int, AppError>(
+        var task = Result.TryAsync<int, AppError>(
             () => pending.Task,
             _ => App(),
             () => App(),
@@ -455,7 +455,7 @@ public sealed class CustomErrorTypeTests
     [Test]
     public async Task TryAsyncAction_WithCustomError_ReturnsUnit()
     {
-        var result = await Rop.TryAsync<AppError>(
+        var result = await Result.TryAsync<AppError>(
             () => Task.CompletedTask,
             exception => App("E_ACTION", exception.Message));
 
@@ -466,7 +466,7 @@ public sealed class CustomErrorTypeTests
     [Test]
     public async Task TryAsyncAction_WithCustomError_ConvertsExceptions()
     {
-        var result = await Rop.TryAsync<AppError>(
+        var result = await Result.TryAsync<AppError>(
             () => Task.FromException(new InvalidOperationException("bad")),
             exception => App("E_ACTION", exception.Message));
 
@@ -476,7 +476,7 @@ public sealed class CustomErrorTypeTests
     [Test]
     public async Task TrySwitchAsync_WithCustomError_LiftsTheFunction()
     {
-        var lifted = Rop.TrySwitchAsync<string, int, AppError>(
+        var lifted = Result.TrySwitchAsync<string, int, AppError>(
             text => Task.FromResult(int.Parse(text, CultureInfo.InvariantCulture)),
             exception => App("E_PARSE", exception.Message),
             () => App("E_NULL"));
@@ -491,7 +491,7 @@ public sealed class CustomErrorTypeTests
     [Test]
     public async Task Parse_WithCustomError_ReturnsOk()
     {
-        var result = Rop.Parse<int, AppError>("42", failure => new AppError(failure.Code, failure.Message));
+        var result = Result.Parse<int, AppError>("42", failure => new AppError(failure.Code, failure.Message));
 
         await Assert.That(result.OrThrow()).IsEqualTo(42);
     }
@@ -501,7 +501,7 @@ public sealed class CustomErrorTypeTests
     {
         ParseFailure? captured = null;
 
-        var result = Rop.Parse<int, AppError>("abc", failure =>
+        var result = Result.Parse<int, AppError>("abc", failure =>
         {
             captured = failure;
             return new AppError(failure.Code, failure.Message);
@@ -522,12 +522,12 @@ public sealed class CustomErrorTypeTests
         ParseFailure? nullFailure = null;
         ParseFailure? emptyFailure = null;
 
-        Rop.Parse<int, AppError>(null, failure =>
+        Result.Parse<int, AppError>(null, failure =>
         {
             nullFailure = failure;
             return App();
         });
-        Rop.Parse<int, AppError>(string.Empty, failure =>
+        Result.Parse<int, AppError>(string.Empty, failure =>
         {
             emptyFailure = failure;
             return App();
@@ -549,12 +549,12 @@ public sealed class CustomErrorTypeTests
         ParseFailure? truncatedFailure = null;
         var longInput = new string('a', 100);
 
-        Rop.Parse<int, AppError>("a\"b\nc", failure =>
+        Result.Parse<int, AppError>("a\"b\nc", failure =>
         {
             escapedFailure = failure;
             return App();
         });
-        Rop.Parse<int, AppError>(longInput, failure =>
+        Result.Parse<int, AppError>(longInput, failure =>
         {
             truncatedFailure = failure;
             return App();
@@ -574,7 +574,7 @@ public sealed class CustomErrorTypeTests
     {
         ParseFailure? captured = null;
 
-        Rop.Parse<int, AppError>(
+        Result.Parse<int, AppError>(
             "x",
             failure =>
             {
@@ -591,7 +591,7 @@ public sealed class CustomErrorTypeTests
     {
         var called = false;
 
-        var result = Rop.Parse<int, AppError>("42", _ =>
+        var result = Result.Parse<int, AppError>("42", _ =>
         {
             called = true;
             return App();
@@ -604,8 +604,8 @@ public sealed class CustomErrorTypeTests
     [Test]
     public async Task Parse_WithCustomError_GuardsTheFactoryAndCode()
     {
-        var nullFactory = TestSupport.Catch(() => Rop.Parse<int, AppError>("1", null!));
-        var blankCode = TestSupport.Catch(() => Rop.Parse<int, AppError>("1", _ => App(), " "));
+        var nullFactory = TestSupport.Catch(() => Result.Parse<int, AppError>("1", null!));
+        var blankCode = TestSupport.Catch(() => Result.Parse<int, AppError>("1", _ => App(), " "));
 
         await Assert.That(nullFactory is ArgumentNullException).IsTrue();
         await Assert.That(blankCode is ArgumentException).IsTrue();
@@ -614,7 +614,7 @@ public sealed class CustomErrorTypeTests
     [Test]
     public async Task Parse_WithCustomError_ThrowsWhenTheFactoryReturnsNull()
     {
-        var exception = TestSupport.Catch(() => Rop.Parse<int, AppError>("x", _ => null!));
+        var exception = TestSupport.Catch(() => Result.Parse<int, AppError>("x", _ => null!));
 
         await Assert.That(exception is InvalidOperationException).IsTrue();
     }
@@ -624,7 +624,7 @@ public sealed class CustomErrorTypeTests
     {
         var called = false;
 
-        var result = Rop.FailureIf(false, 1, () =>
+        var result = Result.FailureIf(false, 1, () =>
         {
             called = true;
             return App();
@@ -637,7 +637,7 @@ public sealed class CustomErrorTypeTests
     [Test]
     public async Task FailureIf_WithCustomError_UsesTheFactoryWhenTheConditionHolds()
     {
-        var result = Rop.FailureIf(true, 1, () => App("E_REJECT"));
+        var result = Result.FailureIf(true, 1, () => App("E_REJECT"));
 
         await Assert.That(result.ErrOrThrow().Code).IsEqualTo("E_REJECT");
     }
@@ -646,7 +646,7 @@ public sealed class CustomErrorTypeTests
     public async Task TryAction_WithCustomError_RethrowsOperationCanceledException()
     {
         var exception = TestSupport.Catch(() =>
-            Rop.Try(() => throw new OperationCanceledException(), _ => App()));
+            Result.Try(() => throw new OperationCanceledException(), _ => App()));
 
         await Assert.That(exception is OperationCanceledException).IsTrue();
     }
@@ -654,7 +654,7 @@ public sealed class CustomErrorTypeTests
     [Test]
     public async Task TryAsyncAction_WithCustomError_ConvertsSynchronousExceptions()
     {
-        var result = await Rop.TryAsync<AppError>(
+        var result = await Result.TryAsync<AppError>(
             () => throw new InvalidOperationException("sync"),
             exception => App("E_ACTION", exception.Message));
 
@@ -665,7 +665,7 @@ public sealed class CustomErrorTypeTests
     public async Task TryAsyncAction_WithCustomError_ThrowsForANullTask()
     {
         var exception = await TestSupport.CatchAsync(() =>
-            Rop.TryAsync<AppError>(() => null!, _ => App()));
+            Result.TryAsync<AppError>(() => null!, _ => App()));
 
         await Assert.That(exception is InvalidOperationException).IsTrue();
     }
@@ -674,7 +674,7 @@ public sealed class CustomErrorTypeTests
     public async Task TryAsyncAction_WithCustomError_RethrowsOperationCanceledException()
     {
         var exception = await TestSupport.CatchAsync(() =>
-            Rop.TryAsync<AppError>(() => throw new OperationCanceledException(), _ => App()));
+            Result.TryAsync<AppError>(() => throw new OperationCanceledException(), _ => App()));
 
         await Assert.That(exception is OperationCanceledException).IsTrue();
     }
@@ -685,7 +685,7 @@ public sealed class CustomErrorTypeTests
         var pending = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         using var source = new CancellationTokenSource();
 
-        var task = Rop.TryAsync<AppError>(() => pending.Task, _ => App(), source.Token);
+        var task = Result.TryAsync<AppError>(() => pending.Task, _ => App(), source.Token);
 
         await source.CancelAsync();
         var exception = await TestSupport.CatchAsync(() => task);
@@ -697,7 +697,7 @@ public sealed class CustomErrorTypeTests
     public async Task TryAsync_WithCustomError_RethrowsSynchronousOperationCanceledException()
     {
         var exception = await TestSupport.CatchAsync(() =>
-            Rop.TryAsync<int, AppError>(
+            Result.TryAsync<int, AppError>(
                 () => throw new OperationCanceledException(),
                 _ => App(),
                 () => App()));
@@ -709,7 +709,7 @@ public sealed class CustomErrorTypeTests
     public async Task Try_WithCustomError_PropagatesNullResultFactoryFailures()
     {
         var exception = TestSupport.Catch(() =>
-            Rop.Try<string, AppError>(
+            Result.Try<string, AppError>(
                 () => null!,
                 _ => App(),
                 () => throw new InvalidOperationException("factory bug")));
@@ -721,7 +721,7 @@ public sealed class CustomErrorTypeTests
     public async Task TryAsync_WithCustomError_PropagatesNullResultFactoryFailures()
     {
         var exception = await TestSupport.CatchAsync(() =>
-            Rop.TryAsync<string, AppError>(
+            Result.TryAsync<string, AppError>(
                 () => Task.FromResult<string>(null!),
                 _ => App(),
                 () => throw new InvalidOperationException("factory bug")));
@@ -740,16 +740,16 @@ public sealed class CustomErrorTypeTests
     [Test]
     public async Task ExistingRopErrorOverloads_RemainUnchanged()
     {
-        Result<int, RopError> ok = Rop.Ok(1);
-        Result<int, RopError> err = Rop.Err<int>(Sample.Error());
-        Result<string, RopError> nullable = Rop.FromNullable<string>(null, () => Sample.Error());
-        Result<int, RopError> conditional = Rop.SuccessIf(true, 1, Sample.Error());
-        Result<int, RopError> tried = Rop.Try(() => 1, _ => Sample.Error());
-        var triedAsync = Rop.TryAsync(() => Task.FromResult(1), _ => Sample.Error());
-        Result<int, RopError> validated = Rop.Validate(ok, ok, (a, b) => a + b).ToSingleError();
+        Result<int, RopError> ok = Result.Ok(1);
+        Result<int, RopError> err = Result.Err<int>(Sample.Error());
+        Result<string, RopError> nullable = Result.FromNullable<string>(null, () => Sample.Error());
+        Result<int, RopError> conditional = Result.SuccessIf(true, 1, Sample.Error());
+        Result<int, RopError> tried = Result.Try(() => 1, _ => Sample.Error());
+        var triedAsync = Result.TryAsync(() => Task.FromResult(1), _ => Sample.Error());
+        Result<int, RopError> validated = Result.Validate(ok, ok, (a, b) => a + b).ToSingleError();
         Result<int, RopError> fromEither = Either.Right<string, int>(1).ToResult(_ => Sample.Error());
 
-        Result<string?, RopError> nullSuccess = Rop.Ok<string, RopError>("x")
+        Result<string?, RopError> nullSuccess = Result.Ok<string, RopError>("x")
             .MapOk<string, string?, RopError>(_ => null);
         Result<string, RopError> required = nullSuccess.RequireNotNull(() => Sample.Error("E_NULL"));
 

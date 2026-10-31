@@ -23,7 +23,7 @@ runner; see [docs/performance-budgets.md](performance-budgets.md) for the alloca
   result set can be traced back to its source.
 - Methods whose duration is indistinguishable from an empty method use `OperationsPerInvoke` with an internal loop.
   Without it BenchmarkDotNet reports `ZeroMeasurement` and the number is meaningless.
-- `[Params]` turns a fixed size into data points. `Sequence`, `Opt.Sequence`, `Opt.Values`, `RopError.Combine` and
+- `[Params]` turns a fixed size into data points. `Sequence`, `Option.Sequence`, `Option.Values`, `RopError.Combine` and
   `RopError` aggregation are measured at several sizes so that a change from linear to quadratic is visible.
 
 ### Hand-written baselines
@@ -97,9 +97,9 @@ alert but do not fail the workflow.
 | `OptionBenchmarks` | `MapSome`, `BindSome`, `Filter`, `Match` on both tracks |
 | `EitherBenchmarks` | `MapRight`, `Swap`, `Match`, `ToResult` |
 | `SequenceBenchmarks` | `Sequence` (success, short-circuit), `SequenceValidation` (all-error, mixed), `Partition`, at N = 16 / 256 / 4096 |
-| `CollectionBenchmarks` | `Opt.Values`, `Opt.Sequence`, `Opt.Traverse`, `ToSingleError`, at N = 16 / 256 / 4096 |
+| `CollectionBenchmarks` | `Option.Values`, `Option.Sequence`, `Option.Traverse`, `ToSingleError`, at N = 16 / 256 / 4096 |
 | `RopErrorBenchmarks` | `RopError.Combine` at N = 1 / 10 / 100 / 1000 |
-| `ParsingBenchmarks` | `Rop.Parse` / `Rop.TryParse` success, failure, long input, `Guid`, `DateTime` |
+| `ParsingBenchmarks` | `Result.Parse` / `Result.TryParse` success, failure, long input, `Guid`, `DateTime` |
 | `AsyncBenchmarks` | `MapOkAsync`, `BindOkAsync`, `MapErrAsync` on completed and pending tasks |
 | `EqualityBenchmarks` | `Equals`, `GetHashCode`, `ToString` for all three core types |
 
@@ -298,8 +298,8 @@ both runs, so the numbers describe the same library build.
 | 1.0.0 after exposing an exactly-sized list directly | 240 B |
 | 1.0.0 `SequenceValidation_16` with count-aware pre-sizing | 144 B |
 
-`Rop.ToReadOnlyList` wraps the list when `Capacity == Count` (the common case for small aggregations and error
+`Result.ToReadOnlyList` wraps the list when `Capacity == Count` (the common case for small aggregations and error
 lists) and copies only when the list has spare capacity, so a grown list's slack is never retained by the exposed
-view. APIs that always materialize (`SequenceValidation`, `Partition`, `Opt.Values`) pre-size their lists from
-`ICollection<T>.Count`; short-circuit APIs (`Sequence`, `Traverse`, `Opt.Sequence`) deliberately do not, so an early
+view. APIs that always materialize (`SequenceValidation`, `Partition`, `Option.Values`) pre-size their lists from
+`ICollection<T>.Count`; short-circuit APIs (`Sequence`, `Traverse`, `Option.Sequence`) deliberately do not, so an early
 error does not allocate for the full input.

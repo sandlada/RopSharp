@@ -19,11 +19,11 @@ additive work below into the first version.
 - `RopError`: structured, immutable error with `Code`/`Message`/`Details`/`Cause`/`Kind`, `Create`,
   `FromException`, `With*` and `Combine`; `RopErrorKind` (`Failure`, `Validation`, `NotFound`, `Conflict`,
   `Unauthorized`, `Forbidden`, `Unexpected`).
-- `Rop` entry point: `Ok`, `Err`, `Try`, `TryAsync`, `Switch`, `TrySwitch`, `FromNullable`,
+- `Result` entry point: `Ok`, `Err`, `Try`, `TryAsync`, `Switch`, `TrySwitch`, `FromNullable`,
   `FromNullableValue`, `SuccessIf`, `FailureIf`, `Parse`, `TryParse`, `Combine`, `Zip`, `Validate`,
   `Sequence`, `SequenceValidation`, `Traverse`, `Partition`, `SequenceAsync`, `TraverseAsync`,
   `CombineAsync`, `ValidateAsync`, `ZipAsync`, `PartitionAsync`.
-- `Opt` entry point: `Some`, `None`, `FromNullable`, `FromNullableValue`, `When`, `Combine`, `Zip`,
+- `Option` entry point: `Some`, `None`, `FromNullable`, `FromNullableValue`, `When`, `Combine`, `Zip`,
   `Sequence`, `Traverse`, `Values`.
 - `OptionEnumerableExtensions`: `TryFirst`, `TryLast`, `TryFind`, `Choose`, `Execute`, `ExecuteNoValue`.
 - `ResultTerminalExtensions`: `Switch`, `SwitchAsync`, `MatchFirst`, `SwitchFirst`.
@@ -40,13 +40,13 @@ additive work below into the first version.
 - `Option` asynchronous parity with `Result`:
   - `MapSomeAsync`, `BindSomeAsync`, `BindNoneAsync`, `TeeSomeAsync`, `TeeNoneAsync` and `FilterAsync`
     now accept a synchronous `Option<T>` source, including cancellation-aware callback overloads.
-  - `Opt.CombineAsync` / `Opt.ZipAsync` (2 and 3 inputs) and `Opt.SequenceAsync` / `Opt.TraverseAsync`
+  - `Option.CombineAsync` / `Option.ZipAsync` (2 and 3 inputs) and `Option.SequenceAsync` / `Option.TraverseAsync`
     (including a cancellation-aware mapper) mirror the synchronous aggregation helpers.
   - `Select` / `SelectMany` / `Where` now work on `Task<Option<T>>`, so query syntax spans awaited options.
 - ADR 0003 documents the Option async parity decisions and cancellation semantics.
 - Validation traversal is complete on every track:
-  - `Rop.TraverseValidation` maps a whole sequence and collects every error, complementing `Rop.SequenceValidation`.
-  - `Rop.SequenceValidationAsync` and `Rop.TraverseValidationAsync` (including a cancellation-aware mapper)
+  - `Result.TraverseValidation` maps a whole sequence and collects every error, complementing `Result.SequenceValidation`.
+  - `Result.SequenceValidationAsync` and `Result.TraverseValidationAsync` (including a cancellation-aware mapper)
     await every task and return every error in source order instead of short-circuiting.
 - ADR 0004 documents the validation traversal decisions and fault/cancellation behaviour.
 - `RopError` aggregation is now lossless:
@@ -57,15 +57,15 @@ additive work below into the first version.
   - The aggregate snapshots its inputs, so mutating the caller's list afterwards cannot change it.
 - ADR 0005 documents the structured aggregation and equality decisions.
 - Async boundary and lift parity:
-  - `Rop.Try(Action, ...)` and `Rop.TryAsync(Func<Task>, ...)` (factory and `code` shapes) cover boundaries with no
+  - `Result.Try(Action, ...)` and `Result.TryAsync(Func<Task>, ...)` (factory and `code` shapes) cover boundaries with no
     payload and return `Result<Unit, RopError>`.
-  - `Rop.SwitchAsync` and `Rop.TrySwitchAsync` lift asynchronous functions into task-wrapped results, mirroring
-    `Rop.Switch` / `Rop.TrySwitch`.
-  - The `Rop.Try<T>` docs now warn that a `Task`-returning lambda belongs in `Rop.TryAsync`.
+  - `Result.SwitchAsync` and `Result.TrySwitchAsync` lift asynchronous functions into task-wrapped results, mirroring
+    `Result.Switch` / `Result.TrySwitch`.
+  - The `Result.Try<T>` docs now warn that a `Task`-returning lambda belongs in `Result.TryAsync`.
 - ADR 0006 documents the boundary/lift decisions and naming.
 - Diagnostics:
   - `RopErrorKind` gains `Timeout`, `Unavailable` and `RateLimited` (appended values `7`–`9`, no renumbering).
-  - `Rop.Parse` now echoes the offending input in `Details` as `input=<quoted>`, reports `null` distinctly from an
+  - `Result.Parse` now echoes the offending input in `Details` as `input=<quoted>`, reports `null` distinctly from an
     empty string, truncates the echo to 64 code points and escapes quotes, backslashes and control characters.
 - ADR 0007 documents the diagnostic-text policy and the open-ended enum contract.
 - Model bridging is now complete:
@@ -80,13 +80,13 @@ additive work below into the first version.
 - Scope decisions recorded (ADR 0010, no new API): higher-arity `Combine`/`Validate`, bounded concurrency and
   `IAsyncEnumerable<T>` traversal stay caller-owned; the README design rules now state the alternatives.
 - Custom error types are supported end to end:
-  - `Rop.FromNullable`, `Rop.FromNullableValue`, `Rop.SuccessIf`, `Rop.FailureIf`, `RequireNotNull`,
+  - `Result.FromNullable`, `Result.FromNullableValue`, `Result.SuccessIf`, `Result.FailureIf`, `RequireNotNull`,
     `Either.ToResult` and the parameterless `ToSingleError()` now have `TErr` overloads. The `RopError`
     overloads are unchanged and remain the default.
-  - `Rop.Try`, `Rop.TryAsync`, `Rop.TrySwitch` and `Rop.TrySwitchAsync` have `TErr` overloads that take an
+  - `Result.Try`, `Result.TryAsync`, `Result.TrySwitch` and `Result.TrySwitchAsync` have `TErr` overloads that take an
     explicit `Func<TErr>` null-result factory, preserving the "function returns null → `Err`" contract and the
     `OperationCanceledException` pass-through.
-  - `Rop.Parse<T, TErr>` accepts a `Func<ParseFailure, TErr>` factory; `ParseFailure` carries
+  - `Result.Parse<T, TErr>` accepts a `Func<ParseFailure, TErr>` factory; `ParseFailure` carries
     `Code`/`Message`/`Input`/`TypeName`/`Details`, so the bounded, escaped diagnostics are preserved.
 - ADR 0011 documents the custom-error-type decisions and the value-type caveats.
 - Release engineering: `.github/workflows/ci.yml` builds, tests, measures coverage, packs and publishes the
@@ -94,11 +94,11 @@ additive work below into the first version.
   version stays `0.0.1` until a release is tagged; the published version is supplied by the `vX.Y.Z` tag or the
   workflow `version` input at pack time. The same steps remain runnable manually (`dotnet build` / `dotnet test` /
   `dotnet pack` / `dotnet nuget push`).
-- Allocation gate in the test suite (`PerformanceGuards/`): zero-byte assertions for the hot success and failure paths of `Result`, `Option` and `Either`, and per-call byte budgets (1.2x the measured value) for `Rop.Sequence`, `Rop.SequenceValidation` and `RopError.Combine`. Budgets are documented in `docs/performance-budgets.md`.
+- Allocation gate in the test suite (`PerformanceGuards/`): zero-byte assertions for the hot success and failure paths of `Result`, `Option` and `Either`, and per-call byte budgets (1.2x the measured value) for `Result.Sequence`, `Result.SequenceValidation` and `RopError.Combine`. Budgets are documented in `docs/performance-budgets.md`.
 - Benchmark suite: shared `BenchConfig` pins the ShortRun job, memory diagnoser, JSON and Markdown exporters and
   rejects non-optimized builds and groups without exactly one baseline; `EnvironmentProvenance` records the commit
   and host of every run.
-- Benchmark coverage for `Either`, for `Rop.Sequence`/`SequenceValidation`/`Partition`/`Opt.Values` at
+- Benchmark coverage for `Either`, for `Result.Sequence`/`SequenceValidation`/`Partition`/`Option.Values` at
   N = 16 / 256 / 4096, for `RopError.Combine` at N = 1 / 10 / 100 / 1000, and for parsing, async, collection and
   equality paths.
 - Native AOT size gate: the CI native image job fails when `Sandlada.RopSharp.Sample.exe` grows more than 10% over
@@ -107,28 +107,38 @@ additive work below into the first version.
   regressions alert but never fail the workflow; the allocation gate that blocks a merge lives in the test suite.
 ### Changed
 
+- **Breaking**: the static entry points are renamed to match the domain types they create. `Rop` becomes `Result`
+  (`Rop.Ok` -> `Result.Ok`, `Rop.Try` -> `Result.Try`, `Rop.Combine` -> `Result.Combine`, ...) and `Opt` becomes
+  `Option` (`Opt.Some` -> `Option.Some`, `Opt.None` -> `Option.None`, `Opt.FromNullable` -> `Option.FromNullable`,
+  ...). The old names are removed without obsolete aliases: a non-generic class and a generic struct may share a
+  name because their arity differs, so `Result`/`Result<TOk,TErr>` and `Option`/`Option<T>` coexist in the
+  `Sandlada.RopSharp` namespace. The `RopError` and `RopErrorKind` types keep their names: they carry the product
+  lineage rather than an entry-point role.
 - `RopError` equality and hashing now include `Kind`; existing errors default to `Failure`.
 - Targets `net10.0` and `net11.0` only; `LangVersion` latest; nullable reference types enabled.
 - `Result<,>` and `Option<>` are `readonly struct`s with value equality.
 
 ### Fixed
 
-- Diagnostic echoing now matches the documented contract: `Rop.Parse` truncates at 64 Unicode code points instead of
+- Diagnostic echoing now matches the documented contract: `Result.Parse` truncates at 64 Unicode code points instead of
   64 UTF-16 code units, escapes lone surrogates so the rendered text is always well-formed, and escapes
   `U+2028`/`U+2029` plus bidirectional control characters so a payload cannot forge a log line or reorder terminal
   output.
-- `Rop.TryParse` and the `Rop.Parse` overloads treat an `IParsable<T>` implementation that reports success with a
-  null value as a parse failure instead of throwing from `Opt.Some`/`Rop.Ok`.
+- `Result.TryParse` and the `Result.Parse` overloads treat an `IParsable<T>` implementation that reports success with a
+  null value as a parse failure instead of throwing from `Option.Some`/`Result.Ok`.
 - Lazy error factories passed to `MapErr`, `Ensure`, `FailIf`, `RequireSome`, `Either.ToResult` and
   `ToSingleError(combine)` now fault with `InvalidOperationException` when they return null, matching the
   documented behavior of the boundary and conversion helpers.
-- `Rop.PartitionAsync` rejects a null task with `InvalidOperationException`, matching `SequenceValidationAsync` and
+- `Result.PartitionAsync` rejects a null task with `InvalidOperationException`, matching `SequenceValidationAsync` and
   `TraverseValidationAsync`.
 - `RopError.Combine` deduplicates messages and codes with ordinal hash sets, so the aggregation is linear in the
   number of errors instead of quadratic.
 - `default(Result<TOk,TErr>)` no longer leaks a null error: `TryGetErr`, `Match`, `Switch`, the error-track
   combinators and `ErrOrThrow` now fault with `InvalidOperationException` instead of handing `null` to user code.
   Valid results and non-nullable value-type errors are unchanged.
+- `TeeOk`, `TeeOkAsync`, `Ensure`, `FailIf`, `ThenEnsure` and `ToOption` now fault with `InvalidOperationException`
+  on an uninitialized `default(Result<TOk,TErr>)` instead of returning it unchanged, so the invalid state cannot
+  travel unnoticed through a pipeline. A real `Err` is unaffected.
 
 ### Documentation
 

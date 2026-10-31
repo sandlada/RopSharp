@@ -308,7 +308,7 @@ internal sealed class DocExampleCompilation
             }
         }
 
-        var library = typeof(Rop).Assembly.Location;
+        var library = typeof(Result).Assembly.Location;
 
         if (File.Exists(library) && seen.Add(library))
         {

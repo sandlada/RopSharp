@@ -11,10 +11,10 @@ public sealed class AsyncCancellationTests
         cts.Cancel();
         var pending = new TaskCompletionSource<Result<int, RopError>>(TaskCreationOptions.RunContinuationsAsynchronously);
 
-        var exception = await TestSupport.CatchAsync(() => Rop.SequenceAsync([pending.Task], cts.Token));
+        var exception = await TestSupport.CatchAsync(() => Result.SequenceAsync([pending.Task], cts.Token));
 
         await Assert.That(exception is OperationCanceledException).IsTrue();
-        pending.SetResult(Rop.Ok(1));
+        pending.SetResult(Result.Ok(1));
     }
 
     [Test]
@@ -25,17 +25,17 @@ public sealed class AsyncCancellationTests
         var pending = new TaskCompletionSource<Result<int, RopError>>(TaskCreationOptions.RunContinuationsAsynchronously);
 
         var exception = await TestSupport.CatchAsync(() =>
-            Rop.TraverseAsync([1], _ => pending.Task, cts.Token));
+            Result.TraverseAsync([1], _ => pending.Task, cts.Token));
 
         await Assert.That(exception is OperationCanceledException).IsTrue();
-        pending.SetResult(Rop.Ok(1));
+        pending.SetResult(Result.Ok(1));
     }
 
     [Test]
     public async Task SequenceAsync_WithNullTask_FaultsWithInvalidOperation()
     {
         var exception = await TestSupport.CatchAsync(() =>
-            Rop.SequenceAsync(new Task<Result<int, RopError>>[] { null! }));
+            Result.SequenceAsync(new Task<Result<int, RopError>>[] { null! }));
 
         await Assert.That(exception is InvalidOperationException).IsTrue();
     }
@@ -44,7 +44,7 @@ public sealed class AsyncCancellationTests
     public async Task TraverseAsync_WithNullTask_FaultsWithInvalidOperation()
     {
         var exception = await TestSupport.CatchAsync(() =>
-            Rop.TraverseAsync<int, int, RopError>([1], _ => null!));
+            Result.TraverseAsync<int, int, RopError>([1], _ => null!));
 
         await Assert.That(exception is InvalidOperationException).IsTrue();
     }
@@ -53,7 +53,7 @@ public sealed class AsyncCancellationTests
     public async Task BindOkAsync_WithNullBinderResult_FaultsWithInvalidOperation()
     {
         var exception = await TestSupport.CatchAsync(() =>
-            Rop.Ok(1).BindOkAsync<int, int, RopError>(_ => null!));
+            Result.Ok(1).BindOkAsync<int, int, RopError>(_ => null!));
 
         await Assert.That(exception is InvalidOperationException).IsTrue();
     }
@@ -62,7 +62,7 @@ public sealed class AsyncCancellationTests
     public async Task BindErrAsync_WithNullFallbackResult_FaultsWithInvalidOperation()
     {
         var exception = await TestSupport.CatchAsync(() =>
-            Rop.Err<int>(Sample.Error()).BindErrAsync<int, RopError>(_ => null!));
+            Result.Err<int>(Sample.Error()).BindErrAsync<int, RopError>(_ => null!));
 
         await Assert.That(exception is InvalidOperationException).IsTrue();
     }
@@ -71,7 +71,7 @@ public sealed class AsyncCancellationTests
     public async Task BindNoneAsync_WithNullFallbackResult_FaultsWithInvalidOperation()
     {
         var exception = await TestSupport.CatchAsync(() =>
-            Task.FromResult(Opt.None<int>()).BindNoneAsync<int>(() => null!));
+            Task.FromResult(Option.None<int>()).BindNoneAsync<int>(() => null!));
 
         await Assert.That(exception is InvalidOperationException).IsTrue();
     }
@@ -81,7 +81,7 @@ public sealed class AsyncCancellationTests
     {
         var error = Sample.Error("E_ROUND");
 
-        var roundTrip = Rop.Err<int>(error).ToValidation().ToSingleError();
+        var roundTrip = Result.Err<int>(error).ToValidation().ToSingleError();
 
         await Assert.That(roundTrip.ErrOrThrow()).IsSameReferenceAs(error);
     }
@@ -105,11 +105,11 @@ public sealed class AsyncCancellationTests
     {
         var items = Enumerable.Range(0, 20)
             .Select(value => value % 3 == 0
-                ? Rop.Err<int>(Sample.Error($"E_{value}"))
-                : Rop.Ok(value))
+                ? Result.Err<int>(Sample.Error($"E_{value}"))
+                : Result.Ok(value))
             .ToArray();
 
-        var (oks, errs) = Rop.Partition(items);
+        var (oks, errs) = Result.Partition(items);
 
         await TestSupport.AssertSequenceAsync(oks, [1, 2, 4, 5, 7, 8, 10, 11, 13, 14, 16, 17, 19]);
         await Assert.That(errs.Count).IsEqualTo(7);
@@ -123,9 +123,9 @@ public sealed class AsyncCancellationTests
 
         Parallel.For(0, 2_000, index =>
         {
-            var result = Rop.Ok(index)
+            var result = Result.Ok(index)
                 .MapOk(static value => value + 1)
-                .BindOk(static value => Rop.Ok(value * 2))
+                .BindOk(static value => Result.Ok(value * 2))
                 .Ensure(static value => value >= 0, Sample.Error());
 
             if (!result.TryGetOk(out var value) || value != (index + 1) * 2)
@@ -133,7 +133,7 @@ public sealed class AsyncCancellationTests
                 Interlocked.Increment(ref failures);
             }
 
-            var option = Opt.Some(index).MapSome(static value => value + 1).Filter(static value => value > 0);
+            var option = Option.Some(index).MapSome(static value => value + 1).Filter(static value => value > 0);
 
             if (!option.TryGetValue(out var optionValue) || optionValue != index + 1)
             {

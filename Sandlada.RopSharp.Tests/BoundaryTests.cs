@@ -8,7 +8,7 @@ public sealed class BoundaryTests
     [Test]
     public async Task Try_ReturnsOkWhenFunctionSucceeds()
     {
-        var result = Rop.Try(() => 42, _ => Sample.Error());
+        var result = Result.Try(() => 42, _ => Sample.Error());
 
         await Assert.That(result.OrThrow()).IsEqualTo(42);
     }
@@ -16,7 +16,7 @@ public sealed class BoundaryTests
     [Test]
     public async Task Try_ConvertsExceptionToErrorWithCause()
     {
-        var result = Rop.Try<int>(() => throw new FormatException("bad"), exception => RopError.FromException(exception, "E_PARSE"));
+        var result = Result.Try<int>(() => throw new FormatException("bad"), exception => RopError.FromException(exception, "E_PARSE"));
 
         var error = result.ErrOrThrow();
 
@@ -27,7 +27,7 @@ public sealed class BoundaryTests
     [Test]
     public async Task Try_WithCodeOverload_UsesProvidedCode()
     {
-        var result = Rop.Try<int>(() => throw new InvalidOperationException("bad"), "E_CODE");
+        var result = Result.Try<int>(() => throw new InvalidOperationException("bad"), "E_CODE");
 
         await Assert.That(result.ErrOrThrow().Code).IsEqualTo("E_CODE");
     }
@@ -35,7 +35,7 @@ public sealed class BoundaryTests
     [Test]
     public async Task Try_WithNullResult_ReturnsNullResultError()
     {
-        var result = Rop.Try<string>(() => null!, _ => Sample.Error());
+        var result = Result.Try<string>(() => null!, _ => Sample.Error());
 
         await Assert.That(result.ErrOrThrow().Code).IsEqualTo("E_NULL_RESULT");
     }
@@ -44,7 +44,7 @@ public sealed class BoundaryTests
     public async Task Try_RethrowsOperationCanceledException()
     {
         var exception = TestSupport.Catch(() =>
-            Rop.Try<int>(() => throw new OperationCanceledException(), _ => Sample.Error()));
+            Result.Try<int>(() => throw new OperationCanceledException(), _ => Sample.Error()));
 
         await Assert.That(exception is OperationCanceledException).IsTrue();
     }
@@ -52,14 +52,14 @@ public sealed class BoundaryTests
     [Test]
     public async Task Try_WithNullArguments_Throws()
     {
-        await Assert.That(TestSupport.Catch(() => Rop.Try<int>(null!, _ => Sample.Error())) is ArgumentNullException).IsTrue();
-        await Assert.That(TestSupport.Catch(() => Rop.Try(() => 1, (Func<Exception, RopError>)null!)) is ArgumentNullException).IsTrue();
+        await Assert.That(TestSupport.Catch(() => Result.Try<int>(null!, _ => Sample.Error())) is ArgumentNullException).IsTrue();
+        await Assert.That(TestSupport.Catch(() => Result.Try(() => 1, (Func<Exception, RopError>)null!)) is ArgumentNullException).IsTrue();
     }
 
     [Test]
     public async Task TrySwitch_LiftsFunctionAndCapturesExceptions()
     {
-        var safeParse = Rop.TrySwitch<string, int>(
+        var safeParse = Result.TrySwitch<string, int>(
             text => int.Parse(text, CultureInfo.InvariantCulture),
             exception => RopError.FromException(exception, "E_PARSE"));
 
@@ -73,7 +73,7 @@ public sealed class BoundaryTests
     [Test]
     public async Task Switch_LiftsWithoutCatchingExceptions()
     {
-        var parse = Rop.Switch<string, int, RopError>(text => int.Parse(text, CultureInfo.InvariantCulture));
+        var parse = Result.Switch<string, int, RopError>(text => int.Parse(text, CultureInfo.InvariantCulture));
 
         var ok = parse("12");
         var exception = TestSupport.Catch(() => parse("nope"));
@@ -85,7 +85,7 @@ public sealed class BoundaryTests
     [Test]
     public async Task Switch_WithNullFunction_Throws()
     {
-        var exception = TestSupport.Catch(() => Rop.Switch<string, int, RopError>(null!));
+        var exception = TestSupport.Catch(() => Result.Switch<string, int, RopError>(null!));
 
         await Assert.That(exception is ArgumentNullException).IsTrue();
     }
@@ -96,8 +96,8 @@ public sealed class BoundaryTests
         string? missing = null;
         string? present = "x";
 
-        var err = Rop.FromNullable(missing, () => Sample.Error("E_NULL"));
-        var ok = Rop.FromNullable(present, () => Sample.Error());
+        var err = Result.FromNullable(missing, () => Sample.Error("E_NULL"));
+        var ok = Result.FromNullable(present, () => Sample.Error());
 
         await Assert.That(err.ErrOrThrow().Code).IsEqualTo("E_NULL");
         await Assert.That(ok.OrThrow()).IsEqualTo("x");
@@ -109,7 +109,7 @@ public sealed class BoundaryTests
         string? present = "x";
         var called = false;
 
-        var result = Rop.FromNullable(present, () =>
+        var result = Result.FromNullable(present, () =>
         {
             called = true;
             return Sample.Error();
@@ -125,8 +125,8 @@ public sealed class BoundaryTests
         int? missing = null;
         int? present = 5;
 
-        var err = Rop.FromNullableValue(missing, () => Sample.Error("E_AGE_NULL"));
-        var ok = Rop.FromNullableValue(present, () => Sample.Error());
+        var err = Result.FromNullableValue(missing, () => Sample.Error("E_AGE_NULL"));
+        var ok = Result.FromNullableValue(present, () => Sample.Error());
 
         await Assert.That(err.ErrOrThrow().Code).IsEqualTo("E_AGE_NULL");
         await Assert.That(ok.OrThrow()).IsEqualTo(5);
@@ -137,7 +137,7 @@ public sealed class BoundaryTests
     {
         string? present = "x";
 
-        var exception = TestSupport.Catch(() => Rop.FromNullable(present, null!));
+        var exception = TestSupport.Catch(() => Result.FromNullable(present, null!));
 
         await Assert.That(exception is ArgumentNullException).IsTrue();
     }
@@ -147,7 +147,7 @@ public sealed class BoundaryTests
     {
         string? missing = null;
 
-        var exception = TestSupport.Catch(() => Rop.FromNullable(missing, () => null!));
+        var exception = TestSupport.Catch(() => Result.FromNullable(missing, () => null!));
 
         await Assert.That(exception is InvalidOperationException).IsTrue();
     }

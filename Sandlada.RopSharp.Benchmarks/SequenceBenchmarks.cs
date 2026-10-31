@@ -23,9 +23,9 @@ public class SequenceBenchmarks
     [GlobalSetup]
     public void Setup()
     {
-        _allOk = [.. Enumerable.Range(0, N).Select(static value => Rop.Ok(value))];
-        _errorAtMiddle = [.. Enumerable.Range(0, N).Select(value => value == N / 2 ? Rop.Err<int>(Error) : Rop.Ok(value))];
-        _allErr = [.. Enumerable.Range(0, N).Select(static _ => Rop.Err<int>(Error))];
+        _allOk = [.. Enumerable.Range(0, N).Select(static value => Result.Ok(value))];
+        _errorAtMiddle = [.. Enumerable.Range(0, N).Select(value => value == N / 2 ? Result.Err<int>(Error) : Result.Ok(value))];
+        _allErr = [.. Enumerable.Range(0, N).Select(static _ => Result.Err<int>(Error))];
     }
 
     [Benchmark(Baseline = true)]
@@ -36,29 +36,29 @@ public class SequenceBenchmarks
         {
             if (!result.TryGetOk(out var value))
             {
-                return Rop.Err<IReadOnlyList<int>>(Error);
+                return Result.Err<IReadOnlyList<int>>(Error);
             }
 
             values.Add(value);
         }
 
-        return Rop.Ok<IReadOnlyList<int>>(values);
+        return Result.Ok<IReadOnlyList<int>>(values);
     }
 
     [Benchmark]
-    public Result<IReadOnlyList<int>, RopError> Sequence_AllOk() => Rop.Sequence(_allOk);
+    public Result<IReadOnlyList<int>, RopError> Sequence_AllOk() => Result.Sequence(_allOk);
 
     [Benchmark]
-    public Result<IReadOnlyList<int>, RopError> Sequence_ErrorAtMiddle() => Rop.Sequence(_errorAtMiddle);
+    public Result<IReadOnlyList<int>, RopError> Sequence_ErrorAtMiddle() => Result.Sequence(_errorAtMiddle);
 
     [Benchmark]
     public Result<IReadOnlyList<int>, IReadOnlyList<RopError>> SequenceValidation_AllErr() =>
-        Rop.SequenceValidation(_allErr);
+        Result.SequenceValidation(_allErr);
 
     [Benchmark]
     public Result<IReadOnlyList<int>, IReadOnlyList<RopError>> SequenceValidation_HalfErr() =>
-        Rop.SequenceValidation(_errorAtMiddle);
+        Result.SequenceValidation(_errorAtMiddle);
 
     [Benchmark]
-    public (IReadOnlyList<int> Oks, IReadOnlyList<RopError> Errs) Partition_Half() => Rop.Partition(_errorAtMiddle);
+    public (IReadOnlyList<int> Oks, IReadOnlyList<RopError> Errs) Partition_Half() => Result.Partition(_errorAtMiddle);
 }

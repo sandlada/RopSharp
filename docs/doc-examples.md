@@ -36,8 +36,8 @@ They are compiled twice: once into the test assembly, and once - verbatim - as a
 example compilation, so the snippets are type checked against the very same declarations the documentation
 mentions.
 
-Because every example uses the same domain, a reader who moves from `Rop.Try` to `ResultExtensions.MapOk` to
-`Rop.Aggregation.Validate` keeps watching one program grow instead of a series of unrelated fragments.
+Because every example uses the same domain, a reader who moves from `Result.Try` to `ResultExtensions.MapOk` to
+`Result.Aggregation.Validate` keeps watching one program grow instead of a series of unrelated fragments.
 
 ## The template
 
@@ -50,7 +50,7 @@ Because every example uses the same domain, a reader who moves from `Rop.Try` to
 /// Why the member exists and where it belongs in a pipeline. Cross references use <see cref="..."/>.
 /// </para>
 /// <code><![CDATA[
-/// var receiptId = Rop.Try(() => OrderFixtures.Charge(OrderFixtures.Sample), "E_CHARGE")
+/// var receiptId = Result.Try(() => OrderFixtures.Charge(OrderFixtures.Sample), "E_CHARGE")
 ///     .MapOk(static payment => payment.Id);
 ///
 /// // Ok(receiptId) when the payment provider answered,

@@ -14,8 +14,8 @@ public sealed class CoverageGapTests
     {
         using var cts = new CancellationTokenSource();
 
-        var result = await Rop.Ok(2)
-            .BindOkAsync((value, token) => Task.FromResult(Rop.Ok(value + (token == cts.Token ? 1 : 0))), cts.Token);
+        var result = await Result.Ok(2)
+            .BindOkAsync((value, token) => Task.FromResult(Result.Ok(value + (token == cts.Token ? 1 : 0))), cts.Token);
 
         await Assert.That(result.OrThrow()).IsEqualTo(3);
     }
@@ -26,10 +26,10 @@ public sealed class CoverageGapTests
         var error = Sample.Error("E_BIND");
         var called = false;
 
-        var result = await Rop.Err<int>(error).BindOkAsync((value, _) =>
+        var result = await Result.Err<int>(error).BindOkAsync((value, _) =>
         {
             called = true;
-            return Task.FromResult(Rop.Ok(value));
+            return Task.FromResult(Result.Ok(value));
         }, CancellationToken.None);
 
         await Assert.That(called).IsFalse();
@@ -43,10 +43,10 @@ public sealed class CoverageGapTests
         cts.Cancel();
         var called = false;
 
-        var exception = await TestSupport.CatchAsync(() => Rop.Ok(1).BindOkAsync((value, _) =>
+        var exception = await TestSupport.CatchAsync(() => Result.Ok(1).BindOkAsync((value, _) =>
         {
             called = true;
-            return Task.FromResult(Rop.Ok(value));
+            return Task.FromResult(Result.Ok(value));
         }, cts.Token));
 
         await Assert.That(exception is OperationCanceledException).IsTrue();
@@ -58,8 +58,8 @@ public sealed class CoverageGapTests
     {
         using var cts = new CancellationTokenSource();
 
-        var result = await Rop.Err<int>(Sample.Error())
-            .BindErrAsync((_, token) => Task.FromResult(Rop.Ok(token == cts.Token ? 1 : 0)), cts.Token);
+        var result = await Result.Err<int>(Sample.Error())
+            .BindErrAsync((_, token) => Task.FromResult(Result.Ok(token == cts.Token ? 1 : 0)), cts.Token);
 
         await Assert.That(result.OrThrow()).IsEqualTo(1);
     }
@@ -67,8 +67,8 @@ public sealed class CoverageGapTests
     [Test]
     public async Task BindErrAsync_OnSyncResult_WithCancellationAwareFallback_KeepsSuccess()
     {
-        var result = await Rop.Ok(1)
-            .BindErrAsync((_, _) => Task.FromResult(Rop.Ok(2)), CancellationToken.None);
+        var result = await Result.Ok(1)
+            .BindErrAsync((_, _) => Task.FromResult(Result.Ok(2)), CancellationToken.None);
 
         await Assert.That(result.OrThrow()).IsEqualTo(1);
     }
@@ -76,7 +76,7 @@ public sealed class CoverageGapTests
     [Test]
     public async Task ResultLinq_SelectManyTwoArgument_Composes()
     {
-        var query = Rop.Ok(2).SelectMany(value => Rop.Ok(value * 3));
+        var query = Result.Ok(2).SelectMany(value => Result.Ok(value * 3));
 
         await Assert.That(query.OrThrow()).IsEqualTo(6);
     }
@@ -84,8 +84,8 @@ public sealed class CoverageGapTests
     [Test]
     public async Task OptionLinq_SelectAndTwoArgumentSelectMany_Compose()
     {
-        var projected = Opt.Some(2).Select(value => value + 1);
-        var bound = Opt.Some(2).SelectMany(value => Opt.Some(value * 3));
+        var projected = Option.Some(2).Select(value => value + 1);
+        var bound = Option.Some(2).SelectMany(value => Option.Some(value * 3));
 
         await Assert.That(projected.OrThrow()).IsEqualTo(3);
         await Assert.That(bound.OrThrow()).IsEqualTo(6);
@@ -103,9 +103,9 @@ public sealed class CoverageGapTests
     [Test]
     public async Task Option_NoneHashCodeAndInequality()
     {
-        await Assert.That(Opt.None<int>().GetHashCode()).IsEqualTo(0);
-        await Assert.That(Opt.None<int>() != Opt.Some(1)).IsTrue();
-        await Assert.That(Opt.None<string>().Equals((object)Opt.None<string>())).IsTrue();
+        await Assert.That(Option.None<int>().GetHashCode()).IsEqualTo(0);
+        await Assert.That(Option.None<int>() != Option.Some(1)).IsTrue();
+        await Assert.That(Option.None<string>().Equals((object)Option.None<string>())).IsTrue();
     }
 
     [Test]
@@ -113,7 +113,7 @@ public sealed class CoverageGapTests
     {
         var called = false;
 
-        var option = Opt.None<Sample.Profile>().BindSomeNullableValue(value =>
+        var option = Option.None<Sample.Profile>().BindSomeNullableValue(value =>
         {
             called = true;
             return value.Score;
@@ -128,13 +128,13 @@ public sealed class CoverageGapTests
     {
         var called = false;
 
-        var asyncResult = await Task.FromResult(Opt.None<int>()).MapSomeAsync(value =>
+        var asyncResult = await Task.FromResult(Option.None<int>()).MapSomeAsync(value =>
         {
             called = true;
             return Task.FromResult(value + 1);
         });
 
-        var ctResult = await Task.FromResult(Opt.None<int>()).MapSomeAsync((value, _) =>
+        var ctResult = await Task.FromResult(Option.None<int>()).MapSomeAsync((value, _) =>
         {
             called = true;
             return Task.FromResult(value + 1);
@@ -150,13 +150,13 @@ public sealed class CoverageGapTests
     {
         var called = false;
 
-        var asyncResult = await Task.FromResult(Rop.Ok(1)).MapErrAsync(error =>
+        var asyncResult = await Task.FromResult(Result.Ok(1)).MapErrAsync(error =>
         {
             called = true;
             return Task.FromResult(error);
         });
 
-        var ctResult = await Task.FromResult(Rop.Ok(1)).MapErrAsync((error, _) =>
+        var ctResult = await Task.FromResult(Result.Ok(1)).MapErrAsync((error, _) =>
         {
             called = true;
             return Task.FromResult(error);
@@ -172,13 +172,13 @@ public sealed class CoverageGapTests
     {
         var called = false;
 
-        var teeOk = await Task.FromResult(Rop.Err<int>(Sample.Error())).TeeOkAsync((_, _) =>
+        var teeOk = await Task.FromResult(Result.Err<int>(Sample.Error())).TeeOkAsync((_, _) =>
         {
             called = true;
             return Task.CompletedTask;
         });
 
-        var teeErr = await Task.FromResult(Rop.Ok(1)).TeeErrAsync((_, _) =>
+        var teeErr = await Task.FromResult(Result.Ok(1)).TeeErrAsync((_, _) =>
         {
             called = true;
             return Task.CompletedTask;
@@ -194,13 +194,13 @@ public sealed class CoverageGapTests
     {
         var called = false;
 
-        var teeSome = await Task.FromResult(Opt.None<int>()).TeeSomeAsync((_, _) =>
+        var teeSome = await Task.FromResult(Option.None<int>()).TeeSomeAsync((_, _) =>
         {
             called = true;
             return Task.CompletedTask;
         });
 
-        var teeNone = await Task.FromResult(Opt.Some(1)).TeeNoneAsync(_ =>
+        var teeNone = await Task.FromResult(Option.Some(1)).TeeNoneAsync(_ =>
         {
             called = true;
             return Task.CompletedTask;
@@ -216,7 +216,7 @@ public sealed class CoverageGapTests
     {
         var called = false;
 
-        var option = await Task.FromResult(Opt.None<int>()).FilterAsync(value =>
+        var option = await Task.FromResult(Option.None<int>()).FilterAsync(value =>
         {
             called = true;
             return Task.FromResult(value > 0);
@@ -229,7 +229,7 @@ public sealed class CoverageGapTests
     [Test]
     public async Task TraverseAsync_WithEmptySource_ReturnsEmptyOk()
     {
-        var result = await Rop.TraverseAsync(Array.Empty<int>(), value => Task.FromResult(Rop.Ok(value)));
+        var result = await Result.TraverseAsync(Array.Empty<int>(), value => Task.FromResult(Result.Ok(value)));
 
         await Assert.That(result.OrThrow().Count).IsEqualTo(0);
     }
@@ -238,7 +238,7 @@ public sealed class CoverageGapTests
     public async Task TryAsync_WithNullTask_FaultsWithInvalidOperation()
     {
         var exception = await TestSupport.CatchAsync(() =>
-            Rop.TryAsync<int>(() => null!, _ => Sample.Error()));
+            Result.TryAsync<int>(() => null!, _ => Sample.Error()));
 
         await Assert.That(exception is InvalidOperationException).IsTrue();
     }
@@ -247,7 +247,7 @@ public sealed class CoverageGapTests
     public async Task Try_WithNullErrorFactoryResult_ThrowsInvalidOperation()
     {
         var exception = TestSupport.Catch(() =>
-            Rop.Try<int>(() => throw new InvalidOperationException("boom"), _ => null!));
+            Result.Try<int>(() => throw new InvalidOperationException("boom"), _ => null!));
 
         await Assert.That(exception is InvalidOperationException).IsTrue();
     }
@@ -256,7 +256,7 @@ public sealed class CoverageGapTests
     public async Task TryAsync_WithNullErrorFactoryResult_ThrowsInvalidOperation()
     {
         var exception = await TestSupport.CatchAsync(() =>
-            Rop.TryAsync<int>(
+            Result.TryAsync<int>(
                 () => Task.FromException<int>(new InvalidOperationException("boom")),
                 _ => null!));
 
@@ -269,10 +269,10 @@ public sealed class CoverageGapTests
         var error = Sample.Error("E_TASK");
         var called = false;
 
-        var result = await Task.FromResult(Rop.Err<int>(error)).BindOkAsync(value =>
+        var result = await Task.FromResult(Result.Err<int>(error)).BindOkAsync(value =>
         {
             called = true;
-            return Task.FromResult(Rop.Ok(value));
+            return Task.FromResult(Result.Ok(value));
         });
 
         await Assert.That(called).IsFalse();
@@ -285,10 +285,10 @@ public sealed class CoverageGapTests
         var error = Sample.Error("E_SYNC");
         var called = false;
 
-        var result = await Rop.Err<int>(error).BindOkAsync(value =>
+        var result = await Result.Err<int>(error).BindOkAsync(value =>
         {
             called = true;
-            return Task.FromResult(Rop.Ok(value));
+            return Task.FromResult(Result.Ok(value));
         });
 
         await Assert.That(called).IsFalse();
@@ -298,7 +298,7 @@ public sealed class CoverageGapTests
     [Test]
     public async Task BindErrAsync_SyncReceiver_NonCancellationAware_KeepsSuccess()
     {
-        var result = await Rop.Ok(1).BindErrAsync(_ => Task.FromResult(Rop.Ok(9)));
+        var result = await Result.Ok(1).BindErrAsync(_ => Task.FromResult(Result.Ok(9)));
 
         await Assert.That(result.OrThrow()).IsEqualTo(1);
     }
@@ -307,13 +307,13 @@ public sealed class CoverageGapTests
     public async Task BindAsync_NullReturnedTask_FaultsWithInvalidOperation()
     {
         var bindOk = await TestSupport.CatchAsync(() =>
-            Task.FromResult(Rop.Ok(1)).BindOkAsync<int, int, RopError>(_ => null!));
+            Task.FromResult(Result.Ok(1)).BindOkAsync<int, int, RopError>(_ => null!));
         var bindErr = await TestSupport.CatchAsync(() =>
-            Task.FromResult(Rop.Err<int>(Sample.Error())).BindErrAsync<int, RopError>(_ => null!));
+            Task.FromResult(Result.Err<int>(Sample.Error())).BindErrAsync<int, RopError>(_ => null!));
         var bindSome = await TestSupport.CatchAsync(() =>
-            Task.FromResult(Opt.Some(1)).BindSomeAsync<int, int>(_ => null!));
+            Task.FromResult(Option.Some(1)).BindSomeAsync<int, int>(_ => null!));
         var bindNone = await TestSupport.CatchAsync(() =>
-            Task.FromResult(Opt.None<int>()).BindNoneAsync<int>(_ => null!));
+            Task.FromResult(Option.None<int>()).BindNoneAsync<int>(_ => null!));
 
         await Assert.That(bindOk is InvalidOperationException).IsTrue();
         await Assert.That(bindErr is InvalidOperationException).IsTrue();
@@ -324,10 +324,10 @@ public sealed class CoverageGapTests
     [Test]
     public async Task BindNoneAsync_BothOverloads_HandleNoneAndSome()
     {
-        var noArgNone = await Task.FromResult(Opt.None<int>()).BindNoneAsync(() => Task.FromResult(Opt.Some(5)));
-        var noArgSome = await Task.FromResult(Opt.Some(1)).BindNoneAsync(() => Task.FromResult(Opt.Some(5)));
-        var ctNone = await Task.FromResult(Opt.None<int>()).BindNoneAsync(_ => Task.FromResult(Opt.Some(7)));
-        var ctSome = await Task.FromResult(Opt.Some(1)).BindNoneAsync(_ => Task.FromResult(Opt.Some(9)));
+        var noArgNone = await Task.FromResult(Option.None<int>()).BindNoneAsync(() => Task.FromResult(Option.Some(5)));
+        var noArgSome = await Task.FromResult(Option.Some(1)).BindNoneAsync(() => Task.FromResult(Option.Some(5)));
+        var ctNone = await Task.FromResult(Option.None<int>()).BindNoneAsync(_ => Task.FromResult(Option.Some(7)));
+        var ctSome = await Task.FromResult(Option.Some(1)).BindNoneAsync(_ => Task.FromResult(Option.Some(9)));
 
         await Assert.That(noArgNone.OrThrow()).IsEqualTo(5);
         await Assert.That(noArgSome.OrThrow()).IsEqualTo(1);
@@ -339,7 +339,7 @@ public sealed class CoverageGapTests
     public async Task TryAsync_SynchronousOperationCanceled_Rethrows()
     {
         var exception = await TestSupport.CatchAsync(() =>
-            Rop.TryAsync<int>(() => throw new OperationCanceledException(), _ => Sample.Error()));
+            Result.TryAsync<int>(() => throw new OperationCanceledException(), _ => Sample.Error()));
 
         await Assert.That(exception is OperationCanceledException).IsTrue();
     }
@@ -349,10 +349,10 @@ public sealed class CoverageGapTests
     {
         var error = Sample.Error("E_MAP");
 
-        var taskReceiver = await Task.FromResult(Rop.Err<int>(error)).MapOkAsync(value => Task.FromResult(value + 1));
-        var taskReceiverCt = await Task.FromResult(Rop.Err<int>(error))
+        var taskReceiver = await Task.FromResult(Result.Err<int>(error)).MapOkAsync(value => Task.FromResult(value + 1));
+        var taskReceiverCt = await Task.FromResult(Result.Err<int>(error))
             .MapOkAsync((value, _) => Task.FromResult(value + 1));
-        var resultReceiver = await Rop.Err<int>(error).MapOkAsync(value => Task.FromResult(value + 1));
+        var resultReceiver = await Result.Err<int>(error).MapOkAsync(value => Task.FromResult(value + 1));
 
         await Assert.That(taskReceiver.ErrOrThrow()).IsSameReferenceAs(error);
         await Assert.That(taskReceiverCt.ErrOrThrow()).IsSameReferenceAs(error);
@@ -364,8 +364,8 @@ public sealed class CoverageGapTests
     {
         var error = Sample.Error("E_BIND");
 
-        var taskReceiver = await Task.FromResult(Rop.Err<int>(error))
-            .BindOkAsync((value, _) => Task.FromResult(Rop.Ok(value)));
+        var taskReceiver = await Task.FromResult(Result.Err<int>(error))
+            .BindOkAsync((value, _) => Task.FromResult(Result.Ok(value)));
 
         await Assert.That(taskReceiver.ErrOrThrow()).IsSameReferenceAs(error);
     }
@@ -374,7 +374,7 @@ public sealed class CoverageGapTests
     public async Task BindOkAsync_ResultReceiver_CancellationAware_NullBinderTask_Faults()
     {
         var exception = await TestSupport.CatchAsync(() =>
-            Rop.Ok(1).BindOkAsync<int, int, RopError>((_, _) => null!, CancellationToken.None));
+            Result.Ok(1).BindOkAsync<int, int, RopError>((_, _) => null!, CancellationToken.None));
 
         await Assert.That(exception is InvalidOperationException).IsTrue();
     }
@@ -382,8 +382,8 @@ public sealed class CoverageGapTests
     [Test]
     public async Task BindErrAsync_AsyncFallbacks_KeepSuccess()
     {
-        var taskReceiver = await Task.FromResult(Rop.Ok(1)).BindErrAsync(_ => Task.FromResult(Rop.Ok(2)));
-        var taskReceiverCt = await Task.FromResult(Rop.Ok(1)).BindErrAsync((_, _) => Task.FromResult(Rop.Ok(3)));
+        var taskReceiver = await Task.FromResult(Result.Ok(1)).BindErrAsync(_ => Task.FromResult(Result.Ok(2)));
+        var taskReceiverCt = await Task.FromResult(Result.Ok(1)).BindErrAsync((_, _) => Task.FromResult(Result.Ok(3)));
 
         await Assert.That(taskReceiver.OrThrow()).IsEqualTo(1);
         await Assert.That(taskReceiverCt.OrThrow()).IsEqualTo(1);
@@ -393,7 +393,7 @@ public sealed class CoverageGapTests
     public async Task BindErrAsync_ResultReceiver_CancellationAware_NullFallbackTask_Faults()
     {
         var exception = await TestSupport.CatchAsync(() =>
-            Rop.Err<int>(Sample.Error())
+            Result.Err<int>(Sample.Error())
                 .BindErrAsync<int, RopError>((_, _) => null!, CancellationToken.None));
 
         await Assert.That(exception is InvalidOperationException).IsTrue();
@@ -402,10 +402,10 @@ public sealed class CoverageGapTests
     [Test]
     public async Task BindSomeAsync_AllBinderOverloads_HandleNone()
     {
-        var taskReceiver = await Task.FromResult(Opt.None<int>()).BindSomeAsync(value => Task.FromResult(Opt.Some(value)));
-        var taskReceiverCt = await Task.FromResult(Opt.None<int>())
-            .BindSomeAsync((value, _) => Task.FromResult(Opt.Some(value)));
-        var optionReceiver = await Opt.None<int>().BindSomeAsync(value => Task.FromResult(Opt.Some(value)));
+        var taskReceiver = await Task.FromResult(Option.None<int>()).BindSomeAsync(value => Task.FromResult(Option.Some(value)));
+        var taskReceiverCt = await Task.FromResult(Option.None<int>())
+            .BindSomeAsync((value, _) => Task.FromResult(Option.Some(value)));
+        var optionReceiver = await Option.None<int>().BindSomeAsync(value => Task.FromResult(Option.Some(value)));
 
         await Assert.That(taskReceiver.IsNone).IsTrue();
         await Assert.That(taskReceiverCt.IsNone).IsTrue();
@@ -415,7 +415,7 @@ public sealed class CoverageGapTests
     [Test]
     public async Task FilterAsync_SyncPredicate_OnNone_ReturnsNone()
     {
-        var option = await Task.FromResult(Opt.None<int>()).FilterAsync(value => value > 0);
+        var option = await Task.FromResult(Option.None<int>()).FilterAsync(value => value > 0);
 
         await Assert.That(option.IsNone).IsTrue();
     }
@@ -426,10 +426,10 @@ public sealed class CoverageGapTests
         var error = Sample.Error("E_FIRST");
         var mergerCalled = false;
 
-        var result = Rop.Combine(
-            Rop.Err<int>(error),
-            Rop.Ok(2),
-            Rop.Ok(3),
+        var result = Result.Combine(
+            Result.Err<int>(error),
+            Result.Ok(2),
+            Result.Ok(3),
             (int a, int b, int c) =>
             {
                 mergerCalled = true;
@@ -443,8 +443,8 @@ public sealed class CoverageGapTests
     [Test]
     public async Task Result_OkWithNullPayload_HasStableEqualityAndHashCode()
     {
-        var first = Rop.Ok<string, RopError>("x").MapOk(_ => (string?)null);
-        var second = Rop.Ok<string, RopError>("y").MapOk(_ => (string?)null);
+        var first = Result.Ok<string, RopError>("x").MapOk(_ => (string?)null);
+        var second = Result.Ok<string, RopError>("y").MapOk(_ => (string?)null);
 
         await Assert.That(first.IsOk).IsTrue();
         await Assert.That(first.Equals(second)).IsTrue();
@@ -465,9 +465,9 @@ public sealed class CoverageGapTests
     [Test]
     public async Task Transpose_OptionOfResultWithNullPayload_BecomesOkNone()
     {
-        var inner = Rop.Ok<string, RopError>("x").MapOk(_ => (string?)null);
+        var inner = Result.Ok<string, RopError>("x").MapOk(_ => (string?)null);
 
-        var transposed = Opt.Some(inner).Transpose();
+        var transposed = Option.Some(inner).Transpose();
 
         await Assert.That(transposed.IsOk).IsTrue();
         await Assert.That(transposed.OrThrow().IsNone).IsTrue();

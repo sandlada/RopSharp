@@ -14,7 +14,7 @@ public sealed class AsyncContractTests
     {
         using var cts = new CancellationTokenSource();
 
-        var result = await Rop.Ok(2)
+        var result = await Result.Ok(2)
             .MapOkAsync((value, token) => Task.FromResult(value + (token == cts.Token ? 1 : 0)), cts.Token);
 
         await Assert.That(result.OrThrow()).IsEqualTo(3);
@@ -25,7 +25,7 @@ public sealed class AsyncContractTests
     {
         var error = Sample.Error("E_MAP");
 
-        var result = await Rop.Err<int>(error)
+        var result = await Result.Err<int>(error)
             .MapOkAsync((value, _) => Task.FromResult(value + 1));
 
         await Assert.That(result.ErrOrThrow()).IsSameReferenceAs(error);
@@ -36,7 +36,7 @@ public sealed class AsyncContractTests
     {
         var mapper = new TaskCompletionSource<int>(TaskCreationOptions.RunContinuationsAsynchronously);
 
-        var pending = Rop.Ok(1).MapOkAsync((_, _) => mapper.Task, CancellationToken.None);
+        var pending = Result.Ok(1).MapOkAsync((_, _) => mapper.Task, CancellationToken.None);
 
         await Assert.That(pending.IsCompleted).IsFalse();
         mapper.SetResult(4);
@@ -47,7 +47,7 @@ public sealed class AsyncContractTests
     [Test]
     public async Task MapErrAsync_OnSyncResult_WithAsyncMapper_MapsError()
     {
-        var result = await Rop.Err<int>(Sample.Error("E_X"))
+        var result = await Result.Err<int>(Sample.Error("E_X"))
             .MapErrAsync(error => Task.FromResult(error.WithCode("E_ASYNC")));
 
         await Assert.That(result.ErrOrThrow().Code).IsEqualTo("E_ASYNC");
@@ -58,7 +58,7 @@ public sealed class AsyncContractTests
     {
         var called = false;
 
-        var result = await Rop.Ok(1).MapErrAsync(error =>
+        var result = await Result.Ok(1).MapErrAsync(error =>
         {
             called = true;
             return Task.FromResult(error);
@@ -73,7 +73,7 @@ public sealed class AsyncContractTests
     {
         using var cts = new CancellationTokenSource();
 
-        var result = await Rop.Err<int>(Sample.Error("E_X"))
+        var result = await Result.Err<int>(Sample.Error("E_X"))
             .MapErrAsync((error, token) => Task.FromResult(error.WithCode(token == cts.Token ? "E_CT" : "E_NO")), cts.Token);
 
         await Assert.That(result.ErrOrThrow().Code).IsEqualTo("E_CT");
@@ -82,7 +82,7 @@ public sealed class AsyncContractTests
     [Test]
     public async Task MapErrAsync_OnSyncResult_CancellationAware_KeepsSuccess()
     {
-        var result = await Rop.Ok(1).MapErrAsync((error, _) => Task.FromResult(error));
+        var result = await Result.Ok(1).MapErrAsync((error, _) => Task.FromResult(error));
 
         await Assert.That(result.OrThrow()).IsEqualTo(1);
     }
@@ -92,7 +92,7 @@ public sealed class AsyncContractTests
     {
         var mapper = new TaskCompletionSource<RopError>(TaskCreationOptions.RunContinuationsAsynchronously);
 
-        var pending = Rop.Err<int>(Sample.Error("E_X")).MapErrAsync((_, _) => mapper.Task, CancellationToken.None);
+        var pending = Result.Err<int>(Sample.Error("E_X")).MapErrAsync((_, _) => mapper.Task, CancellationToken.None);
 
         await Assert.That(pending.IsCompleted).IsFalse();
         mapper.SetResult(Sample.Error("E_LATE"));
@@ -104,30 +104,30 @@ public sealed class AsyncContractTests
     public async Task AsyncCallbacks_ReturningNullTask_FaultWithInvalidOperation()
     {
         var mapperTaskReceiver = await TestSupport.CatchAsync(() =>
-            Task.FromResult(Rop.Ok(1)).MapOkAsync(value => (Task<int>)null!));
+            Task.FromResult(Result.Ok(1)).MapOkAsync(value => (Task<int>)null!));
         var mapperTaskReceiverCt = await TestSupport.CatchAsync(() =>
-            Task.FromResult(Rop.Ok(1)).MapOkAsync((value, _) => (Task<int>)null!));
+            Task.FromResult(Result.Ok(1)).MapOkAsync((value, _) => (Task<int>)null!));
         var mapperResultReceiver = await TestSupport.CatchAsync(() =>
-            Rop.Ok(1).MapOkAsync(value => (Task<int>)null!));
+            Result.Ok(1).MapOkAsync(value => (Task<int>)null!));
         var mapperResultReceiverCt = await TestSupport.CatchAsync(() =>
-            Rop.Ok(1).MapOkAsync((value, _) => (Task<int>)null!));
+            Result.Ok(1).MapOkAsync((value, _) => (Task<int>)null!));
 
         var errMapperResult = await TestSupport.CatchAsync(() =>
-            Rop.Err<int>(Sample.Error()).MapErrAsync(error => (Task<RopError>)null!));
+            Result.Err<int>(Sample.Error()).MapErrAsync(error => (Task<RopError>)null!));
         var errMapperCt = await TestSupport.CatchAsync(() =>
-            Task.FromResult(Rop.Err<int>(Sample.Error())).MapErrAsync((error, _) => (Task<RopError>)null!));
+            Task.FromResult(Result.Err<int>(Sample.Error())).MapErrAsync((error, _) => (Task<RopError>)null!));
 
         var optionMapper = await TestSupport.CatchAsync(() =>
-            Task.FromResult(Opt.Some(1)).MapSomeAsync(value => (Task<int>)null!));
+            Task.FromResult(Option.Some(1)).MapSomeAsync(value => (Task<int>)null!));
         var optionPredicate = await TestSupport.CatchAsync(() =>
-            Task.FromResult(Opt.Some(1)).FilterAsync(value => (Task<bool>)null!));
+            Task.FromResult(Option.Some(1)).FilterAsync(value => (Task<bool>)null!));
 
         var teeOk = await TestSupport.CatchAsync(() =>
-            Task.FromResult(Rop.Ok(1)).TeeOkAsync(value => (Task)null!));
+            Task.FromResult(Result.Ok(1)).TeeOkAsync(value => (Task)null!));
         var teeSome = await TestSupport.CatchAsync(() =>
-            Task.FromResult(Opt.Some(1)).TeeSomeAsync(value => (Task)null!));
+            Task.FromResult(Option.Some(1)).TeeSomeAsync(value => (Task)null!));
         var teeNone = await TestSupport.CatchAsync(() =>
-            Task.FromResult(Opt.None<int>()).TeeNoneAsync(() => null!));
+            Task.FromResult(Option.None<int>()).TeeNoneAsync(() => null!));
 
         foreach (var exception in new[]
                  {

@@ -53,7 +53,7 @@ public sealed class OptionEnumerableTests
     [Test]
     public async Task Choose_DiscardsNoneAndPreservesOrder()
     {
-        var values = new[] { Opt.Some(1), Opt.None<int>(), Opt.Some(3) }.Choose();
+        var values = new[] { Option.Some(1), Option.None<int>(), Option.Some(3) }.Choose();
 
         await TestSupport.AssertSequenceAsync(values, 1, 3);
     }
@@ -61,7 +61,7 @@ public sealed class OptionEnumerableTests
     [Test]
     public async Task Choose_WithMapper_ProjectsPresentValues()
     {
-        var values = new[] { Opt.Some(1), Opt.None<int>(), Opt.Some(3) }
+        var values = new[] { Option.Some(1), Option.None<int>(), Option.Some(3) }
             .Choose(value => value * 10);
 
         await TestSupport.AssertSequenceAsync(values, 10, 30);
@@ -71,10 +71,10 @@ public sealed class OptionEnumerableTests
     public async Task Execute_RunsOnlyForSome()
     {
         var seen = 0;
-        Opt.Some(42).Execute(value => seen = value);
+        Option.Some(42).Execute(value => seen = value);
 
         var noneRan = false;
-        Opt.None<int>().Execute(_ => noneRan = true);
+        Option.None<int>().Execute(_ => noneRan = true);
 
         await Assert.That(seen).IsEqualTo(42);
         await Assert.That(noneRan).IsFalse();
@@ -84,10 +84,10 @@ public sealed class OptionEnumerableTests
     public async Task ExecuteNoValue_RunsOnlyForNone()
     {
         var noneRan = false;
-        Opt.None<int>().ExecuteNoValue(() => noneRan = true);
+        Option.None<int>().ExecuteNoValue(() => noneRan = true);
 
         var someRan = false;
-        Opt.Some(42).ExecuteNoValue(() => someRan = true);
+        Option.Some(42).ExecuteNoValue(() => someRan = true);
 
         await Assert.That(noneRan).IsTrue();
         await Assert.That(someRan).IsFalse();
@@ -100,7 +100,7 @@ public sealed class OptionEnumerableTests
         await Assert.That(TestSupport.Catch(() => ((IEnumerable<int>)null!).TryFirst(_ => true)) is ArgumentNullException).IsTrue();
         await Assert.That(TestSupport.Catch(() => ((IEnumerable<int>)null!).TryLast()) is ArgumentNullException).IsTrue();
         await Assert.That(TestSupport.Catch(() => new[] { 1 }.TryFirst(null!)) is ArgumentNullException).IsTrue();
-        await Assert.That(TestSupport.Catch(() => Opt.Some(1).Execute(null!)) is ArgumentNullException).IsTrue();
+        await Assert.That(TestSupport.Catch(() => Option.Some(1).Execute(null!)) is ArgumentNullException).IsTrue();
     }
 
     [Test]
@@ -160,7 +160,7 @@ public sealed class OptionEnumerableTests
     [Test]
     public async Task Choose_WithMapperReturningNull_Throws()
     {
-        var source = new[] { Opt.Some(1) };
+        var source = new[] { Option.Some(1) };
 
         var exception = TestSupport.Catch(() => source.Choose<int, string>(_ => null!));
 

@@ -25,7 +25,7 @@ namespace Sandlada.RopSharp;
 /// </remarks>
 /// <remarks>
 /// <code><![CDATA[
-/// var city = await Opt.FromNullable(OrderFixtures.Sample.Customer.Address)
+/// var city = await Option.FromNullable(OrderFixtures.Sample.Customer.Address)
 ///     .MapSomeAsync(static shipping => Task.FromResult(shipping.City));
 ///
 /// // Some("London") when the customer has a shipping address,
@@ -46,7 +46,7 @@ public static class OptionAsyncExtensions
     /// <returns>A task that completes with <paramref name="option"/>.</returns>
     /// <remarks>
     /// <code><![CDATA[
-    /// var city = await Opt.FromNullable(OrderFixtures.Sample.Customer.Address)
+    /// var city = await Option.FromNullable(OrderFixtures.Sample.Customer.Address)
     ///     .AsTask()
     ///     .MapSomeAsync(static shipping => shipping.City);
     ///
@@ -67,7 +67,7 @@ public static class OptionAsyncExtensions
     /// <returns><c>Some(mapper(value))</c> or <c>None</c>.</returns>
     /// <remarks>
     /// <code><![CDATA[
-    /// var city = await Task.FromResult(Opt.FromNullable(OrderFixtures.Sample.Customer.Address))
+    /// var city = await Task.FromResult(Option.FromNullable(OrderFixtures.Sample.Customer.Address))
     ///     .MapSomeAsync(static shipping => shipping.City);
     ///
     /// // Some("London") when the address is present,
@@ -86,11 +86,11 @@ public static class OptionAsyncExtensions
         var option = await task.WaitAsync(cancellationToken).ConfigureAwait(false);
         if (!option.TryGetValue(out var value))
         {
-            return Opt.None<TOut>();
+            return Option.None<TOut>();
         }
 
         cancellationToken.ThrowIfCancellationRequested();
-        return Opt.Some(mapper(value));
+        return Option.Some(mapper(value));
     }
 
     /// <summary>
@@ -104,7 +104,7 @@ public static class OptionAsyncExtensions
     /// <returns><c>Some(mapped)</c> or <c>None</c>.</returns>
     /// <remarks>
     /// <code><![CDATA[
-    /// var city = await Task.FromResult(Opt.FromNullable(OrderFixtures.Sample.Customer.Address))
+    /// var city = await Task.FromResult(Option.FromNullable(OrderFixtures.Sample.Customer.Address))
     ///     .MapSomeAsync(static shipping => Task.FromResult(shipping.City));
     ///
     /// // Some("London") when the address is present,
@@ -123,11 +123,11 @@ public static class OptionAsyncExtensions
         var option = await task.WaitAsync(cancellationToken).ConfigureAwait(false);
         if (!option.TryGetValue(out var value))
         {
-            return Opt.None<TOut>();
+            return Option.None<TOut>();
         }
 
         cancellationToken.ThrowIfCancellationRequested();
-        return Opt.Some(await AsyncGuards.Require(mapper(value), "mapper").ConfigureAwait(false));
+        return Option.Some(await AsyncGuards.Require(mapper(value), "mapper").ConfigureAwait(false));
     }
 
     /// <summary>
@@ -141,7 +141,7 @@ public static class OptionAsyncExtensions
     /// <returns><c>Some(mapped)</c> or <c>None</c>.</returns>
     /// <remarks>
     /// <code><![CDATA[
-    /// var city = await Task.FromResult(Opt.FromNullable(OrderFixtures.Sample.Customer.Address))
+    /// var city = await Task.FromResult(Option.FromNullable(OrderFixtures.Sample.Customer.Address))
     ///     .MapSomeAsync(static (shipping, token) => Task.FromResult(shipping.City));
     ///
     /// // Some("London") when the address is present,
@@ -160,11 +160,11 @@ public static class OptionAsyncExtensions
         var option = await task.WaitAsync(cancellationToken).ConfigureAwait(false);
         if (!option.TryGetValue(out var value))
         {
-            return Opt.None<TOut>();
+            return Option.None<TOut>();
         }
 
         cancellationToken.ThrowIfCancellationRequested();
-        return Opt.Some(await AsyncGuards.Require(mapper(value, cancellationToken), "mapper").ConfigureAwait(false));
+        return Option.Some(await AsyncGuards.Require(mapper(value, cancellationToken), "mapper").ConfigureAwait(false));
     }
 
     /// <summary>
@@ -178,8 +178,8 @@ public static class OptionAsyncExtensions
     /// <returns>The bound option, or <c>None</c>.</returns>
     /// <remarks>
     /// <code><![CDATA[
-    /// var city = await Task.FromResult(Opt.FromNullable(OrderFixtures.Sample.Customer.Address))
-    ///     .BindSomeAsync(static shipping => Task.FromResult(Opt.Some(shipping.City)));
+    /// var city = await Task.FromResult(Option.FromNullable(OrderFixtures.Sample.Customer.Address))
+    ///     .BindSomeAsync(static shipping => Task.FromResult(Option.Some(shipping.City)));
     ///
     /// // Some("London") when the address is present and the binding succeeded,
     /// // None when it is missing - the binder never runs on the empty track.
@@ -197,7 +197,7 @@ public static class OptionAsyncExtensions
         var option = await task.WaitAsync(cancellationToken).ConfigureAwait(false);
         if (!option.TryGetValue(out var value))
         {
-            return Opt.None<TOut>();
+            return Option.None<TOut>();
         }
 
         cancellationToken.ThrowIfCancellationRequested();
@@ -215,8 +215,8 @@ public static class OptionAsyncExtensions
     /// <returns>The bound option, or <c>None</c>.</returns>
     /// <remarks>
     /// <code><![CDATA[
-    /// var city = await Task.FromResult(Opt.FromNullable(OrderFixtures.Sample.Customer.Address))
-    ///     .BindSomeAsync(static (shipping, token) => Task.FromResult(Opt.Some(shipping.City)));
+    /// var city = await Task.FromResult(Option.FromNullable(OrderFixtures.Sample.Customer.Address))
+    ///     .BindSomeAsync(static (shipping, token) => Task.FromResult(Option.Some(shipping.City)));
     ///
     /// // Some("London") when the address is present and the binding succeeded,
     /// // None when it is missing - the binder receives the same token.
@@ -234,7 +234,7 @@ public static class OptionAsyncExtensions
         var option = await task.WaitAsync(cancellationToken).ConfigureAwait(false);
         if (!option.TryGetValue(out var value))
         {
-            return Opt.None<TOut>();
+            return Option.None<TOut>();
         }
 
         cancellationToken.ThrowIfCancellationRequested();
@@ -252,8 +252,8 @@ public static class OptionAsyncExtensions
     /// <returns>The bound option, or <c>None</c>.</returns>
     /// <remarks>
     /// <code><![CDATA[
-    /// var city = await Opt.FromNullable(OrderFixtures.Sample.Customer.Address)
-    ///     .BindSomeAsync(static shipping => Task.FromResult(Opt.Some(shipping.City)));
+    /// var city = await Option.FromNullable(OrderFixtures.Sample.Customer.Address)
+    ///     .BindSomeAsync(static shipping => Task.FromResult(Option.Some(shipping.City)));
     ///
     /// // Some("London") when the address is present and the binding succeeded,
     /// // None when it is missing - the binder never runs on the empty track.
@@ -269,7 +269,7 @@ public static class OptionAsyncExtensions
 
         if (!option.TryGetValue(out var value))
         {
-            return Opt.None<TOut>();
+            return Option.None<TOut>();
         }
 
         cancellationToken.ThrowIfCancellationRequested();
@@ -286,8 +286,8 @@ public static class OptionAsyncExtensions
     /// <returns>The original option, or the fallback option.</returns>
     /// <remarks>
     /// <code><![CDATA[
-    /// var city = await Task.FromResult(Opt.FromNullable(OrderFixtures.CustomerWithoutAddress.Address))
-    ///     .BindNoneAsync(static () => Task.FromResult(Opt.Some(OrderFixtures.Sample.Customer.Address!)));
+    /// var city = await Task.FromResult(Option.FromNullable(OrderFixtures.CustomerWithoutAddress.Address))
+    ///     .BindNoneAsync(static () => Task.FromResult(Option.Some(OrderFixtures.Sample.Customer.Address!)));
     ///
     /// // Some(address) when the address is missing,
     /// // Some(city) when it is present - the fallback never runs on the present track.
@@ -322,8 +322,8 @@ public static class OptionAsyncExtensions
     /// <returns>The original option, or the fallback option.</returns>
     /// <remarks>
     /// <code><![CDATA[
-    /// var city = await Task.FromResult(Opt.FromNullable(OrderFixtures.CustomerWithoutAddress.Address))
-    ///     .BindNoneAsync(static (token) => Task.FromResult(Opt.Some(OrderFixtures.Sample.Customer.Address!)));
+    /// var city = await Task.FromResult(Option.FromNullable(OrderFixtures.CustomerWithoutAddress.Address))
+    ///     .BindNoneAsync(static (token) => Task.FromResult(Option.Some(OrderFixtures.Sample.Customer.Address!)));
     ///
     /// // Some(address) when the address is missing,
     /// // Some(city) when it is present - the fallback receives the same token.
@@ -358,7 +358,7 @@ public static class OptionAsyncExtensions
     /// <returns>The same option value.</returns>
     /// <remarks>
     /// <code><![CDATA[
-    /// await Task.FromResult(Opt.FromNullable(OrderFixtures.Sample.Customer.Address))
+    /// await Task.FromResult(Option.FromNullable(OrderFixtures.Sample.Customer.Address))
     ///     .TeeSomeAsync(static shipping => Task.CompletedTask);
     ///
     /// // Some(address) runs the side effect and keeps the option,
@@ -394,7 +394,7 @@ public static class OptionAsyncExtensions
     /// <returns>The same option value.</returns>
     /// <remarks>
     /// <code><![CDATA[
-    /// await Task.FromResult(Opt.FromNullable(OrderFixtures.Sample.Customer.Address))
+    /// await Task.FromResult(Option.FromNullable(OrderFixtures.Sample.Customer.Address))
     ///     .TeeSomeAsync(static (shipping, token) => Task.CompletedTask);
     ///
     /// // Some(address) runs the side effect and keeps the option,
@@ -430,7 +430,7 @@ public static class OptionAsyncExtensions
     /// <returns>The same option value.</returns>
     /// <remarks>
     /// <code><![CDATA[
-    /// await Task.FromResult(Opt.FromNullable(OrderFixtures.CustomerWithoutAddress.Address))
+    /// await Task.FromResult(Option.FromNullable(OrderFixtures.CustomerWithoutAddress.Address))
     ///     .TeeNoneAsync(static () => Task.CompletedTask);
     ///
     /// // None runs the side effect and keeps the option,
@@ -466,7 +466,7 @@ public static class OptionAsyncExtensions
     /// <returns>The same option value.</returns>
     /// <remarks>
     /// <code><![CDATA[
-    /// await Task.FromResult(Opt.FromNullable(OrderFixtures.CustomerWithoutAddress.Address))
+    /// await Task.FromResult(Option.FromNullable(OrderFixtures.CustomerWithoutAddress.Address))
     ///     .TeeNoneAsync(static (token) => Task.CompletedTask);
     ///
     /// // None runs the side effect and keeps the option,
@@ -502,7 +502,7 @@ public static class OptionAsyncExtensions
     /// <returns>The original option when the predicate holds; otherwise <c>None</c>.</returns>
     /// <remarks>
     /// <code><![CDATA[
-    /// var city = await Task.FromResult(Opt.FromNullable(OrderFixtures.Sample.Customer.Address))
+    /// var city = await Task.FromResult(Option.FromNullable(OrderFixtures.Sample.Customer.Address))
     ///     .FilterAsync(static shipping => shipping.Country is "GB")
     ///     .MapSomeAsync(static shipping => shipping.City);
     ///
@@ -526,7 +526,7 @@ public static class OptionAsyncExtensions
         }
 
         cancellationToken.ThrowIfCancellationRequested();
-        return predicate(value) ? option : Opt.None<T>();
+        return predicate(value) ? option : Option.None<T>();
     }
 
     /// <summary>
@@ -539,7 +539,7 @@ public static class OptionAsyncExtensions
     /// <returns>The original option when the predicate holds; otherwise <c>None</c>.</returns>
     /// <remarks>
     /// <code><![CDATA[
-    /// var city = await Task.FromResult(Opt.FromNullable(OrderFixtures.Sample.Customer.Address))
+    /// var city = await Task.FromResult(Option.FromNullable(OrderFixtures.Sample.Customer.Address))
     ///     .FilterAsync(static shipping => Task.FromResult(shipping.Country is "GB"))
     ///     .MapSomeAsync(static shipping => shipping.City);
     ///
@@ -565,7 +565,7 @@ public static class OptionAsyncExtensions
         cancellationToken.ThrowIfCancellationRequested();
         return await AsyncGuards.Require(predicate(value), "predicate").ConfigureAwait(false)
             ? option
-            : Opt.None<T>();
+            : Option.None<T>();
     }
 
     /// <summary>
@@ -581,7 +581,7 @@ public static class OptionAsyncExtensions
     /// <exception cref="InvalidOperationException">The mapper returned a null task.</exception>
     /// <remarks>
     /// <code><![CDATA[
-    /// var city = await Opt.FromNullable(OrderFixtures.Sample.Customer.Address)
+    /// var city = await Option.FromNullable(OrderFixtures.Sample.Customer.Address)
     ///     .MapSomeAsync(static shipping => Task.FromResult(shipping.City));
     ///
     /// // Some("London") when the address is present,
@@ -598,11 +598,11 @@ public static class OptionAsyncExtensions
 
         if (!option.TryGetValue(out var value))
         {
-            return Opt.None<TOut>();
+            return Option.None<TOut>();
         }
 
         cancellationToken.ThrowIfCancellationRequested();
-        return Opt.Some(await AsyncGuards.Require(mapper(value), "mapper").ConfigureAwait(false));
+        return Option.Some(await AsyncGuards.Require(mapper(value), "mapper").ConfigureAwait(false));
     }
 
     /// <summary>
@@ -618,7 +618,7 @@ public static class OptionAsyncExtensions
     /// <exception cref="InvalidOperationException">The mapper returned a null task.</exception>
     /// <remarks>
     /// <code><![CDATA[
-    /// var city = await Opt.FromNullable(OrderFixtures.Sample.Customer.Address)
+    /// var city = await Option.FromNullable(OrderFixtures.Sample.Customer.Address)
     ///     .MapSomeAsync(static (shipping, token) => Task.FromResult(shipping.City));
     ///
     /// // Some("London") when the address is present,
@@ -635,11 +635,11 @@ public static class OptionAsyncExtensions
 
         if (!option.TryGetValue(out var value))
         {
-            return Opt.None<TOut>();
+            return Option.None<TOut>();
         }
 
         cancellationToken.ThrowIfCancellationRequested();
-        return Opt.Some(
+        return Option.Some(
             await AsyncGuards.Require(mapper(value, cancellationToken), "mapper").ConfigureAwait(false));
     }
 
@@ -656,8 +656,8 @@ public static class OptionAsyncExtensions
     /// <exception cref="InvalidOperationException">The binder returned a null task.</exception>
     /// <remarks>
     /// <code><![CDATA[
-    /// var city = await Opt.FromNullable(OrderFixtures.Sample.Customer.Address)
-    ///     .BindSomeAsync(static (shipping, token) => Task.FromResult(Opt.Some(shipping.City)));
+    /// var city = await Option.FromNullable(OrderFixtures.Sample.Customer.Address)
+    ///     .BindSomeAsync(static (shipping, token) => Task.FromResult(Option.Some(shipping.City)));
     ///
     /// // Some("London") when the address is present and the binding succeeded,
     /// // None when it is missing - the binder receives the same token.
@@ -673,7 +673,7 @@ public static class OptionAsyncExtensions
 
         if (!option.TryGetValue(out var value))
         {
-            return Opt.None<TOut>();
+            return Option.None<TOut>();
         }
 
         cancellationToken.ThrowIfCancellationRequested();
@@ -692,8 +692,8 @@ public static class OptionAsyncExtensions
     /// <exception cref="InvalidOperationException">The fallback returned a null task.</exception>
     /// <remarks>
     /// <code><![CDATA[
-    /// var city = await Opt.FromNullable(OrderFixtures.CustomerWithoutAddress.Address)
-    ///     .BindNoneAsync(static () => Task.FromResult(Opt.Some(OrderFixtures.Sample.Customer.Address!)));
+    /// var city = await Option.FromNullable(OrderFixtures.CustomerWithoutAddress.Address)
+    ///     .BindNoneAsync(static () => Task.FromResult(Option.Some(OrderFixtures.Sample.Customer.Address!)));
     ///
     /// // Some(address) when the address is missing,
     /// // Some(city) when it is present - the fallback never runs on the present track.
@@ -728,8 +728,8 @@ public static class OptionAsyncExtensions
     /// <exception cref="InvalidOperationException">The fallback returned a null task.</exception>
     /// <remarks>
     /// <code><![CDATA[
-    /// var city = await Opt.FromNullable(OrderFixtures.CustomerWithoutAddress.Address)
-    ///     .BindNoneAsync(static (token) => Task.FromResult(Opt.Some(OrderFixtures.Sample.Customer.Address!)));
+    /// var city = await Option.FromNullable(OrderFixtures.CustomerWithoutAddress.Address)
+    ///     .BindNoneAsync(static (token) => Task.FromResult(Option.Some(OrderFixtures.Sample.Customer.Address!)));
     ///
     /// // Some(address) when the address is missing,
     /// // Some(city) when it is present - the fallback receives the same token.
@@ -764,7 +764,7 @@ public static class OptionAsyncExtensions
     /// <exception cref="InvalidOperationException">The action returned a null task.</exception>
     /// <remarks>
     /// <code><![CDATA[
-    /// await Opt.FromNullable(OrderFixtures.Sample.Customer.Address)
+    /// await Option.FromNullable(OrderFixtures.Sample.Customer.Address)
     ///     .TeeSomeAsync(static shipping => Task.CompletedTask);
     ///
     /// // Some(address) runs the side effect and keeps the option,
@@ -800,7 +800,7 @@ public static class OptionAsyncExtensions
     /// <exception cref="InvalidOperationException">The action returned a null task.</exception>
     /// <remarks>
     /// <code><![CDATA[
-    /// await Opt.FromNullable(OrderFixtures.Sample.Customer.Address)
+    /// await Option.FromNullable(OrderFixtures.Sample.Customer.Address)
     ///     .TeeSomeAsync(static (shipping, token) => Task.CompletedTask);
     ///
     /// // Some(address) runs the side effect and keeps the option,
@@ -836,7 +836,7 @@ public static class OptionAsyncExtensions
     /// <exception cref="InvalidOperationException">The action returned a null task.</exception>
     /// <remarks>
     /// <code><![CDATA[
-    /// await Opt.FromNullable(OrderFixtures.CustomerWithoutAddress.Address)
+    /// await Option.FromNullable(OrderFixtures.CustomerWithoutAddress.Address)
     ///     .TeeNoneAsync(static () => Task.CompletedTask);
     ///
     /// // None runs the side effect and keeps the option,
@@ -872,7 +872,7 @@ public static class OptionAsyncExtensions
     /// <exception cref="InvalidOperationException">The action returned a null task.</exception>
     /// <remarks>
     /// <code><![CDATA[
-    /// await Opt.FromNullable(OrderFixtures.CustomerWithoutAddress.Address)
+    /// await Option.FromNullable(OrderFixtures.CustomerWithoutAddress.Address)
     ///     .TeeNoneAsync(static (token) => Task.CompletedTask);
     ///
     /// // None runs the side effect and keeps the option,
@@ -908,7 +908,7 @@ public static class OptionAsyncExtensions
     /// <exception cref="InvalidOperationException">The predicate returned a null task.</exception>
     /// <remarks>
     /// <code><![CDATA[
-    /// var city = await Opt.FromNullable(OrderFixtures.Sample.Customer.Address)
+    /// var city = await Option.FromNullable(OrderFixtures.Sample.Customer.Address)
     ///     .FilterAsync(static shipping => Task.FromResult(shipping.Country is "GB"))
     ///     .MapSomeAsync(static shipping => shipping.City);
     ///
@@ -932,7 +932,7 @@ public static class OptionAsyncExtensions
         cancellationToken.ThrowIfCancellationRequested();
         return await AsyncGuards.Require(predicate(value), "predicate").ConfigureAwait(false)
             ? option
-            : Opt.None<T>();
+            : Option.None<T>();
     }
 
     /// <summary>
@@ -947,7 +947,7 @@ public static class OptionAsyncExtensions
     /// <exception cref="InvalidOperationException">The predicate returned a null task.</exception>
     /// <remarks>
     /// <code><![CDATA[
-    /// var city = await Opt.FromNullable(OrderFixtures.Sample.Customer.Address)
+    /// var city = await Option.FromNullable(OrderFixtures.Sample.Customer.Address)
     ///     .FilterAsync(static (shipping, token) => Task.FromResult(shipping.Country is "GB"))
     ///     .MapSomeAsync(static shipping => shipping.City);
     ///
@@ -971,7 +971,7 @@ public static class OptionAsyncExtensions
         cancellationToken.ThrowIfCancellationRequested();
         return await AsyncGuards.Require(predicate(value, cancellationToken), "predicate").ConfigureAwait(false)
             ? option
-            : Opt.None<T>();
+            : Option.None<T>();
     }
 
     /// <summary>
@@ -986,7 +986,7 @@ public static class OptionAsyncExtensions
     /// <exception cref="InvalidOperationException">The predicate returned a null task.</exception>
     /// <remarks>
     /// <code><![CDATA[
-    /// var city = await Task.FromResult(Opt.FromNullable(OrderFixtures.Sample.Customer.Address))
+    /// var city = await Task.FromResult(Option.FromNullable(OrderFixtures.Sample.Customer.Address))
     ///     .FilterAsync(static (shipping, token) => Task.FromResult(shipping.Country is "GB"))
     ///     .MapSomeAsync(static shipping => shipping.City);
     ///
@@ -1012,7 +1012,7 @@ public static class OptionAsyncExtensions
         cancellationToken.ThrowIfCancellationRequested();
         return await AsyncGuards.Require(predicate(value, cancellationToken), "predicate").ConfigureAwait(false)
             ? option
-            : Opt.None<T>();
+            : Option.None<T>();
     }
 
     private static Task<Option<TOut>> InvokeAsync<T, TOut>(

@@ -96,11 +96,11 @@ internal static class CarrierQuoteScenario
 
         // Partition keeps every successful bid and every failure: the short-circuit track is not used
         // here because a single bad carrier must not discard the others.
-        var (bids, failures) = Rop.Partition(outcomes.Select(static outcome => outcome.Outcome));
+        var (bids, failures) = Result.Partition(outcomes.Select(static outcome => outcome.Outcome));
         if (bids.Count == 0)
         {
             Console.WriteLine($"   no bid survived ({failures.Count} error(s))");
-            return Rop.Err<Quote>(RopError.Combine(failures));
+            return Result.Err<Quote>(RopError.Combine(failures));
         }
 
         // Result LINQ keeps the late deadline and pricing rules on the same failure track.
@@ -129,15 +129,15 @@ internal static class CarrierQuoteScenario
             : bids.Where(bid => bid.Days <= deadlineDays.Value).ToList();
 
         return eligible.Count == 0
-            ? Rop.Err<CarrierBid>(RopError.Create(
+            ? Result.Err<CarrierBid>(RopError.Create(
                 "E_DEADLINE",
                 $"no carrier meets the {deadlineDays}-day deadline"))
-            : Rop.Ok(eligible.MinBy(static bid => bid.Price)!);
+            : Result.Ok(eligible.MinBy(static bid => bid.Price)!);
     }
 
     private static Result<decimal, RopError> Price(CarrierBid bid, string? membership)
     {
-        var discount = Opt.FromNullable(membership)
+        var discount = Option.FromNullable(membership)
             .MapSome(static tier => tier.ToLowerInvariant())
             .MapSome(static tier => tier switch
             {
@@ -147,7 +147,7 @@ internal static class CarrierQuoteScenario
             })
             .Match(some: static value => value, none: static () => 0m);
 
-        return Rop.Ok(bid.Price).MapOk(price => price * (1m - discount));
+        return Result.Ok(bid.Price).MapOk(price => price * (1m - discount));
     }
 
     private static Task<Result<CarrierBid, RopError>> BidAsync(
@@ -159,13 +159,13 @@ internal static class CarrierQuoteScenario
         // A carrier that does not serve the lane is a domain rejection, not a transport failure.
         if (carrier == "budget")
         {
-            return Task.FromResult(Rop.Err<CarrierBid>(RopError.Create(
+            return Task.FromResult(Result.Err<CarrierBid>(RopError.Create(
                 "E_NO_ROUTE",
                 "budget carrier does not serve this lane")));
         }
 
         // Everything that can throw crosses the boundary exactly once.
-        return Rop.TryAsync(
+        return Result.TryAsync(
             () => CarrierAsync(carrier, request, retry, cancellationToken),
             "E_CARRIER",
             cancellationToken);

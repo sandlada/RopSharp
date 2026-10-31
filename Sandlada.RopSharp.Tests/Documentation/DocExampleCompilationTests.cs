@@ -51,7 +51,7 @@ public sealed class DocExampleCompilationTests
         var examples = DocExampleExtractor.Extract();
         var compilation = DocExampleCompilation.Create(examples);
 
-        var libraryAssembly = typeof(Rop).Assembly.GetName().Name;
+        var libraryAssembly = typeof(Result).Assembly.GetName().Name;
         var offenders = new List<string>();
 
         for (var index = 0; index < examples.Count; index++)

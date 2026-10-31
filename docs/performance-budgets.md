@@ -34,9 +34,9 @@ Bytes per call, measured on the reference run (16 elements for the collection pa
 
 | Path | Test | Observed | Budget (x1.2) |
 | --- | --- | ---: | ---: |
-| `Rop.Sequence`, all `Ok` | `ResultSequence_SuccessPath_StaysWithinBudget` | 272 B | 327 B |
-| `Rop.Sequence`, error at index 8 (short-circuit) | `ResultSequence_ShortCircuitPath_StaysWithinBudget` | 160 B | 192 B |
-| `Rop.SequenceValidation`, all `Err` | `ResultSequenceValidation_AllErrors_StaysWithinBudget` | 544 B | 653 B |
+| `Result.Sequence`, all `Ok` | `ResultSequence_SuccessPath_StaysWithinBudget` | 272 B | 327 B |
+| `Result.Sequence`, error at index 8 (short-circuit) | `ResultSequence_ShortCircuitPath_StaysWithinBudget` | 160 B | 192 B |
+| `Result.SequenceValidation`, all `Err` | `ResultSequenceValidation_AllErrors_StaysWithinBudget` | 544 B | 653 B |
 | `RopError.Combine`, 10 errors | `RopErrorCombine_Ten_StaysWithinBudget` | 1,528 B | 1,834 B |
 
 The short-circuit budget is lower than the success budget because `Sequence` stops at the first error and does not

@@ -7,16 +7,16 @@ public sealed class ResultLawTests
     private static readonly Func<int, int> F = x => x + 1;
     private static readonly Func<int, int> G = x => x * 2;
     private static readonly Func<int, Result<int, RopError>> H = x =>
-        x >= 0 ? Rop.Ok(x * 3) : Rop.Err<int>(Sample.Error("E_NEG"));
-    private static readonly Func<int, Result<int, RopError>> K = x => Rop.Ok(x + 100);
-    private static readonly Func<RopError, Result<int, RopError>> Eh = error => Rop.Ok(error.Code.Length);
-    private static readonly Func<RopError, Result<int, RopError>> Ek = error => Rop.Err<int>(error.WithCode("E_SECOND"));
+        x >= 0 ? Result.Ok(x * 3) : Result.Err<int>(Sample.Error("E_NEG"));
+    private static readonly Func<int, Result<int, RopError>> K = x => Result.Ok(x + 100);
+    private static readonly Func<RopError, Result<int, RopError>> Eh = error => Result.Ok(error.Code.Length);
+    private static readonly Func<RopError, Result<int, RopError>> Ek = error => Result.Err<int>(error.WithCode("E_SECOND"));
 
     private static IEnumerable<Result<int, RopError>> Samples()
     {
-        yield return Rop.Ok(5);
-        yield return Rop.Ok(0);
-        yield return Rop.Err<int>(Sample.Error("E_A"));
+        yield return Result.Ok(5);
+        yield return Result.Ok(0);
+        yield return Result.Err<int>(Sample.Error("E_A"));
     }
 
     [Test]
@@ -69,7 +69,7 @@ public sealed class ResultLawTests
     {
         const int Value = 7;
 
-        var left = Rop.Ok(Value).BindOk(H);
+        var left = Result.Ok(Value).BindOk(H);
         var right = H(Value);
 
         await Assert.That(left).IsEqualTo(right);
@@ -80,7 +80,7 @@ public sealed class ResultLawTests
     {
         foreach (var result in Samples())
         {
-            var bound = result.BindOk<int, int, RopError>(Rop.Ok<int, RopError>);
+            var bound = result.BindOk<int, int, RopError>(Result.Ok<int, RopError>);
 
             await Assert.That(bound).IsEqualTo(result);
         }
@@ -103,7 +103,7 @@ public sealed class ResultLawTests
     {
         var error = Sample.Error("E_A");
 
-        var left = Rop.Err<int>(error).BindErr(Eh);
+        var left = Result.Err<int>(error).BindErr(Eh);
         var right = Eh(error);
 
         await Assert.That(left).IsEqualTo(right);
@@ -114,7 +114,7 @@ public sealed class ResultLawTests
     {
         foreach (var result in Samples())
         {
-            var bound = result.BindErr<int, RopError>(Rop.Err<int, RopError>);
+            var bound = result.BindErr<int, RopError>(Result.Err<int, RopError>);
 
             await Assert.That(bound).IsEqualTo(result);
         }
@@ -153,13 +153,13 @@ public sealed class ResultLawTests
         var mapErrCalled = false;
         var mapOkCalled = false;
 
-        var ok = Rop.Ok(1).MapErr(error =>
+        var ok = Result.Ok(1).MapErr(error =>
         {
             mapErrCalled = true;
             return error;
         });
 
-        var err = Rop.Err<int>(Sample.Error()).MapOk(value =>
+        var err = Result.Err<int>(Sample.Error()).MapOk(value =>
         {
             mapOkCalled = true;
             return value;

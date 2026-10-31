@@ -11,7 +11,7 @@ public sealed class ReviewRegressionTests
 {
     // A success carrying null is legal after a nullable mapping (MapOk deliberately preserves it).
     private static Result<string?, RopError> NullSuccess =>
-        Rop.Ok<string?, RopError>("bob").MapOk(static _ => (string?)null);
+        Result.Ok<string?, RopError>("bob").MapOk(static _ => (string?)null);
 
     [Test]
     public async Task MapErr_PreservesNullSuccessPayload()
@@ -101,7 +101,7 @@ public sealed class ReviewRegressionTests
         await source.CancelAsync();
 
         var exception = await TestSupport.CatchAsync(() =>
-            Rop.SequenceAsync([Task.FromResult(Rop.Ok(1))], source.Token));
+            Result.SequenceAsync([Task.FromResult(Result.Ok(1))], source.Token));
 
         await Assert.That(exception is OperationCanceledException).IsTrue();
     }
@@ -114,12 +114,12 @@ public sealed class ReviewRegressionTests
         var calls = 0;
 
         var exception = await TestSupport.CatchAsync(() =>
-            Rop.TraverseAsync<int, int, RopError>(
+            Result.TraverseAsync<int, int, RopError>(
                 [1, 2],
                 value =>
                 {
                     calls++;
-                    return Task.FromResult(Rop.Ok(value));
+                    return Task.FromResult(Result.Ok(value));
                 },
                 source.Token));
 
@@ -135,7 +135,7 @@ public sealed class ReviewRegressionTests
         var calls = 0;
 
         var exception = await TestSupport.CatchAsync(() =>
-            Task.FromResult(Rop.Err<int>(Sample.Error())).MapErrAsync(
+            Task.FromResult(Result.Err<int>(Sample.Error())).MapErrAsync(
                 error =>
                 {
                     calls++;
@@ -155,7 +155,7 @@ public sealed class ReviewRegressionTests
         using var source = new CancellationTokenSource();
         await source.CancelAsync();
 
-        var result = await Task.FromResult(Rop.Err<int>(Sample.Error()))
+        var result = await Task.FromResult(Result.Err<int>(Sample.Error()))
             .MapOkAsync(static value => value + 1, source.Token);
 
         await Assert.That(result.ErrOrThrow().Code).IsEqualTo("E_TEST");
@@ -167,7 +167,7 @@ public sealed class ReviewRegressionTests
         using var source = new CancellationTokenSource();
         await source.CancelAsync();
 
-        var result = await Task.FromResult(Rop.Err<int>(Sample.Error()))
+        var result = await Task.FromResult(Result.Err<int>(Sample.Error()))
             .TeeOkAsync(static _ => Task.CompletedTask, source.Token);
 
         await Assert.That(result.ErrOrThrow().Code).IsEqualTo("E_TEST");
@@ -187,22 +187,22 @@ public sealed class ReviewRegressionTests
     [Test]
     public async Task GetHashCode_IsConsistentOnEveryTrack()
     {
-        var ok = Rop.Ok<int, RopError>(1);
+        var ok = Result.Ok<int, RopError>(1);
         var nullOk = NullSuccess;
-        var err = Rop.Err<int>(Sample.Error());
+        var err = Result.Err<int>(Sample.Error());
 
-        await Assert.That(ok.GetHashCode()).IsEqualTo(Rop.Ok<int, RopError>(1).GetHashCode());
+        await Assert.That(ok.GetHashCode()).IsEqualTo(Result.Ok<int, RopError>(1).GetHashCode());
         await Assert.That(nullOk.GetHashCode()).IsEqualTo(NullSuccess.GetHashCode());
-        await Assert.That(err.GetHashCode()).IsEqualTo(Rop.Err<int>(Sample.Error()).GetHashCode());
+        await Assert.That(err.GetHashCode()).IsEqualTo(Result.Err<int>(Sample.Error()).GetHashCode());
     }
 
     [Test]
     public async Task Validate3_WithFailures_CollectsEveryErrorInOrder()
     {
-        var result = Rop.Validate(
-            Rop.Ok<int, RopError>(1),
-            Rop.Err<int>(Sample.Error("E_B", "second")),
-            Rop.Err<int>(Sample.Error("E_C", "third")),
+        var result = Result.Validate(
+            Result.Ok<int, RopError>(1),
+            Result.Err<int>(Sample.Error("E_B", "second")),
+            Result.Err<int>(Sample.Error("E_C", "third")),
             static (a, b, c) => a + b + c);
 
         var errors = result.ErrOrThrow();

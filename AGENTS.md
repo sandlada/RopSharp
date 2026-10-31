@@ -14,6 +14,21 @@ NuGet ROP / Railway & Result library for C#. Package ID: `Sandlada.RopSharp`, or
 - `Result`/`Option`-style types: no throwing on expected failure paths, no `null` returns on public surface. C# overloads allowed.
 - Keep core types allocation- and AOT-friendly; avoid reflection in hot paths.
 
+## Public entry points
+
+- The static entry points are `Result` (creates `Result<TOk, TErr>`) and `Option` (creates `Option<T>`). The former
+  names `Rop` and `Opt` are gone — see [ADR 0012](docs/adr/0012-result-and-option-entry-points.md).
+- A non-generic class and a generic struct may share a name because their arity differs: `Result`/`Result<TOk, TErr>`
+  and `Option`/`Option<T>` coexist in the `Sandlada.RopSharp` namespace.
+- `RopError` and `RopErrorKind` keep their names: they carry the product lineage, not an entry-point role.
+
+## Public API baseline
+
+- `Sandlada.RopSharp/PublicAPI.Shipped.txt` and `PublicAPI.Unshipped.txt` are enforced by
+  `Microsoft.CodeAnalysis.PublicApiAnalyzers`. Every public API change must update them in the same commit.
+- A breaking change (removal, rename, signature change) must be recorded in `CHANGELOG.md` and, when it changes a
+  decision, in a new ADR. Existing ADR conclusions are never rewritten.
+
 ## Commands
 
 - Build: `dotnet build`

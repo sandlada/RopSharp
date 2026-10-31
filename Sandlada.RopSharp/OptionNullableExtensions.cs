@@ -7,7 +7,7 @@ namespace Sandlada.RopSharp;
 /// C# does not allow two overloads that differ only by generic constraints, so the reference and value-type
 /// variants live under distinct names (<c>ToNullable</c> and <c>ToNullableValue</c>).
 /// <code><![CDATA[
-/// var city = Opt.FromNullable(OrderFixtures.Sample.Customer.Address)
+/// var city = Option.FromNullable(OrderFixtures.Sample.Customer.Address)
 ///     .MapSome(static shipping => shipping.City)
 ///     .ToNullable();
 ///
@@ -23,14 +23,14 @@ public static class OptionNullableExtensions
     /// <typeparam name="T">The value type.</typeparam>
     /// <param name="option">The source option.</param>
     /// <returns>The contained value, or <see langword="null"/> when empty.</returns>
-    /// <remarks>Cross back immediately with <see cref="Opt.FromNullable{T}(T)"/> at the consuming boundary.
+    /// <remarks>Cross back immediately with <see cref="Option.FromNullable{T}(T)"/> at the consuming boundary.
     /// <code><![CDATA[
-    /// var city = Opt.FromNullable(OrderFixtures.Sample.Customer.Address)
+    /// var city = Option.FromNullable(OrderFixtures.Sample.Customer.Address)
     ///     .MapSome(static shipping => shipping.City)
     ///     .ToNullable();
     ///
     /// // "London" for Some(city),
-    /// // null for None - cross back with Opt.FromNullable right away.
+    /// // null for None - cross back with Option.FromNullable right away.
     /// ]]></code>
     /// </remarks>
     public static T? ToNullable<T>(this Option<T> option)
@@ -48,7 +48,7 @@ public static class OptionNullableExtensions
     /// This is the way into an API that only knows about nullable references: the null the binder returns is
     /// turned back into an empty option instead of leaking out.
     /// <code><![CDATA[
-    /// var city = Opt.FromNullable(OrderFixtures.Sample.Customer.Address)
+    /// var city = Option.FromNullable(OrderFixtures.Sample.Customer.Address)
     ///     .BindSomeNullable(static shipping => shipping.City);
     ///
     /// // Some("London") when the binder returns a city,
@@ -61,10 +61,10 @@ public static class OptionNullableExtensions
         ArgumentNullException.ThrowIfNull(binder);
         if (!option.TryGetValue(out var value))
         {
-            return Opt.None<TOut>();
+            return Option.None<TOut>();
         }
 
         var mapped = binder(value);
-        return mapped is null ? Opt.None<TOut>() : Opt.Some(mapped);
+        return mapped is null ? Option.None<TOut>() : Option.Some(mapped);
     }
 }

@@ -35,5 +35,5 @@ disclosure and a patched release will be arranged.
 - no third-party runtime dependencies.
 
 The relevant attack surface is therefore limited to misuse of the public API (for example, passing untrusted
-functions to `Rop.Try`, or trusting `RopError.Message` as data). Treat `RopError.Code` as the stable,
+functions to `Result.Try`, or trusting `RopError.Message` as data). Treat `RopError.Code` as the stable,
 machine-readable branch key and `Message`/`Details` as untrusted display text when they contain external input.

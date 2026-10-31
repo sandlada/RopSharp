@@ -8,7 +8,7 @@ namespace Sandlada.RopSharp;
 /// <see langword="false"/>. <c>FailIf</c> expresses the opposite, more natural reading for rejection rules, while
 /// <c>ThenEnsure</c> runs a result-returning check and keeps the original success value.
 /// <code><![CDATA[
-/// var placed = Rop.Try(() => OrderFixtures.Charge(OrderFixtures.Sample), "E_CHARGE")
+/// var placed = Result.Try(() => OrderFixtures.Charge(OrderFixtures.Sample), "E_CHARGE")
 ///     .FailIf(static payment => payment.Amount <= 0m, RopError.Create("E_AMOUNT", "the amount must be positive"));
 ///
 /// // Ok(payment) when the amount is positive,
@@ -31,7 +31,7 @@ public static class ResultEnsureExtensions
     /// <c>FailIf</c> reads the way a rejection rule is usually written: "fail when the amount is not positive".
     /// The predicate never runs on the failure track.
     /// <code><![CDATA[
-    /// var placed = Rop.Try(() => OrderFixtures.Charge(OrderFixtures.Sample), "E_CHARGE")
+    /// var placed = Result.Try(() => OrderFixtures.Charge(OrderFixtures.Sample), "E_CHARGE")
     ///     .FailIf(static payment => payment.Amount <= 0m, RopError.Create("E_AMOUNT", "the amount must be positive"));
     ///
     /// // Ok(payment) when the amount is positive,
@@ -51,7 +51,7 @@ public static class ResultEnsureExtensions
             return result;
         }
 
-        return predicate(value) ? Rop.Err<TOk, TErr>(error) : result;
+        return predicate(value) ? Result.Err<TOk, TErr>(error) : result;
     }
 
     /// <summary>
@@ -68,7 +68,7 @@ public static class ResultEnsureExtensions
     /// <remarks>
     /// The factory is lazy, so an expensive error message is only built on the failing branch.
     /// <code><![CDATA[
-    /// var placed = Rop.Try(() => OrderFixtures.Charge(OrderFixtures.Sample), "E_CHARGE")
+    /// var placed = Result.Try(() => OrderFixtures.Charge(OrderFixtures.Sample), "E_CHARGE")
     ///     .FailIf(
     ///         static payment => payment.Amount <= 0m,
     ///         static payment => RopError.Create("E_AMOUNT", $"the amount {payment.Amount} must be positive"));
@@ -91,7 +91,7 @@ public static class ResultEnsureExtensions
         }
 
         return predicate(value)
-            ? Rop.Err<TOk, TErr>(Rop.RequireError(errorFactory(value)))
+            ? Result.Err<TOk, TErr>(Result.RequireError(errorFactory(value)))
             : result;
     }
 
@@ -108,8 +108,8 @@ public static class ResultEnsureExtensions
     /// <c>ThenEnsure</c> is the sequenced form of the assertion: the check is itself a pipeline, so it can fail
     /// with its own error. The original success value survives a successful check.
     /// <code><![CDATA[
-    /// var placed = Rop.Try(() => OrderFixtures.Charge(OrderFixtures.Sample), "E_CHARGE")
-    ///     .ThenEnsure(static payment => Rop.Try(
+    /// var placed = Result.Try(() => OrderFixtures.Charge(OrderFixtures.Sample), "E_CHARGE")
+    ///     .ThenEnsure(static payment => Result.Try(
     ///         () =>
     ///         {
     ///             if (payment.Amount <= 0m)
@@ -135,6 +135,6 @@ public static class ResultEnsureExtensions
         }
 
         var checkedResult = ensure(value);
-        return checkedResult.IsOk ? result : Rop.Err<TOk, TErr>(checkedResult.ErrUnsafe);
+        return checkedResult.IsOk ? result : Result.Err<TOk, TErr>(checkedResult.ErrUnsafe);
     }
 }

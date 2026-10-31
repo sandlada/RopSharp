@@ -30,7 +30,7 @@ namespace Sandlada.RopSharp;
 /// reshapes it, and it is finally read by a terminal that decides what the caller sees.
 /// </para>
 /// <code><![CDATA[
-/// var placed = Rop.Try(() => OrderFixtures.Charge(OrderFixtures.Declined), "E_CHARGE")
+/// var placed = Result.Try(() => OrderFixtures.Charge(OrderFixtures.Declined), "E_CHARGE")
 ///     .MapErr(static error => error.WithCode("E_PAYMENT_DECLINED"));
 ///
 /// // Err(E_PAYMENT_DECLINED) when the provider refused the order,
@@ -70,7 +70,7 @@ public sealed class RopError : IEquatable<RopError>
     /// </para>
     /// <code><![CDATA[
     /// var error = RopError.Create("E_ORDER_NOT_FOUND", "order 42 does not exist").WithCode("E_ORDER_404");
-    /// var placed = Rop.Err<Payment>(error);
+    /// var placed = Result.Err<Payment>(error);
     ///
     /// // Err(E_ORDER_404) is the stable key to branch on,
     /// // Ok(payment) is the other track of the same result.
@@ -87,7 +87,7 @@ public sealed class RopError : IEquatable<RopError>
     /// only <see cref="Code"/> may be branched on.
     /// </para>
     /// <code><![CDATA[
-    /// var charged = Rop.Try(() => OrderFixtures.Charge(OrderFixtures.Declined), "E_CHARGE");
+    /// var charged = Result.Try(() => OrderFixtures.Charge(OrderFixtures.Declined), "E_CHARGE");
     /// var message = charged.Match(
     ///     ok: static payment => payment.Id,
     ///     err: static error => error.Message);
@@ -109,7 +109,7 @@ public sealed class RopError : IEquatable<RopError>
     /// <code><![CDATA[
     /// var error = RopError.Create("E_ORDER_NOT_FOUND", "order 42 does not exist", "id=42")
     ///     .WithDetails("id=42,archived=true");
-    /// var placed = Rop.Err<Payment>(error);
+    /// var placed = Result.Err<Payment>(error);
     ///
     /// // Err(E_ORDER_NOT_FOUND) carries the diagnostic payload,
     /// // Ok(payment) is the other track of the same result.
@@ -126,7 +126,7 @@ public sealed class RopError : IEquatable<RopError>
     /// different stack traces still compare equal.
     /// </para>
     /// <code><![CDATA[
-    /// var charged = Rop.Try(() => OrderFixtures.Charge(OrderFixtures.Declined), "E_CHARGE");
+    /// var charged = Result.Try(() => OrderFixtures.Charge(OrderFixtures.Declined), "E_CHARGE");
     /// Exception? cause = null;
     /// if (charged.TryGetErr(out var error))
     /// {
@@ -149,7 +149,7 @@ public sealed class RopError : IEquatable<RopError>
     /// </para>
     /// <code><![CDATA[
     /// var error = RopError.Create("E_AMOUNT_RANGE", "amount must be positive", RopErrorKind.Validation);
-    /// var placed = Rop.Err<Payment>(error);
+    /// var placed = Result.Err<Payment>(error);
     ///
     /// // Err(E_AMOUNT_RANGE) is categorized as RopErrorKind.Validation,
     /// // Ok(payment) is the other track of the same result.
@@ -198,7 +198,7 @@ public sealed class RopError : IEquatable<RopError>
     /// <see cref="RopErrorKind.Failure"/> with no cause and no inner errors.
     /// </para>
     /// <code><![CDATA[
-    /// var placed = Rop.Err<Payment>(RopError.Create("E_ORDER_NOT_FOUND", "order 42 does not exist", "id=42"));
+    /// var placed = Result.Err<Payment>(RopError.Create("E_ORDER_NOT_FOUND", "order 42 does not exist", "id=42"));
     ///
     /// // Err(E_ORDER_NOT_FOUND) carries the code, the message and the details,
     /// // Ok(payment) is the other track of the same result.
@@ -221,7 +221,7 @@ public sealed class RopError : IEquatable<RopError>
     /// empty.
     /// </para>
     /// <code><![CDATA[
-    /// var placed = Rop.Err<Payment>(
+    /// var placed = Result.Err<Payment>(
     ///     RopError.Create("E_AMOUNT_RANGE", "amount must be positive", RopErrorKind.Validation));
     ///
     /// // Err(E_AMOUNT_RANGE) is a validation failure,
@@ -249,7 +249,7 @@ public sealed class RopError : IEquatable<RopError>
     /// in one call.
     /// </para>
     /// <code><![CDATA[
-    /// var placed = Rop.Err<Payment>(
+    /// var placed = Result.Err<Payment>(
     ///     RopError.Create("E_AMOUNT_RANGE", "amount must be positive", "amount=0", RopErrorKind.Validation));
     ///
     /// // Err(E_AMOUNT_RANGE) carries the details as well,
@@ -269,7 +269,7 @@ public sealed class RopError : IEquatable<RopError>
     }
 
     /// <summary>
-    /// Creates an error from an exception. Intended for boundary code only (see <c>Rop.Try</c>).
+    /// Creates an error from an exception. Intended for boundary code only (see <c>Result.Try</c>).
     /// </summary>
     /// <param name="exception">The captured exception.</param>
     /// <param name="code">The error code; defaults to <c>E_EXN</c>.</param>
@@ -284,7 +284,7 @@ public sealed class RopError : IEquatable<RopError>
     /// </para>
     /// <code><![CDATA[
     /// var error = RopError.FromException(new InvalidOperationException("provider unavailable"), "E_PROVIDER");
-    /// var placed = Rop.Err<Payment>(error);
+    /// var placed = Result.Err<Payment>(error);
     ///
     /// // Err(E_PROVIDER) captures the exception as its Cause,
     /// // Ok(payment) is the other track of the same result.
@@ -307,7 +307,7 @@ public sealed class RopError : IEquatable<RopError>
     /// </para>
     /// <code><![CDATA[
     /// var error = RopError.FromException(new TimeoutException("carrier did not answer"), RopErrorKind.Timeout);
-    /// var placed = Rop.Err<Payment>(error);
+    /// var placed = Result.Err<Payment>(error);
     ///
     /// // Err(E_EXN) is categorized as RopErrorKind.Timeout,
     /// // Ok(payment) is the other track of the same result.
@@ -335,7 +335,7 @@ public sealed class RopError : IEquatable<RopError>
     ///     new TimeoutException("carrier did not answer"),
     ///     "E_CARRIER_TIMEOUT",
     ///     RopErrorKind.Timeout);
-    /// var placed = Rop.Err<Payment>(error);
+    /// var placed = Result.Err<Payment>(error);
     ///
     /// // Err(E_CARRIER_TIMEOUT) captures the exception as its Cause,
     /// // Ok(payment) is the other track of the same result.
@@ -365,7 +365,7 @@ public sealed class RopError : IEquatable<RopError>
     /// </para>
     /// <code><![CDATA[
     /// var error = RopError.Create("E_ORDER_NOT_FOUND", "order 42 does not exist").WithCode("E_ORDER_404");
-    /// var placed = Rop.Err<Payment>(error);
+    /// var placed = Result.Err<Payment>(error);
     ///
     /// // Err(E_ORDER_404) replaces the original code,
     /// // Ok(payment) is the other track of the same result.
@@ -391,7 +391,7 @@ public sealed class RopError : IEquatable<RopError>
     /// <code><![CDATA[
     /// var error = RopError.Create("E_ORDER_NOT_FOUND", "order 42 does not exist")
     ///     .WithMessage("the order was archived");
-    /// var placed = Rop.Err<Payment>(error);
+    /// var placed = Result.Err<Payment>(error);
     ///
     /// // Err(E_ORDER_NOT_FOUND) now explains what happened,
     /// // Ok(payment) is the other track of the same result.
@@ -416,7 +416,7 @@ public sealed class RopError : IEquatable<RopError>
     /// <code><![CDATA[
     /// var error = RopError.Create("E_ORDER_NOT_FOUND", "order 42 does not exist")
     ///     .WithDetails("id=42,archived=true");
-    /// var placed = Rop.Err<Payment>(error);
+    /// var placed = Result.Err<Payment>(error);
     ///
     /// // Err(E_ORDER_NOT_FOUND) carries the new diagnostic payload,
     /// // Ok(payment) is the other track of the same result.
@@ -445,7 +445,7 @@ public sealed class RopError : IEquatable<RopError>
     /// <code><![CDATA[
     /// var error = RopError.Create("E_ORDER_NOT_FOUND", "order 42 does not exist")
     ///     .WithKind(RopErrorKind.NotFound);
-    /// var placed = Rop.Err<Payment>(error);
+    /// var placed = Result.Err<Payment>(error);
     ///
     /// // Err(E_ORDER_NOT_FOUND) is categorized as RopErrorKind.NotFound,
     /// // Ok(payment) is the other track of the same result.
@@ -486,7 +486,7 @@ public sealed class RopError : IEquatable<RopError>
     ///     RopError.Create("E_ORDER_NOT_FOUND", "order 42 does not exist"),
     ///     RopError.Create("E_STOCK_MISSING", "SKU-1 is out of stock"),
     /// ]);
-    /// var placed = Rop.Err<Payment>(aggregate);
+    /// var placed = Result.Err<Payment>(aggregate);
     ///
     /// // Err(E_MULTIPLE) collapses the individual failures for display,
     /// // Ok(payment) is the other track of the same result.
@@ -556,7 +556,7 @@ public sealed class RopError : IEquatable<RopError>
     /// <code><![CDATA[
     /// var first = RopError.Create("E_ORDER_NOT_FOUND", "order 42 does not exist");
     /// var second = RopError.Create("E_ORDER_NOT_FOUND", "order 42 does not exist");
-    /// var placed = Rop.Err<Payment>(first);
+    /// var placed = Result.Err<Payment>(first);
     /// var same = first.Equals(second);
     ///
     /// // Err(E_ORDER_NOT_FOUND) equals Err(E_ORDER_NOT_FOUND),
@@ -585,7 +585,7 @@ public sealed class RopError : IEquatable<RopError>
     /// </para>
     /// <code><![CDATA[
     /// var error = RopError.Create("E_ORDER_NOT_FOUND", "order 42 does not exist");
-    /// var placed = Rop.Err<Payment>(error);
+    /// var placed = Result.Err<Payment>(error);
     /// var same = error.Equals((object)error);
     ///
     /// // Err(E_ORDER_NOT_FOUND) equals its own boxed copy,
@@ -602,7 +602,7 @@ public sealed class RopError : IEquatable<RopError>
     /// </para>
     /// <code><![CDATA[
     /// var error = RopError.Create("E_ORDER_NOT_FOUND", "order 42 does not exist");
-    /// var placed = Rop.Err<Payment>(error);
+    /// var placed = Result.Err<Payment>(error);
     /// var bucket = error.GetHashCode() % 16;
     ///
     /// // Err(E_ORDER_NOT_FOUND) hashes by kind, code, message and details,
@@ -623,7 +623,7 @@ public sealed class RopError : IEquatable<RopError>
     /// </para>
     /// <code><![CDATA[
     /// var error = RopError.Create("E_ORDER_NOT_FOUND", "order 42 does not exist", "id=42");
-    /// var placed = Rop.Err<Payment>(error);
+    /// var placed = Result.Err<Payment>(error);
     /// var text = error.ToString();
     ///
     /// // Err(E_ORDER_NOT_FOUND) renders as "E_ORDER_NOT_FOUND: order 42 does not exist (id=42)",
@@ -645,7 +645,7 @@ public sealed class RopError : IEquatable<RopError>
     /// <code><![CDATA[
     /// var first = RopError.Create("E_ORDER_NOT_FOUND", "order 42 does not exist");
     /// var second = RopError.Create("E_ORDER_NOT_FOUND", "order 42 does not exist").WithCode("E_ORDER_NOT_FOUND");
-    /// var placed = Rop.Err<Payment>(first);
+    /// var placed = Result.Err<Payment>(first);
     /// var same = first == second;
     ///
     /// // Err(E_ORDER_NOT_FOUND) == Err(E_ORDER_NOT_FOUND),
@@ -666,7 +666,7 @@ public sealed class RopError : IEquatable<RopError>
     /// <code><![CDATA[
     /// var first = RopError.Create("E_ORDER_NOT_FOUND", "order 42 does not exist");
     /// var second = RopError.Create("E_ORDER_NOT_FOUND", "order 42 does not exist").WithCode("E_STOCK_MISSING");
-    /// var placed = Rop.Err<Payment>(first);
+    /// var placed = Result.Err<Payment>(first);
     /// var differs = first != second;
     ///
     /// // Err(E_ORDER_NOT_FOUND) != Err(E_STOCK_MISSING) because the codes differ,

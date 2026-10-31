@@ -71,7 +71,7 @@ internal static class SettlementScenario
 
     private static void ReportOutcomes(IReadOnlyList<Result<SettledPayment, RopError>> outcomes)
     {
-        var (settled, failed) = Rop.Partition(outcomes);
+        var (settled, failed) = Result.Partition(outcomes);
 
         foreach (var payment in settled)
         {
@@ -102,7 +102,7 @@ internal static class SettlementScenario
         CancellationToken cancellationToken)
     {
         return await ParseAmount(row.Amount)
-            .BindOk(amount => Opt.FromNullable(Accounts.GetValueOrDefault(row.Account))
+            .BindOk(amount => Option.FromNullable(Accounts.GetValueOrDefault(row.Account))
                 .RequireSome(() => RopError.Create("E_ACCOUNT_UNKNOWN", $"no such account: {row.Account}"))
                 .BindOk(account => ValidateAccount(account, amount)
                     .MapOk(_ => (Account: account, Amount: amount))))
@@ -110,7 +110,7 @@ internal static class SettlementScenario
     }
 
     private static Result<decimal, RopError> ParseAmount(string raw) =>
-        Rop.Try(
+        Result.Try(
                 () => decimal.Parse(raw, NumberStyles.Number, CultureInfo.InvariantCulture),
                 "E_AMOUNT_PARSE")
             .Ensure(
@@ -122,18 +122,18 @@ internal static class SettlementScenario
     /// and the exceeded limit in one aggregated failure.
     /// </summary>
     private static Result<Account, RopError> ValidateAccount(Account account, decimal amount) =>
-        Rop.Validate(
+        Result.Validate(
                 account.Frozen
-                    ? Rop.Err<bool>(RopError.Create("E_ACCOUNT_FROZEN", "account is frozen"))
-                    : Rop.Ok(true),
+                    ? Result.Err<bool>(RopError.Create("E_ACCOUNT_FROZEN", "account is frozen"))
+                    : Result.Ok(true),
                 amount <= account.Balance
-                    ? Rop.Ok(amount)
-                    : Rop.Err<decimal>(RopError.Create(
+                    ? Result.Ok(amount)
+                    : Result.Err<decimal>(RopError.Create(
                         "E_INSUFFICIENT_FUNDS",
                         $"balance {account.Balance:0.00} < {amount:0.00}")),
                 amount <= account.DailyLimit
-                    ? Rop.Ok(amount)
-                    : Rop.Err<decimal>(RopError.Create(
+                    ? Result.Ok(amount)
+                    : Result.Err<decimal>(RopError.Create(
                         "E_LIMIT_EXCEEDED",
                         $"daily limit {account.DailyLimit:0.00} < {amount:0.00}")),
                 (_, _, _) => account)
@@ -153,7 +153,7 @@ internal static class SettlementScenario
             {
                 if (error.Code != "E_CHANNEL_BUSY")
                 {
-                    return Task.FromResult(Rop.Err<SettledPayment>(error));
+                    return Task.FromResult(Result.Err<SettledPayment>(error));
                 }
 
                 Console.WriteLine($"   retry {row.Id}: {error.Code}");
@@ -174,19 +174,19 @@ internal static class SettlementScenario
 
         if (row.Channel == "busy-always")
         {
-            return Rop.Err<SettledPayment>(RopError.Create(
+            return Result.Err<SettledPayment>(RopError.Create(
                 "E_CHANNEL_BUSY",
                 $"channel unavailable for {row.Id} (attempt {attempt})"));
         }
 
         if (row.Channel == "busy" && attempt == 1)
         {
-            return Rop.Err<SettledPayment>(RopError.Create(
+            return Result.Err<SettledPayment>(RopError.Create(
                 "E_CHANNEL_BUSY",
                 $"channel busy for {row.Id} (attempt {attempt})"));
         }
 
-        return Rop.Ok(new SettledPayment(row.Id, row.Account, amount, row.Channel));
+        return Result.Ok(new SettledPayment(row.Id, row.Account, amount, row.Channel));
     }
 }
 

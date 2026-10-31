@@ -15,7 +15,7 @@ namespace Sandlada.RopSharp;
 /// All conversions are explicit: the library never switches models implicitly (ADR 0001, D5).
 /// </para>
 /// <code><![CDATA[
-/// var outcome = Rop.Try(() => OrderFixtures.Charge(OrderFixtures.Sample), "E_CHARGE")
+/// var outcome = Result.Try(() => OrderFixtures.Charge(OrderFixtures.Sample), "E_CHARGE")
 ///     .ToEither()
 ///     .MapRight(static payment => payment.Id);
 ///
@@ -40,7 +40,7 @@ public static class EitherBridgeExtensions
     /// The mapping is lossless in both directions; <see cref="Either{TLeft,TRight}.ToResult"/> recovers the original
     /// result when the left branch is converted back with an identity error factory.
     /// <code><![CDATA[
-    /// var outcome = Rop.Try(() => OrderFixtures.Charge(OrderFixtures.Sample), "E_CHARGE")
+    /// var outcome = Result.Try(() => OrderFixtures.Charge(OrderFixtures.Sample), "E_CHARGE")
     ///     .ToEither()
     ///     .MapRight(static payment => payment.Id);
     ///
@@ -66,7 +66,7 @@ public static class EitherBridgeExtensions
     /// The left value is validated eagerly, even when the option is <c>Some</c>; use the factory overload when
     /// building it is expensive.
     /// <code><![CDATA[
-    /// var outcome = Opt.FromNullable(OrderFixtures.Sample.Customer.Address)
+    /// var outcome = Option.FromNullable(OrderFixtures.Sample.Customer.Address)
     ///     .ToEither("no shipping address on file")
     ///     .MapRight(static shipping => shipping.City);
     ///
@@ -96,7 +96,7 @@ public static class EitherBridgeExtensions
     /// The factory runs only on the empty track, so an expensive left value costs nothing when the option carries
     /// a value.
     /// <code><![CDATA[
-    /// var outcome = Opt.FromNullable(OrderFixtures.CustomerWithoutAddress.Address)
+    /// var outcome = Option.FromNullable(OrderFixtures.CustomerWithoutAddress.Address)
     ///     .ToEither(static () => "no shipping address on file")
     ///     .MapRight(static shipping => shipping.City);
     ///

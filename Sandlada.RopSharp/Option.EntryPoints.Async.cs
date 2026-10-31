@@ -8,7 +8,7 @@ namespace Sandlada.RopSharp;
 /// </summary>
 /// <remarks>
 /// <para>
-/// These helpers mirror the synchronous <see cref="Opt"/> combinators while preserving the option contract: a
+/// These helpers mirror the synchronous <see cref="Option"/> combinators while preserving the option contract: a
 /// missing value short-circuits the sequence, and cancellation is reported as
 /// <see cref="OperationCanceledException"/> rather than <c>None</c>.
 /// </para>
@@ -22,7 +22,11 @@ namespace Sandlada.RopSharp;
     "ApiDesign",
     "RS0026:Do not add multiple overloads with optional parameters",
     Justification = "The 2- and 3-input overloads differ by arity, and the TraverseAsync overloads differ by delegate arity; existing calls cannot become ambiguous. The optional token follows the library-wide ct-last convention.")]
-public static partial class Opt
+[SuppressMessage(
+    "Naming",
+    "CA1716:Identifiers should not match keywords",
+    Justification = "Option is the domain name of the library and matches the Option<T> value type it creates. The name is part of the published contract, so it is kept even though Visual Basic reserves it.")]
+public static partial class Option
 {
     /// <summary>
     /// Awaits two options and combines them with a merger, yielding <c>None</c> when either is <c>None</c>.
@@ -39,9 +43,9 @@ public static partial class Opt
     /// <remarks>
     /// Every input is awaited before the result is decided.
     /// <code><![CDATA[
-    /// var summary = await Opt.CombineAsync(
-    ///         Task.FromResult(Opt.FromNullable(OrderFixtures.Sample.Customer.Address)),
-    ///         Task.FromResult(Opt.FromNullable(OrderFixtures.Sample.Customer.Name)),
+    /// var summary = await Option.CombineAsync(
+    ///         Task.FromResult(Option.FromNullable(OrderFixtures.Sample.Customer.Address)),
+    ///         Task.FromResult(Option.FromNullable(OrderFixtures.Sample.Customer.Name)),
     ///         static (shipping, name) => $"{name} in {shipping.City}")
     ///     .MapSomeAsync(static summary => summary.ToUpperInvariant());
     ///
@@ -84,10 +88,10 @@ public static partial class Opt
     /// <remarks>
     /// Every input is awaited before the result is decided.
     /// <code><![CDATA[
-    /// var summary = await Opt.CombineAsync(
-    ///         Task.FromResult(Opt.FromNullable(OrderFixtures.Sample.Customer.Address)),
-    ///         Task.FromResult(Opt.FromNullable(OrderFixtures.Sample.Customer.Name)),
-    ///         Task.FromResult(Opt.FromNullableValue<int>(OrderFixtures.Sample.ItemCount)),
+    /// var summary = await Option.CombineAsync(
+    ///         Task.FromResult(Option.FromNullable(OrderFixtures.Sample.Customer.Address)),
+    ///         Task.FromResult(Option.FromNullable(OrderFixtures.Sample.Customer.Name)),
+    ///         Task.FromResult(Option.FromNullableValue<int>(OrderFixtures.Sample.ItemCount)),
     ///         static (shipping, name, count) => $"{name} in {shipping.City} ({count} items)")
     ///     .MapSomeAsync(static summary => summary.ToUpperInvariant());
     ///
@@ -129,9 +133,9 @@ public static partial class Opt
     /// <remarks>
     /// <c>ZipAsync</c> is <see cref="CombineAsync{T1,T2,TOut}"/> with a tuple merger.
     /// <code><![CDATA[
-    /// var name = await Opt.ZipAsync(
-    ///         Task.FromResult(Opt.FromNullable(OrderFixtures.Sample.Customer.Address)),
-    ///         Task.FromResult(Opt.FromNullable(OrderFixtures.Sample.Customer.Name)))
+    /// var name = await Option.ZipAsync(
+    ///         Task.FromResult(Option.FromNullable(OrderFixtures.Sample.Customer.Address)),
+    ///         Task.FromResult(Option.FromNullable(OrderFixtures.Sample.Customer.Name)))
     ///     .MapSomeAsync(static pair => pair.Item2);
     ///
     /// // Some("Ada Lovelace") when both options carry a value,
@@ -159,10 +163,10 @@ public static partial class Opt
     /// <remarks>
     /// <c>ZipAsync</c> is <see cref="CombineAsync{T1,T2,T3,TOut}"/> with a tuple merger.
     /// <code><![CDATA[
-    /// var name = await Opt.ZipAsync(
-    ///         Task.FromResult(Opt.FromNullable(OrderFixtures.Sample.Customer.Address)),
-    ///         Task.FromResult(Opt.FromNullable(OrderFixtures.Sample.Customer.Name)),
-    ///         Task.FromResult(Opt.FromNullableValue<int>(OrderFixtures.Sample.ItemCount)))
+    /// var name = await Option.ZipAsync(
+    ///         Task.FromResult(Option.FromNullable(OrderFixtures.Sample.Customer.Address)),
+    ///         Task.FromResult(Option.FromNullable(OrderFixtures.Sample.Customer.Name)),
+    ///         Task.FromResult(Option.FromNullableValue<int>(OrderFixtures.Sample.ItemCount)))
     ///     .MapSomeAsync(static triple => triple.Item2);
     ///
     /// // Some("Ada Lovelace") when all three options carry a value,
@@ -191,8 +195,8 @@ public static partial class Opt
     /// Sequencing is deliberately sequential: options are awaited in enumeration order. Start the tasks eagerly at
     /// the call site if they should run concurrently. Tasks after the first <c>None</c> are not awaited.
     /// <code><![CDATA[
-    /// var cities = await Opt.SequenceAsync(
-    ///         new[] { Task.FromResult(Opt.Some("London")), Task.FromResult(Opt.None<string>()) })
+    /// var cities = await Option.SequenceAsync(
+    ///         new[] { Task.FromResult(Option.Some("London")), Task.FromResult(Option.None<string>()) })
     ///     .MapSomeAsync(static list => list.Count);
     ///
     /// // Some(1) when every option carries a value,
@@ -224,7 +228,7 @@ public static partial class Opt
             values.Add(value);
         }
 
-        return Some<IReadOnlyList<T>>(Rop.ToReadOnlyList(values));
+        return Some<IReadOnlyList<T>>(Result.ToReadOnlyList(values));
     }
 
     /// <summary>
@@ -243,9 +247,9 @@ public static partial class Opt
     /// <remarks>
     /// The mapper is not invoked after the first <c>None</c>.
     /// <code><![CDATA[
-    /// var cities = await Opt.TraverseAsync(
+    /// var cities = await Option.TraverseAsync(
     ///         OrderFixtures.Sample.Lines,
-    ///         static line => Task.FromResult(Opt.Some(line.Sku)))
+    ///         static line => Task.FromResult(Option.Some(line.Sku)))
     ///     .MapSomeAsync(static list => list.Count);
     ///
     /// // Some(2) when every element mapped to a value,
@@ -281,7 +285,7 @@ public static partial class Opt
             values.Add(value);
         }
 
-        return Some<IReadOnlyList<TOut>>(Rop.ToReadOnlyList(values));
+        return Some<IReadOnlyList<TOut>>(Result.ToReadOnlyList(values));
     }
 
     /// <summary>
@@ -301,9 +305,9 @@ public static partial class Opt
     /// <remarks>
     /// The mapper is not invoked after the first <c>None</c>.
     /// <code><![CDATA[
-    /// var cities = await Opt.TraverseAsync(
+    /// var cities = await Option.TraverseAsync(
     ///         OrderFixtures.Sample.Lines,
-    ///         static (line, token) => Task.FromResult(Opt.Some(line.Sku)),
+    ///         static (line, token) => Task.FromResult(Option.Some(line.Sku)),
     ///         CancellationToken.None)
     ///     .MapSomeAsync(static list => list.Count);
     ///
@@ -340,6 +344,6 @@ public static partial class Opt
             values.Add(value);
         }
 
-        return Some<IReadOnlyList<TOut>>(Rop.ToReadOnlyList(values));
+        return Some<IReadOnlyList<TOut>>(Result.ToReadOnlyList(values));
     }
 }

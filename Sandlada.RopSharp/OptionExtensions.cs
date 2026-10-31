@@ -8,7 +8,7 @@ namespace Sandlada.RopSharp;
 /// There is no <c>MapNone</c> because a missing value has nothing to map; the only actions on the empty track are
 /// recovery (<c>BindNone</c>) and observation (<c>TeeNone</c>).
 /// <code><![CDATA[
-/// var city = Opt.FromNullable(OrderFixtures.Sample.Customer.Address)
+/// var city = Option.FromNullable(OrderFixtures.Sample.Customer.Address)
 ///     .MapSome(static shipping => shipping.City)
 ///     .BindNoneValue("unknown");
 ///
@@ -30,7 +30,7 @@ public static class OptionExtensions
     /// <c>MapSome</c> reshapes a present value. It is the option counterpart of
     /// <see cref="ResultExtensions.MapOk{TOk,TOut,TErr}"/>, and it never runs on the empty track.
     /// <code><![CDATA[
-    /// var city = Opt.FromNullable(OrderFixtures.Sample.Customer.Address)
+    /// var city = Option.FromNullable(OrderFixtures.Sample.Customer.Address)
     ///     .MapSome(static shipping => shipping.City);
     ///
     /// // Some("London") when the address is present,
@@ -40,7 +40,7 @@ public static class OptionExtensions
     public static Option<TOut> MapSome<T, TOut>(this Option<T> option, Func<T, TOut> mapper)
     {
         ArgumentNullException.ThrowIfNull(mapper);
-        return option.TryGetValue(out var value) ? Opt.Some(mapper(value)) : Opt.None<TOut>();
+        return option.TryGetValue(out var value) ? Option.Some(mapper(value)) : Option.None<TOut>();
     }
 
     /// <summary>
@@ -54,7 +54,7 @@ public static class OptionExtensions
     /// Only for logging and metrics. The option itself is returned unchanged, so the observation can be spliced
     /// into a chain without changing its shape.
     /// <code><![CDATA[
-    /// var city = Opt.FromNullable(OrderFixtures.Sample.Customer.Address)
+    /// var city = Option.FromNullable(OrderFixtures.Sample.Customer.Address)
     ///     .TeeSome(static shipping => Console.WriteLine($"shipping to {shipping.City}"));
     ///
     /// // Some(address) runs the side effect and keeps the option,
@@ -83,7 +83,7 @@ public static class OptionExtensions
     /// The empty-track counterpart of <see cref="TeeSome{T}(Option{T},Action{T})"/>. It is how a pipeline reports
     /// that a value was missing without giving up on the value it may still recover.
     /// <code><![CDATA[
-    /// var city = Opt.FromNullable(OrderFixtures.CustomerWithoutAddress.Address)
+    /// var city = Option.FromNullable(OrderFixtures.CustomerWithoutAddress.Address)
     ///     .TeeNone(static () => Console.WriteLine("no shipping address on file"));
     ///
     /// // None runs the side effect and keeps the option,
@@ -112,7 +112,7 @@ public static class OptionExtensions
     /// <c>Filter</c> is the option counterpart of <see cref="ResultExtensions.Ensure{TOk,TErr}(Result{TOk,TErr},Func{TOk,bool},TErr)"/>:
     /// it turns a present but unwanted value into an absent one, without needing an error value.
     /// <code><![CDATA[
-    /// var city = Opt.FromNullable(OrderFixtures.Sample.Customer.Address)
+    /// var city = Option.FromNullable(OrderFixtures.Sample.Customer.Address)
     ///     .Filter(static shipping => shipping.Country is "GB")
     ///     .MapSome(static shipping => shipping.City);
     ///
@@ -123,7 +123,7 @@ public static class OptionExtensions
     public static Option<T> Filter<T>(this Option<T> option, Func<T, bool> predicate)
     {
         ArgumentNullException.ThrowIfNull(predicate);
-        return option.TryGetValue(out var value) && !predicate(value) ? Opt.None<T>() : option;
+        return option.TryGetValue(out var value) && !predicate(value) ? Option.None<T>() : option;
     }
 
     /// <summary>
@@ -138,7 +138,7 @@ public static class OptionExtensions
     /// <remarks>
     /// Use it to discard the payload and keep only the presence information.
     /// <code><![CDATA[
-    /// var present = Opt.FromNullable(OrderFixtures.Sample.Customer.Address)
+    /// var present = Option.FromNullable(OrderFixtures.Sample.Customer.Address)
     ///     .MapSomeValue(true);
     ///
     /// // Some(True) when the address is present,
@@ -148,7 +148,7 @@ public static class OptionExtensions
     public static Option<TOut> MapSomeValue<T, TOut>(this Option<T> option, TOut value)
     {
         ArgumentGuards.ThrowIfNull(value, nameof(value));
-        return option.IsSome ? Opt.Some(value) : Opt.None<TOut>();
+        return option.IsSome ? Option.Some(value) : Option.None<TOut>();
     }
 
     /// <summary>
@@ -163,8 +163,8 @@ public static class OptionExtensions
     /// <c>BindSome</c> is the expansion step of an option pipeline: the binder returns a whole new option, so it
     /// may be empty in its own right.
     /// <code><![CDATA[
-    /// var city = Opt.FromNullable(OrderFixtures.Sample.Customer.Address)
-    ///     .BindSome(static shipping => Opt.Some(shipping.City));
+    /// var city = Option.FromNullable(OrderFixtures.Sample.Customer.Address)
+    ///     .BindSome(static shipping => Option.Some(shipping.City));
     ///
     /// // Some("London") when the address is present and the binding succeeded,
     /// // None when it is missing - the binder never runs on the empty track.
@@ -173,7 +173,7 @@ public static class OptionExtensions
     public static Option<TOut> BindSome<T, TOut>(this Option<T> option, Func<T, Option<TOut>> binder)
     {
         ArgumentNullException.ThrowIfNull(binder);
-        return option.TryGetValue(out var value) ? binder(value) : Opt.None<TOut>();
+        return option.TryGetValue(out var value) ? binder(value) : Option.None<TOut>();
     }
 
     /// <summary>
@@ -187,9 +187,9 @@ public static class OptionExtensions
     /// <c>BindNone</c> is the recovery step of an option pipeline. It is the only way to produce a value for the
     /// empty track, and it never runs when a value is already present.
     /// <code><![CDATA[
-    /// var city = Opt.FromNullable(OrderFixtures.CustomerWithoutAddress.Address)
+    /// var city = Option.FromNullable(OrderFixtures.CustomerWithoutAddress.Address)
     ///     .MapSome(static shipping => shipping.City)
-    ///     .BindNone(static () => Opt.Some("unknown"));
+    ///     .BindNone(static () => Option.Some("unknown"));
     ///
     /// // Some("unknown") when the address is missing,
     /// // Some(city) when it is present - the fallback never runs on the present track.
@@ -212,7 +212,7 @@ public static class OptionExtensions
     /// <remarks>
     /// The cheapest recovery: the pipeline continues with a known value instead of staying empty.
     /// <code><![CDATA[
-    /// var city = Opt.FromNullable(OrderFixtures.CustomerWithoutAddress.Address)
+    /// var city = Option.FromNullable(OrderFixtures.CustomerWithoutAddress.Address)
     ///     .MapSome(static shipping => shipping.City)
     ///     .BindNoneValue("unknown");
     ///
@@ -223,7 +223,7 @@ public static class OptionExtensions
     public static Option<T> BindNoneValue<T>(this Option<T> option, T fallback)
     {
         ArgumentGuards.ThrowIfNull(fallback, nameof(fallback));
-        return option.IsNone ? Opt.Some(fallback) : option;
+        return option.IsNone ? Option.Some(fallback) : option;
     }
 
     /// <summary>
@@ -236,7 +236,7 @@ public static class OptionExtensions
     /// <remarks>
     /// The factory is lazy, so an expensive fallback is only built when the value is actually missing.
     /// <code><![CDATA[
-    /// var city = Opt.FromNullable(OrderFixtures.CustomerWithoutAddress.Address)
+    /// var city = Option.FromNullable(OrderFixtures.CustomerWithoutAddress.Address)
     ///     .MapSome(static shipping => shipping.City)
     ///     .BindNoneValue(static () => "unknown");
     ///
@@ -247,7 +247,7 @@ public static class OptionExtensions
     public static Option<T> BindNoneValue<T>(this Option<T> option, Func<T> fallbackFactory)
     {
         ArgumentNullException.ThrowIfNull(fallbackFactory);
-        return option.IsNone ? Opt.Some(fallbackFactory()) : option;
+        return option.IsNone ? Option.Some(fallbackFactory()) : option;
     }
 
     /// <summary>
@@ -260,8 +260,8 @@ public static class OptionExtensions
     /// <c>Flatten</c> collapses two levels into one, which is what makes a nested option usable with the rest of
     /// the pipeline.
     /// <code><![CDATA[
-    /// var nested = Opt.FromNullable(OrderFixtures.Sample.Customer.Address)
-    ///     .MapSome(static shipping => Opt.Some(shipping.City));
+    /// var nested = Option.FromNullable(OrderFixtures.Sample.Customer.Address)
+    ///     .MapSome(static shipping => Option.Some(shipping.City));
     /// var city = nested.Flatten();
     ///
     /// // Some("London") when both levels carry a value,
@@ -269,7 +269,7 @@ public static class OptionExtensions
     /// ]]></code>
     /// </remarks>
     public static Option<T> Flatten<T>(this Option<Option<T>> option) =>
-        option.TryGetValue(out var inner) ? inner : Opt.None<T>();
+        option.TryGetValue(out var inner) ? inner : Option.None<T>();
 
     /// <summary>
     /// Exits the option by projecting both tracks into a single value.
@@ -283,7 +283,7 @@ public static class OptionExtensions
     /// <remarks>
     /// <c>Match</c> is the total exit of an option: it handles both tracks, so nothing is ever left behind.
     /// <code><![CDATA[
-    /// var label = Opt.FromNullable(OrderFixtures.Sample.Customer.Address)
+    /// var label = Option.FromNullable(OrderFixtures.Sample.Customer.Address)
     ///     .Match(
     ///         some: static shipping => $"ships to {shipping.City}",
     ///         none: static () => "no shipping address");
@@ -311,7 +311,7 @@ public static class OptionExtensions
     /// <exception cref="InvalidOperationException">The option is <c>None</c>.</exception>
     /// <remarks>Intended for tests and boundaries only.
     /// <code><![CDATA[
-    /// var address = Opt.FromNullable(OrderFixtures.Sample.Customer.Address);
+    /// var address = Option.FromNullable(OrderFixtures.Sample.Customer.Address);
     /// var shipping = address.OrThrow();
     ///
     /// // Some(address) yields the address,

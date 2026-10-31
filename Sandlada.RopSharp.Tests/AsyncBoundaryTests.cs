@@ -9,7 +9,7 @@ public sealed class AsyncBoundaryTests
     {
         var called = false;
 
-        var result = Rop.Try(
+        var result = Result.Try(
             () =>
             {
                 called = true;
@@ -23,7 +23,7 @@ public sealed class AsyncBoundaryTests
     [Test]
     public async Task TryAction_WhenActionThrows_ReturnsErrorWithCause()
     {
-        var result = Rop.Try(
+        var result = Result.Try(
             () => throw new FormatException("bad"),
             exception => RopError.FromException(exception, "E_PARSE"));
 
@@ -36,7 +36,7 @@ public sealed class AsyncBoundaryTests
     [Test]
     public async Task TryAction_WithCodeOverload_UsesProvidedCode()
     {
-        var result = Rop.Try(() => throw new InvalidOperationException("bad"), "E_CODE");
+        var result = Result.Try(() => throw new InvalidOperationException("bad"), "E_CODE");
 
         await Assert.That(result.ErrOrThrow().Code).IsEqualTo("E_CODE");
     }
@@ -45,7 +45,7 @@ public sealed class AsyncBoundaryTests
     public async Task TryAction_RethrowsOperationCanceledException()
     {
         var exception = TestSupport.Catch(() =>
-            Rop.Try(() => throw new OperationCanceledException(), _ => Sample.Error()));
+            Result.Try(() => throw new OperationCanceledException(), _ => Sample.Error()));
 
         await Assert.That(exception is OperationCanceledException).IsTrue();
     }
@@ -53,14 +53,14 @@ public sealed class AsyncBoundaryTests
     [Test]
     public async Task TryAction_WithNullArguments_Throws()
     {
-        await Assert.That(TestSupport.Catch(() => Rop.Try((Action)null!, _ => Sample.Error())) is ArgumentNullException).IsTrue();
-        await Assert.That(TestSupport.Catch(() => Rop.Try(() => { }, (Func<Exception, RopError>)null!)) is ArgumentNullException).IsTrue();
+        await Assert.That(TestSupport.Catch(() => Result.Try((Action)null!, _ => Sample.Error())) is ArgumentNullException).IsTrue();
+        await Assert.That(TestSupport.Catch(() => Result.Try(() => { }, (Func<Exception, RopError>)null!)) is ArgumentNullException).IsTrue();
     }
 
     [Test]
     public async Task TryAction_WithBlankCode_Throws()
     {
-        var exception = TestSupport.Catch(() => Rop.Try(() => { }, "  "));
+        var exception = TestSupport.Catch(() => Result.Try(() => { }, "  "));
 
         await Assert.That(exception is ArgumentException).IsTrue();
     }
@@ -69,7 +69,7 @@ public sealed class AsyncBoundaryTests
     public async Task TryAction_WithFactoryReturningNull_Throws()
     {
         var exception = TestSupport.Catch(() =>
-            Rop.Try(() => throw new InvalidOperationException("bad"), _ => null!));
+            Result.Try(() => throw new InvalidOperationException("bad"), _ => null!));
 
         await Assert.That(exception is InvalidOperationException).IsTrue();
     }
@@ -79,7 +79,7 @@ public sealed class AsyncBoundaryTests
     {
         var called = false;
 
-        var result = await Rop.TryAsync(
+        var result = await Result.TryAsync(
             async () =>
             {
                 await Task.Yield();
@@ -94,7 +94,7 @@ public sealed class AsyncBoundaryTests
     [Test]
     public async Task TryAsyncAction_WhenActionThrows_ReturnsErrorWithCause()
     {
-        var result = await Rop.TryAsync(
+        var result = await Result.TryAsync(
             async () =>
             {
                 await Task.Yield();
@@ -111,7 +111,7 @@ public sealed class AsyncBoundaryTests
     [Test]
     public async Task TryAsyncAction_WhenActionThrowsSynchronously_ReturnsError()
     {
-        var result = await Rop.TryAsync(
+        var result = await Result.TryAsync(
             () => throw new InvalidOperationException("bad"),
             exception => RopError.FromException(exception, "E_SYNC"));
 
@@ -121,7 +121,7 @@ public sealed class AsyncBoundaryTests
     [Test]
     public async Task TryAsyncAction_WithCodeOverload_UsesProvidedCode()
     {
-        var result = await Rop.TryAsync(
+        var result = await Result.TryAsync(
             async () =>
             {
                 await Task.Yield();
@@ -136,7 +136,7 @@ public sealed class AsyncBoundaryTests
     public async Task TryAsyncAction_RethrowsOperationCanceledException()
     {
         var exception = await TestSupport.CatchAsync(() =>
-            Rop.TryAsync(
+            Result.TryAsync(
                 () => throw new OperationCanceledException(),
                 _ => Sample.Error()));
 
@@ -151,7 +151,7 @@ public sealed class AsyncBoundaryTests
         var called = false;
 
         var exception = await TestSupport.CatchAsync(() =>
-            Rop.TryAsync(
+            Result.TryAsync(
                 () =>
                 {
                     called = true;
@@ -170,7 +170,7 @@ public sealed class AsyncBoundaryTests
         using var cts = new CancellationTokenSource();
         var pending = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
 
-        var operation = Rop.TryAsync(() => pending.Task, _ => Sample.Error(), cts.Token);
+        var operation = Result.TryAsync(() => pending.Task, _ => Sample.Error(), cts.Token);
         cts.Cancel();
 
         var exception = await TestSupport.CatchAsync(() => operation);
@@ -183,7 +183,7 @@ public sealed class AsyncBoundaryTests
     public async Task TryAsyncAction_WithNullTask_ThrowsInvalidOperation()
     {
         var exception = await TestSupport.CatchAsync(() =>
-            Rop.TryAsync(() => null!, _ => Sample.Error()));
+            Result.TryAsync(() => null!, _ => Sample.Error()));
 
         await Assert.That(exception is InvalidOperationException).IsTrue();
     }
@@ -192,17 +192,17 @@ public sealed class AsyncBoundaryTests
     public async Task TryAsyncAction_WithNullArguments_Throws()
     {
         await Assert.That(
-            await TestSupport.CatchAsync(() => Rop.TryAsync((Func<Task>)null!, _ => Sample.Error()))
+            await TestSupport.CatchAsync(() => Result.TryAsync((Func<Task>)null!, _ => Sample.Error()))
                 is ArgumentNullException).IsTrue();
         await Assert.That(
-            await TestSupport.CatchAsync(() => Rop.TryAsync(() => Task.CompletedTask, (Func<Exception, RopError>)null!))
+            await TestSupport.CatchAsync(() => Result.TryAsync(() => Task.CompletedTask, (Func<Exception, RopError>)null!))
                 is ArgumentNullException).IsTrue();
     }
 
     [Test]
     public async Task TryAsyncAction_WithBlankCode_Throws()
     {
-        var exception = await TestSupport.CatchAsync(() => Rop.TryAsync(() => Task.CompletedTask, " "));
+        var exception = await TestSupport.CatchAsync(() => Result.TryAsync(() => Task.CompletedTask, " "));
 
         await Assert.That(exception is ArgumentException).IsTrue();
     }
@@ -211,7 +211,7 @@ public sealed class AsyncBoundaryTests
     public async Task TryAsyncAction_WithFactoryReturningNull_Throws()
     {
         var exception = await TestSupport.CatchAsync(() =>
-            Rop.TryAsync(
+            Result.TryAsync(
                 async () =>
                 {
                     await Task.Yield();
@@ -225,7 +225,7 @@ public sealed class AsyncBoundaryTests
     [Test]
     public async Task SwitchAsync_LiftsFunctionWithoutCatchingExceptions()
     {
-        var lift = Rop.SwitchAsync<string, int, RopError>(async text =>
+        var lift = Result.SwitchAsync<string, int, RopError>(async text =>
         {
             await Task.Yield();
             return int.Parse(text, System.Globalization.CultureInfo.InvariantCulture);
@@ -241,7 +241,7 @@ public sealed class AsyncBoundaryTests
     [Test]
     public async Task SwitchAsync_WithNullTask_ThrowsInvalidOperation()
     {
-        var lift = Rop.SwitchAsync<string, int, RopError>(_ => null!);
+        var lift = Result.SwitchAsync<string, int, RopError>(_ => null!);
 
         var exception = await TestSupport.CatchAsync(() => lift("12"));
 
@@ -251,7 +251,7 @@ public sealed class AsyncBoundaryTests
     [Test]
     public async Task SwitchAsync_WithNullPayload_ThrowsArgumentNull()
     {
-        var lift = Rop.SwitchAsync<string, string, RopError>(_ => Task.FromResult<string>(null!));
+        var lift = Result.SwitchAsync<string, string, RopError>(_ => Task.FromResult<string>(null!));
 
         var exception = await TestSupport.CatchAsync(() => lift("x"));
 
@@ -261,7 +261,7 @@ public sealed class AsyncBoundaryTests
     [Test]
     public async Task SwitchAsync_WithNullFunction_Throws()
     {
-        var exception = TestSupport.Catch(() => Rop.SwitchAsync<string, int, RopError>(null!));
+        var exception = TestSupport.Catch(() => Result.SwitchAsync<string, int, RopError>(null!));
 
         await Assert.That(exception is ArgumentNullException).IsTrue();
     }
@@ -269,7 +269,7 @@ public sealed class AsyncBoundaryTests
     [Test]
     public async Task TrySwitchAsync_LiftsFunctionAndCapturesExceptions()
     {
-        var safeParse = Rop.TrySwitchAsync<string, int>(
+        var safeParse = Result.TrySwitchAsync<string, int>(
             async text =>
             {
                 await Task.Yield();
@@ -287,7 +287,7 @@ public sealed class AsyncBoundaryTests
     [Test]
     public async Task TrySwitchAsync_WithNullPayload_ReturnsNullResultError()
     {
-        var lift = Rop.TrySwitchAsync<string, string>(_ => Task.FromResult<string>(null!), _ => Sample.Error());
+        var lift = Result.TrySwitchAsync<string, string>(_ => Task.FromResult<string>(null!), _ => Sample.Error());
 
         var result = await lift("x");
 
@@ -298,10 +298,10 @@ public sealed class AsyncBoundaryTests
     public async Task TrySwitchAsync_WithNullArguments_Throws()
     {
         await Assert.That(
-            TestSupport.Catch(() => Rop.TrySwitchAsync<string, int>(null!, _ => Sample.Error()))
+            TestSupport.Catch(() => Result.TrySwitchAsync<string, int>(null!, _ => Sample.Error()))
                 is ArgumentNullException).IsTrue();
         await Assert.That(
-            TestSupport.Catch(() => Rop.TrySwitchAsync<string, int>(_ => Task.FromResult(1), null!))
+            TestSupport.Catch(() => Result.TrySwitchAsync<string, int>(_ => Task.FromResult(1), null!))
                 is ArgumentNullException).IsTrue();
     }
 }

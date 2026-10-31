@@ -9,7 +9,7 @@ namespace Sandlada.RopSharp;
 /// for example <c>Result&lt;Unit, RopError&gt;</c> combined with <c>MapOkValue(Unit.Value)</c>.
 /// </para>
 /// <code><![CDATA[
-/// var shipped = Rop.Try(() => OrderFixtures.Ship(OrderFixtures.Sample, OrderFixtures.Charge(OrderFixtures.Sample)), "E_SHIP")
+/// var shipped = Result.Try(() => OrderFixtures.Ship(OrderFixtures.Sample, OrderFixtures.Charge(OrderFixtures.Sample)), "E_SHIP")
 ///     .MapOk(static shipment => Unit.Value);
 ///
 /// // Ok(()) when the parcel was handed over,
@@ -27,7 +27,7 @@ public readonly struct Unit : IEquatable<Unit>
     /// side-effecting boundary still returns a result that composes with every other combinator.
     /// </para>
     /// <code><![CDATA[
-    /// var shipped = Rop.Try(() => OrderFixtures.Ship(OrderFixtures.Sample, OrderFixtures.Charge(OrderFixtures.Sample)), "E_SHIP")
+    /// var shipped = Result.Try(() => OrderFixtures.Ship(OrderFixtures.Sample, OrderFixtures.Charge(OrderFixtures.Sample)), "E_SHIP")
     ///     .MapOk(static shipment => Unit.Value);
     ///
     /// // Ok(()) when the parcel was handed over,
@@ -42,7 +42,7 @@ public readonly struct Unit : IEquatable<Unit>
     /// Every unit is equal to every other unit, because there is only one of them.
     /// </para>
     /// <code><![CDATA[
-    /// var shipped = Rop.Try(() => OrderFixtures.Ship(OrderFixtures.Sample, OrderFixtures.Charge(OrderFixtures.Sample)), "E_SHIP")
+    /// var shipped = Result.Try(() => OrderFixtures.Ship(OrderFixtures.Sample, OrderFixtures.Charge(OrderFixtures.Sample)), "E_SHIP")
     ///     .MapOk(static shipment => Unit.Value);
     /// var unit = shipped.Match(ok: static _ => Unit.Value, err: static _ => Unit.Value);
     /// var same = unit.Equals(Unit.Value);
@@ -59,7 +59,7 @@ public readonly struct Unit : IEquatable<Unit>
     /// The boxed overload accepts any boxed <see cref="Unit"/>; there is no other inhabitant to compare against.
     /// </para>
     /// <code><![CDATA[
-    /// var shipped = Rop.Try(() => OrderFixtures.Ship(OrderFixtures.Sample, OrderFixtures.Charge(OrderFixtures.Sample)), "E_SHIP")
+    /// var shipped = Result.Try(() => OrderFixtures.Ship(OrderFixtures.Sample, OrderFixtures.Charge(OrderFixtures.Sample)), "E_SHIP")
     ///     .MapOk(static shipment => Unit.Value);
     /// var unit = shipped.Match(ok: static _ => Unit.Value, err: static _ => Unit.Value);
     /// var same = unit.Equals((object)Unit.Value);
@@ -76,7 +76,7 @@ public readonly struct Unit : IEquatable<Unit>
     /// The hash code is always zero, which keeps a unit cheap to use as a dictionary key.
     /// </para>
     /// <code><![CDATA[
-    /// var shipped = Rop.Try(() => OrderFixtures.Ship(OrderFixtures.Sample, OrderFixtures.Charge(OrderFixtures.Sample)), "E_SHIP")
+    /// var shipped = Result.Try(() => OrderFixtures.Ship(OrderFixtures.Sample, OrderFixtures.Charge(OrderFixtures.Sample)), "E_SHIP")
     ///     .MapOk(static shipment => Unit.Value);
     /// var unit = shipped.Match(ok: static _ => Unit.Value, err: static _ => Unit.Value);
     /// var bucket = unit.GetHashCode();
@@ -93,7 +93,7 @@ public readonly struct Unit : IEquatable<Unit>
     /// The text is a debugging aid. It spells the empty tuple, which is the same idea as the value itself.
     /// </para>
     /// <code><![CDATA[
-    /// var shipped = Rop.Try(() => OrderFixtures.Ship(OrderFixtures.Sample, OrderFixtures.Charge(OrderFixtures.Sample)), "E_SHIP")
+    /// var shipped = Result.Try(() => OrderFixtures.Ship(OrderFixtures.Sample, OrderFixtures.Charge(OrderFixtures.Sample)), "E_SHIP")
     ///     .MapOk(static shipment => Unit.Value);
     /// var unit = shipped.Match(ok: static _ => Unit.Value, err: static _ => Unit.Value);
     /// var text = unit.ToString();
@@ -114,7 +114,7 @@ public readonly struct Unit : IEquatable<Unit>
     /// null check.
     /// </para>
     /// <code><![CDATA[
-    /// var shipped = Rop.Try(() => OrderFixtures.Ship(OrderFixtures.Sample, OrderFixtures.Charge(OrderFixtures.Sample)), "E_SHIP")
+    /// var shipped = Result.Try(() => OrderFixtures.Ship(OrderFixtures.Sample, OrderFixtures.Charge(OrderFixtures.Sample)), "E_SHIP")
     ///     .MapOk(static shipment => Unit.Value);
     /// var unit = shipped.Match(ok: static _ => Unit.Value, err: static _ => Unit.Value);
     /// var same = unit == Unit.Value;
@@ -135,7 +135,7 @@ public readonly struct Unit : IEquatable<Unit>
     /// null check.
     /// </para>
     /// <code><![CDATA[
-    /// var shipped = Rop.Try(() => OrderFixtures.Ship(OrderFixtures.Sample, OrderFixtures.Charge(OrderFixtures.Sample)), "E_SHIP")
+    /// var shipped = Result.Try(() => OrderFixtures.Ship(OrderFixtures.Sample, OrderFixtures.Charge(OrderFixtures.Sample)), "E_SHIP")
     ///     .MapOk(static shipment => Unit.Value);
     /// var unit = shipped.Match(ok: static _ => Unit.Value, err: static _ => Unit.Value);
     /// var differs = unit != Unit.Value;

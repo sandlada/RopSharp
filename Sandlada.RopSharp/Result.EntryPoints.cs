@@ -9,26 +9,26 @@ namespace Sandlada.RopSharp;
 /// <remarks>
 /// <para>
 /// Receiver-based operations (mapping, binding, matching) are extension methods only; this class never
-/// duplicates them. The parallel entry point for the <see cref="Option{T}"/> domain is <see cref="Opt"/>.
+/// duplicates them. The parallel entry point for the <see cref="Option{T}"/> domain is <see cref="Option"/>.
 /// </para>
 /// <para>
 /// Production code should prefer the single-type-parameter factories <see cref="Ok{TOk}(TOk)"/> and
 /// <see cref="Err{TOk}(RopError)"/>, which fix the error type to <see cref="RopError"/>.
 /// </para>
 /// <para>
-/// <see cref="Rop"/> is where a result is born: a value enters the pipeline here, either because it is already
+/// <see cref="Result"/> is where a result is born: a value enters the pipeline here, either because it is already
 /// known to be good (<see cref="Ok{TOk}(TOk)"/>) or because a boundary failed (<see cref="Err{TOk}(RopError)"/>).
 /// Everything downstream only reshapes what was decided here.
 /// </para>
 /// <code><![CDATA[
-/// var placed = Rop.Try(() => OrderFixtures.Charge(OrderFixtures.Sample), "E_CHARGE")
-///     .BindOk(static payment => Rop.Ok(payment.Id));
+/// var placed = Result.Try(() => OrderFixtures.Charge(OrderFixtures.Sample), "E_CHARGE")
+///     .BindOk(static payment => Result.Ok(payment.Id));
 ///
 /// // Ok("pay-ord-1001") when the provider answered,
-/// // Err(E_CHARGE) when it threw - Rop is where a result is born.
+/// // Err(E_CHARGE) when it threw - Result is where a result is born.
 /// ]]></code>
 /// </remarks>
-public static partial class Rop
+public static partial class Result
 {
     /// <summary>
     /// Creates a successful result carrying <paramref name="value"/>.
@@ -40,15 +40,15 @@ public static partial class Rop
     /// <exception cref="ArgumentNullException"><paramref name="value"/> is <see langword="null"/>.</exception>
     /// <remarks>
     /// <para>
-    /// Null is never a valid success value. Use <c>Rop.FromNullable</c> or
-    /// <see cref="Opt"/> when absence is expected.
+    /// Null is never a valid success value. Use <c>Result.FromNullable</c> or
+    /// <see cref="Option"/> when absence is expected.
     /// </para>
     /// <para>
     /// This overload fixes the error type explicitly and is the right choice when the caller does not use
     /// <see cref="RopError"/>.
     /// </para>
     /// <code><![CDATA[
-    /// var placed = Rop.Ok<Order, RopError>(OrderFixtures.Sample)
+    /// var placed = Result.Ok<Order, RopError>(OrderFixtures.Sample)
     ///     .MapOk(static order => order.Id);
     ///
     /// // Ok("ord-1001") when the order was accepted,
@@ -61,7 +61,7 @@ public static partial class Rop
         {
             throw new ArgumentNullException(
                 nameof(value),
-                "A success value must not be null. Use Rop.FromNullable, Rop.Try or Option for missing values.");
+                "A success value must not be null. Use Result.FromNullable, Result.Try or Option for missing values.");
         }
 
         return new Result<TOk, TErr>(value, default!, isOk: true);
@@ -80,7 +80,7 @@ public static partial class Rop
     /// error vocabulary from the first step to the last.
     /// </para>
     /// <code><![CDATA[
-    /// var placed = Rop.Ok(OrderFixtures.Sample)
+    /// var placed = Result.Ok(OrderFixtures.Sample)
     ///     .MapOk(static order => order.Id);
     ///
     /// // Ok("ord-1001") when the order was accepted,
@@ -103,7 +103,7 @@ public static partial class Rop
     /// track carries the error, the success track carries nothing yet.
     /// </para>
     /// <code><![CDATA[
-    /// var missing = Rop.Err<Order, RopError>(
+    /// var missing = Result.Err<Order, RopError>(
     ///         RopError.Create("E_ORDER_NOT_FOUND", "order 42 does not exist"))
     ///     .MapErr(static error => error.WithCode("E_ORDER_404"));
     ///
@@ -134,7 +134,7 @@ public static partial class Rop
     /// <see cref="RopError"/>.
     /// </para>
     /// <code><![CDATA[
-    /// var missing = Rop.Err<Order>(RopError.Create("E_ORDER_NOT_FOUND", "order 42 does not exist"))
+    /// var missing = Result.Err<Order>(RopError.Create("E_ORDER_NOT_FOUND", "order 42 does not exist"))
     ///     .MapErr(static error => error.WithCode("E_ORDER_404"));
     ///
     /// // Err(E_ORDER_404) is the failure track of the result,
@@ -158,10 +158,10 @@ public static partial class Rop
     /// function may throw.
     /// </para>
     /// <code><![CDATA[
-    /// Func<string, Result<decimal, RopError>> parse = Rop.Switch<string, decimal, RopError>(
+    /// Func<string, Result<decimal, RopError>> parse = Result.Switch<string, decimal, RopError>(
     ///     static raw => decimal.Parse(raw, CultureInfo.InvariantCulture));
     /// var amount = parse("19.50")
-    ///     .BindOk(static value => Rop.Try(() => value * 1.08m, "E_TAX"));
+    ///     .BindOk(static value => Result.Try(() => value * 1.08m, "E_TAX"));
     ///
     /// // Ok(21.06) when the text parses and the tax step succeeds,
     /// // Err(E_TAX) when the tax step fails - the lifted function itself always returns Ok.
@@ -188,7 +188,7 @@ public static partial class Rop
     /// know whether the call will throw.
     /// </para>
     /// <code><![CDATA[
-    /// Func<string, Result<decimal, RopError>> parse = Rop.TrySwitch<string, decimal>(
+    /// Func<string, Result<decimal, RopError>> parse = Result.TrySwitch<string, decimal>(
     ///     static raw => decimal.Parse(raw, CultureInfo.InvariantCulture),
     ///     static exception => RopError.Create("E_AMOUNT_PARSE", exception.Message));
     /// var amount = parse("19.50").MapOk(static value => value.ToString("0.00", CultureInfo.InvariantCulture));
@@ -224,7 +224,7 @@ public static partial class Rop
     /// The returned function delegates to <see cref="Try{T,TErr}(Func{T},Func{Exception,TErr},Func{TErr})"/>, so a
     /// null payload produces <c>Err(nullResultErrorFactory())</c> exactly as that boundary does.
     /// <code><![CDATA[
-    /// Func<string, Result<decimal, string>> parse = Rop.TrySwitch<string, decimal, string>(
+    /// Func<string, Result<decimal, string>> parse = Result.TrySwitch<string, decimal, string>(
     ///     static raw => decimal.Parse(raw, CultureInfo.InvariantCulture),
     ///     static exception => exception.Message,
     ///     static () => "the amount is missing");
@@ -268,7 +268,7 @@ public static partial class Rop
     /// the task would otherwise become an unawaited success value.
     /// </para>
     /// <code><![CDATA[
-    /// var charged = Rop.Try(
+    /// var charged = Result.Try(
     ///         () => OrderFixtures.Charge(OrderFixtures.Sample),
     ///         static exception => RopError.Create("E_PAYMENT", exception.Message))
     ///     .MapOk(static payment => payment.Id);
@@ -280,7 +280,7 @@ public static partial class Rop
     [SuppressMessage(
         "Design",
         "CA1031:Do not catch general exception types",
-        Justification = "Rop.Try is the single boundary where any non-cancellation exception becomes a domain error.")]
+        Justification = "Result.Try is the single boundary where any non-cancellation exception becomes a domain error.")]
     public static Result<T, RopError> Try<T>(Func<T> func, Func<Exception, RopError> errorFactory)
     {
         ArgumentNullException.ThrowIfNull(func);
@@ -333,7 +333,7 @@ public static partial class Rop
     /// instead of becoming the success payload.
     /// </para>
     /// <code><![CDATA[
-    /// var charged = Rop.Try(
+    /// var charged = Result.Try(
     ///         () => OrderFixtures.Charge(OrderFixtures.Sample),
     ///         static exception => exception.Message,
     ///         static () => "the provider returned no payment")
@@ -346,7 +346,7 @@ public static partial class Rop
     [SuppressMessage(
         "Design",
         "CA1031:Do not catch general exception types",
-        Justification = "Rop.Try is the single boundary where any non-cancellation exception becomes a domain error.")]
+        Justification = "Result.Try is the single boundary where any non-cancellation exception becomes a domain error.")]
     public static Result<T, TErr> Try<T, TErr>(
         Func<T> func,
         Func<Exception, TErr> errorFactory,
@@ -389,7 +389,7 @@ public static partial class Rop
     /// tagged with a stable code the caller can branch on.
     /// </para>
     /// <code><![CDATA[
-    /// var charged = Rop.Try(() => OrderFixtures.Charge(OrderFixtures.Sample), "E_PAYMENT")
+    /// var charged = Result.Try(() => OrderFixtures.Charge(OrderFixtures.Sample), "E_PAYMENT")
     ///     .MapOk(static payment => payment.Id);
     ///
     /// // Ok("pay-ord-1001") when the provider answered,
@@ -415,7 +415,7 @@ public static partial class Rop
     /// Use this overload for side-effecting boundaries that produce no value. The success payload is
     /// <see cref="Unit"/> so the result still composes with every other combinator.
     /// <code><![CDATA[
-    /// var shipped = Rop.Try(
+    /// var shipped = Result.Try(
     ///         () => OrderFixtures.Ship(OrderFixtures.Sample, OrderFixtures.Charge(OrderFixtures.Sample)),
     ///         static exception => RopError.Create("E_SHIP", exception.Message))
     ///     .TeeOk(static _ => Console.WriteLine("parcel handed over"));
@@ -427,7 +427,7 @@ public static partial class Rop
     [SuppressMessage(
         "Design",
         "CA1031:Do not catch general exception types",
-        Justification = "Rop.Try is the single boundary where any non-cancellation exception becomes a domain error.")]
+        Justification = "Result.Try is the single boundary where any non-cancellation exception becomes a domain error.")]
     public static Result<Unit, RopError> Try(Action action, Func<Exception, RopError> errorFactory)
     {
         ArgumentNullException.ThrowIfNull(action);
@@ -462,7 +462,7 @@ public static partial class Rop
     /// The success payload is <see cref="Unit"/> so a side-effecting boundary still composes with every combinator.
     /// There is no null-result branch because an action produces no payload.
     /// <code><![CDATA[
-    /// var shipped = Rop.Try(
+    /// var shipped = Result.Try(
     ///         () => OrderFixtures.Ship(OrderFixtures.Sample, OrderFixtures.Charge(OrderFixtures.Sample)),
     ///         static exception => exception.Message)
     ///     .TeeOk(static _ => Console.WriteLine("parcel handed over"));
@@ -474,7 +474,7 @@ public static partial class Rop
     [SuppressMessage(
         "Design",
         "CA1031:Do not catch general exception types",
-        Justification = "Rop.Try is the single boundary where any non-cancellation exception becomes a domain error.")]
+        Justification = "Result.Try is the single boundary where any non-cancellation exception becomes a domain error.")]
     public static Result<Unit, TErr> Try<TErr>(Action action, Func<Exception, TErr> errorFactory)
     {
         ArgumentNullException.ThrowIfNull(action);
@@ -505,7 +505,7 @@ public static partial class Rop
     /// <remarks>
     /// The shortest boundary for a side effect: the action runs, and a thrown exception becomes a coded error.
     /// <code><![CDATA[
-    /// var shipped = Rop.Try(
+    /// var shipped = Result.Try(
     ///         () => OrderFixtures.Ship(OrderFixtures.Sample, OrderFixtures.Charge(OrderFixtures.Sample)),
     ///         "E_SHIP")
     ///     .TeeOk(static _ => Console.WriteLine("parcel handed over"));
@@ -531,7 +531,7 @@ public static partial class Rop
     /// The factory is evaluated only when the value is <see langword="null"/>.
     /// <code><![CDATA[
     /// Address? shipping = OrderFixtures.Sample.Customer.Address;
-    /// var city = Rop.FromNullable(
+    /// var city = Result.FromNullable(
     ///         shipping,
     ///         () => RopError.Create("E_ADDRESS", "the customer has no shipping address"))
     ///     .MapOk(static value => value.City);
@@ -564,7 +564,7 @@ public static partial class Rop
     /// error system is not <see cref="RopError"/>; the <see cref="RopError"/> overload remains the default.
     /// <code><![CDATA[
     /// Address? shipping = OrderFixtures.Sample.Customer.Address;
-    /// var city = Rop.FromNullable<Address, string>(
+    /// var city = Result.FromNullable<Address, string>(
     ///         shipping,
     ///         () => "the customer has no shipping address")
     ///     .MapOk(static value => value.City);
@@ -590,11 +590,11 @@ public static partial class Rop
     /// <param name="errorFactory">Creates the error when <paramref name="value"/> has no value.</param>
     /// <returns><c>Ok(value)</c> when it has a value; otherwise <c>Err(errorFactory())</c>.</returns>
     /// <remarks>
-    /// Named distinctly from <c>Rop.FromNullable</c> because C# does not permit two
+    /// Named distinctly from <c>Result.FromNullable</c> because C# does not permit two
     /// overloads that differ only by generic constraints.
     /// <code><![CDATA[
     /// int? quantity = OrderFixtures.Sample.ItemCount;
-    /// var count = Rop.FromNullableValue(
+    /// var count = Result.FromNullableValue(
     ///         quantity,
     ///         () => RopError.Create("E_QUANTITY", "the order has no item count"))
     ///     .MapOk(static value => value.ToString(CultureInfo.InvariantCulture));
@@ -627,7 +627,7 @@ public static partial class Rop
     /// not <see cref="RopError"/>.
     /// <code><![CDATA[
     /// int? quantity = OrderFixtures.Sample.ItemCount;
-    /// var count = Rop.FromNullableValue<int, string>(
+    /// var count = Result.FromNullableValue<int, string>(
     ///         quantity,
     ///         () => "the order has no item count")
     ///     .MapOk(static value => value.ToString(CultureInfo.InvariantCulture));

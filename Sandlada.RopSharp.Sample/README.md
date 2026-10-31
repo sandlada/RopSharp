@@ -25,7 +25,7 @@ Four carriers are contacted eagerly, so one failure cannot hide another carrier'
 
 - Domain rejections (`E_NO_ROUTE`) and transport exceptions (`E_CARRIER`) stay distinguishable.
 - Only transient transport failures are retried.
-- `Rop.Partition` keeps every successful bid and every failure visible.
+- `Result.Partition` keeps every successful bid and every failure visible.
 - A late business rule (delivery deadline) can still fail after several carriers succeeded.
 - When no bid survives, all carrier errors are combined.
 - A pre-cancelled token is checked before any carrier is invoked.
@@ -43,7 +43,7 @@ Eight rows run their own pipelines concurrently: parse, account lookup, account 
 
 ## 4. New in 1.1
 
-A compact tour of the additive API: `Rop.Parse`, asynchronous `CombineAsync`, `FailIf`/`Switch`, the
+A compact tour of the additive API: `Result.Parse`, asynchronous `CombineAsync`, `FailIf`/`Switch`, the
 `Either<TLeft,TRight>` union and the `TryLast` option collection helper.
 
 The exact console output is recorded in [`../docs/verification.md`](../docs/verification.md) and is

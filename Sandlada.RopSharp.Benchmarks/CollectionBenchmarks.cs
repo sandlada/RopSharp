@@ -23,25 +23,25 @@ public class CollectionBenchmarks
     [GlobalSetup]
     public void Setup()
     {
-        _allSome = [.. Enumerable.Range(0, N).Select(static value => Opt.Some(value))];
-        _halfNone = [.. Enumerable.Range(0, N).Select(static value => value % 2 == 0 ? Opt.Some(value) : Opt.None<int>())];
-        _allOk = [.. Enumerable.Range(0, N).Select(static value => Rop.Ok(value))];
+        _allSome = [.. Enumerable.Range(0, N).Select(static value => Option.Some(value))];
+        _halfNone = [.. Enumerable.Range(0, N).Select(static value => value % 2 == 0 ? Option.Some(value) : Option.None<int>())];
+        _allOk = [.. Enumerable.Range(0, N).Select(static value => Result.Ok(value))];
     }
 
     [Benchmark(Baseline = true)]
-    public IReadOnlyList<int> Values_AllSome() => Opt.Values(_allSome);
+    public IReadOnlyList<int> Values_AllSome() => Option.Values(_allSome);
 
     [Benchmark]
-    public Option<IReadOnlyList<int>> Sequence_AllSome() => Opt.Sequence(_allSome);
+    public Option<IReadOnlyList<int>> Sequence_AllSome() => Option.Sequence(_allSome);
 
     [Benchmark]
-    public Option<IReadOnlyList<int>> Sequence_HalfNone() => Opt.Sequence(_halfNone);
+    public Option<IReadOnlyList<int>> Sequence_HalfNone() => Option.Sequence(_halfNone);
 
     [Benchmark]
     public Option<IReadOnlyList<int>> Traverse_AllSome() =>
-        Opt.Traverse(Enumerable.Range(0, N), static value => Opt.Some(value));
+        Option.Traverse(Enumerable.Range(0, N), static value => Option.Some(value));
 
     [Benchmark]
     public Result<IReadOnlyList<int>, RopError> ToSingleError_FromValidation() =>
-        Rop.SequenceValidation(_allOk).ToSingleError();
+        Result.SequenceValidation(_allOk).ToSingleError();
 }

@@ -6,7 +6,7 @@ namespace Sandlada.RopSharp;
 /// </summary>
 /// <remarks>
 /// <code><![CDATA[
-/// Rop.Try(() => OrderFixtures.Charge(OrderFixtures.Sample), "E_CHARGE")
+/// Result.Try(() => OrderFixtures.Charge(OrderFixtures.Sample), "E_CHARGE")
 ///     .Switch(
 ///         ok: static payment => Console.WriteLine($"captured {payment.Id}"),
 ///         err: static error => Console.WriteLine($"failed {error.Code}"));
@@ -30,7 +30,7 @@ public static class ResultTerminalExtensions
     /// Exactly one of the two actions runs. Use it when the pipeline ends in a side effect - a log line, a
     /// notification - and there is no value left to hand back.
     /// <code><![CDATA[
-    /// Rop.Try(() => OrderFixtures.Charge(OrderFixtures.Sample), "E_CHARGE")
+    /// Result.Try(() => OrderFixtures.Charge(OrderFixtures.Sample), "E_CHARGE")
     ///     .Switch(
     ///         ok: static payment => Console.WriteLine($"captured {payment.Id}"),
     ///         err: static error => Console.WriteLine($"failed {error.Code}"));
@@ -71,7 +71,7 @@ public static class ResultTerminalExtensions
     /// The task is awaited before the action runs, so the action always sees a decided result. The token is
     /// observed both while waiting and right before the action starts.
     /// <code><![CDATA[
-    /// await Task.FromResult(Rop.Try(() => OrderFixtures.Charge(OrderFixtures.Sample), "E_CHARGE"))
+    /// await Task.FromResult(Result.Try(() => OrderFixtures.Charge(OrderFixtures.Sample), "E_CHARGE"))
     ///     .SwitchAsync(
     ///         ok: static payment => Task.CompletedTask,
     ///         err: static error => Task.CompletedTask);
@@ -118,9 +118,9 @@ public static class ResultTerminalExtensions
     /// <c>MatchFirst</c> is the exit for an aggregating result that has to be reduced to a single error. It is
     /// the counterpart of <see cref="ResultExtensions.Match{TOk,TErr,T}"/> for the collecting track.
     /// <code><![CDATA[
-    /// var validated = Rop.Validate(
-    ///         Rop.Ok<Order, RopError>(OrderFixtures.Sample),
-    ///         Rop.Err<decimal>(RopError.Create("E_AMOUNT", "the amount must be positive")),
+    /// var validated = Result.Validate(
+    ///         Result.Ok<Order, RopError>(OrderFixtures.Sample),
+    ///         Result.Err<decimal>(RopError.Create("E_AMOUNT", "the amount must be positive")),
     ///         static (order, amount) => order.Id);
     ///
     /// var label = validated.MatchFirst(
@@ -160,9 +160,9 @@ public static class ResultTerminalExtensions
     /// <c>SwitchFirst</c> is the action-based counterpart of <see cref="MatchFirst{T,TErr,TResult}"/> for the
     /// collecting track.
     /// <code><![CDATA[
-    /// var validated = Rop.Validate(
-    ///         Rop.Ok<Order, RopError>(OrderFixtures.Sample),
-    ///         Rop.Err<decimal>(RopError.Create("E_AMOUNT", "the amount must be positive")),
+    /// var validated = Result.Validate(
+    ///         Result.Ok<Order, RopError>(OrderFixtures.Sample),
+    ///         Result.Err<decimal>(RopError.Create("E_AMOUNT", "the amount must be positive")),
     ///         static (order, amount) => order.Id);
     ///
     /// validated.SwitchFirst(

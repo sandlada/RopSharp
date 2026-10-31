@@ -150,7 +150,7 @@ public sealed class RopErrorInnerErrorsTests
         var first = Sample.Error("E_FIRST", "one");
         var second = Sample.Error("E_SECOND", "two");
 
-        var collapsed = Rop.Err<int, IReadOnlyList<RopError>>([first, second])
+        var collapsed = Result.Err<int, IReadOnlyList<RopError>>([first, second])
             .ToSingleError(RopError.Combine);
 
         await Assert.That(collapsed.ErrOrThrow().Code).IsEqualTo("E_MULTIPLE");

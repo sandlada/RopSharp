@@ -35,15 +35,15 @@ The test project targets `net10.0` and `net11.0`; `dotnet test` runs both (713 t
 - conditional construction, parsing, action terminals (`Switch`/`MatchFirst`/`SwitchFirst`) and
   `FailIf`/`ThenEnsure`,
 - async aggregation (`CombineAsync`/`ValidateAsync`/`ZipAsync`/`PartitionAsync`) and async LINQ,
-- Option async parity: sync-source async map/bind/tee/filter, `Opt.CombineAsync`/`ZipAsync`/
+- Option async parity: sync-source async map/bind/tee/filter, `Option.CombineAsync`/`ZipAsync`/
   `SequenceAsync`/`TraverseAsync`, and `Task<Option<T>>` query syntax,
-- validation traversal: `Rop.TraverseValidation`, `Rop.SequenceValidationAsync` and
-  `Rop.TraverseValidationAsync` error ordering, full mapping, faults, cancellation and null tasks,
+- validation traversal: `Result.TraverseValidation`, `Result.SequenceValidationAsync` and
+  `Result.TraverseValidationAsync` error ordering, full mapping, faults, cancellation and null tasks,
 - `RopError.InnerErrors`: aggregate structure, single-element identity, nested aggregation, immutable snapshots,
   `With*` propagation and equality exclusion,
-- async boundaries: `Rop.Try(Action)`, `Rop.TryAsync(Func<Task>)`, `Rop.SwitchAsync` and `Rop.TrySwitchAsync`
+- async boundaries: `Result.Try(Action)`, `Result.TryAsync(Func<Task>)`, `Result.SwitchAsync` and `Result.TrySwitchAsync`
   success, exception, null-task, null-payload and cancellation paths,
-- diagnostics: `RopErrorKind` append-only numbering, `Rop.Parse` null/empty distinction, bounded echoing by Unicode
+- diagnostics: `RopErrorKind` append-only numbering, `Result.Parse` null/empty distinction, bounded echoing by Unicode
   code point, control/line-separator/bidi escaping, lone-surrogate escaping and surrogate-safe truncation,
 - hardening: null-returning error factories across `MapErr`/`Ensure`/`FailIf`/`RequireSome`/`Either.ToResult`/
   `ToSingleError`, null-producing `IParsable<T>` implementations, null tasks in `PartitionAsync`, and linear

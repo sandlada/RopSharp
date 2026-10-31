@@ -6,11 +6,11 @@ public sealed class LinqTests
 {
     private static Result<Sample.User, RopError> GetUser(int id) =>
         id > 0
-            ? Rop.Ok(new Sample.User("bob", id))
-            : Rop.Err<Sample.User>(Sample.Error("E_USER", "missing user"));
+            ? Result.Ok(new Sample.User("bob", id))
+            : Result.Err<Sample.User>(Sample.Error("E_USER", "missing user"));
 
     private static Result<Sample.Order, RopError> GetOrder(int age) =>
-        Rop.Ok(new Sample.Order("order", age * 10m));
+        Result.Ok(new Sample.Order("order", age * 10m));
 
     [Test]
     public async Task Result_Select_ProjectsSuccess()
@@ -44,8 +44,8 @@ public sealed class LinqTests
     [Test]
     public async Task Option_SelectAndWhere_Compose()
     {
-        var query = from a in Opt.Some(1)
-                    from b in Opt.Some(2)
+        var query = from a in Option.Some(1)
+                    from b in Option.Some(2)
                     where a < b
                     select a + b;
 
@@ -55,8 +55,8 @@ public sealed class LinqTests
     [Test]
     public async Task Option_Where_CanRejectValue()
     {
-        var query = from a in Opt.Some(2)
-                    from b in Opt.Some(1)
+        var query = from a in Option.Some(2)
+                    from b in Option.Some(1)
                     where a < b
                     select a + b;
 
@@ -66,8 +66,8 @@ public sealed class LinqTests
     [Test]
     public async Task Option_Query_PropagatesNone()
     {
-        var query = from a in Opt.Some(1)
-                    from b in Opt.None<int>()
+        var query = from a in Option.Some(1)
+                    from b in Option.None<int>()
                     select a + b;
 
         await Assert.That(query.IsNone).IsTrue();

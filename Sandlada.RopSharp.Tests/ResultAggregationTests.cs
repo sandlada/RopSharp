@@ -7,7 +7,7 @@ public sealed class ResultAggregationTests
     [Test]
     public async Task Combine2_WithBothSuccess_Merges()
     {
-        var result = Rop.Combine(Rop.Ok(2), Rop.Ok(3), (int a, int b) => a * b);
+        var result = Result.Combine(Result.Ok(2), Result.Ok(3), (int a, int b) => a * b);
 
         await Assert.That(result.OrThrow()).IsEqualTo(6);
     }
@@ -18,9 +18,9 @@ public sealed class ResultAggregationTests
         var first = Sample.Error("E_FIRST");
         var mergerCalled = false;
 
-        var result = Rop.Combine(
-            Rop.Err<int>(first),
-            Rop.Err<int>(Sample.Error("E_SECOND")),
+        var result = Result.Combine(
+            Result.Err<int>(first),
+            Result.Err<int>(Sample.Error("E_SECOND")),
             (int a, int b) =>
             {
                 mergerCalled = true;
@@ -36,7 +36,7 @@ public sealed class ResultAggregationTests
     {
         var second = Sample.Error("E_SECOND");
 
-        var result = Rop.Combine(Rop.Ok(1), Rop.Err<int>(second), (int a, int b) => a + b);
+        var result = Result.Combine(Result.Ok(1), Result.Err<int>(second), (int a, int b) => a + b);
 
         await Assert.That(result.ErrOrThrow()).IsSameReferenceAs(second);
     }
@@ -44,10 +44,10 @@ public sealed class ResultAggregationTests
     [Test]
     public async Task Combine3_WithAllSuccess_Merges()
     {
-        var result = Rop.Combine(
-            Rop.Ok(1),
-            Rop.Ok(2),
-            Rop.Ok(3),
+        var result = Result.Combine(
+            Result.Ok(1),
+            Result.Ok(2),
+            Result.Ok(3),
             (int a, int b, int c) => a + b + c);
 
         await Assert.That(result.OrThrow()).IsEqualTo(6);
@@ -58,10 +58,10 @@ public sealed class ResultAggregationTests
     {
         var third = Sample.Error("E_THIRD");
 
-        var result = Rop.Combine(
-            Rop.Ok(1),
-            Rop.Ok(2),
-            Rop.Err<int>(third),
+        var result = Result.Combine(
+            Result.Ok(1),
+            Result.Ok(2),
+            Result.Err<int>(third),
             (int a, int b, int c) => a + b + c);
 
         await Assert.That(result.ErrOrThrow()).IsSameReferenceAs(third);
@@ -70,7 +70,7 @@ public sealed class ResultAggregationTests
     [Test]
     public async Task Zip2_PairsValues()
     {
-        var result = Rop.Zip(Rop.Ok(1), Rop.Ok("a"));
+        var result = Result.Zip(Result.Ok(1), Result.Ok("a"));
 
         var pair = result.OrThrow();
 
@@ -83,7 +83,7 @@ public sealed class ResultAggregationTests
     {
         var error = Sample.Error();
 
-        var result = Rop.Zip(Rop.Err<int>(error), Rop.Ok("a"));
+        var result = Result.Zip(Result.Err<int>(error), Result.Ok("a"));
 
         await Assert.That(result.ErrOrThrow()).IsSameReferenceAs(error);
     }
@@ -91,7 +91,7 @@ public sealed class ResultAggregationTests
     [Test]
     public async Task Zip3_PairsValues()
     {
-        var triple = Rop.Zip(Rop.Ok(1), Rop.Ok("a"), Rop.Ok(true)).OrThrow();
+        var triple = Result.Zip(Result.Ok(1), Result.Ok("a"), Result.Ok(true)).OrThrow();
 
         await Assert.That(triple.Item1).IsEqualTo(1);
         await Assert.That(triple.Item2).IsEqualTo("a");
@@ -101,7 +101,7 @@ public sealed class ResultAggregationTests
     [Test]
     public async Task Validate2_WithAllSuccess_Merges()
     {
-        var result = Rop.Validate(Rop.Ok(2), Rop.Ok(3), (int a, int b) => a * b);
+        var result = Result.Validate(Result.Ok(2), Result.Ok(3), (int a, int b) => a * b);
 
         await Assert.That(result.OrThrow()).IsEqualTo(6);
     }
@@ -112,9 +112,9 @@ public sealed class ResultAggregationTests
         var first = Sample.Error("E_FIRST");
         var second = Sample.Error("E_SECOND");
 
-        var result = Rop.Validate(
-            Rop.Err<int>(first),
-            Rop.Err<int>(second),
+        var result = Result.Validate(
+            Result.Err<int>(first),
+            Result.Err<int>(second),
             (int a, int b) => a + b);
 
         await TestSupport.AssertSequenceAsync(result.ErrOrThrow(), first, second);
@@ -126,10 +126,10 @@ public sealed class ResultAggregationTests
         var first = Sample.Error("E_FIRST");
         var third = Sample.Error("E_THIRD");
 
-        var result = Rop.Validate(
-            Rop.Err<int>(first),
-            Rop.Ok(2),
-            Rop.Err<int>(third),
+        var result = Result.Validate(
+            Result.Err<int>(first),
+            Result.Ok(2),
+            Result.Err<int>(third),
             (int a, int b, int c) => a + b + c);
 
         var errors = result.ErrOrThrow();
@@ -142,9 +142,9 @@ public sealed class ResultAggregationTests
     [Test]
     public async Task Validate2_ErrorListIsNeverEmpty()
     {
-        var result = Rop.Validate(
-            Rop.Err<int>(Sample.Error()),
-            Rop.Ok(2),
+        var result = Result.Validate(
+            Result.Err<int>(Sample.Error()),
+            Result.Ok(2),
             (int a, int b) => a + b);
 
         await Assert.That(result.ErrOrThrow().Count).IsGreaterThan(0);
@@ -153,7 +153,7 @@ public sealed class ResultAggregationTests
     [Test]
     public async Task Sequence_WithEmptySource_ReturnsEmptyOk()
     {
-        var result = Rop.Sequence(Array.Empty<Result<int, RopError>>());
+        var result = Result.Sequence(Array.Empty<Result<int, RopError>>());
 
         await Assert.That(result.OrThrow().Count).IsEqualTo(0);
     }
@@ -161,7 +161,7 @@ public sealed class ResultAggregationTests
     [Test]
     public async Task Sequence_WithAllSuccess_PreservesOrder()
     {
-        var result = Rop.Sequence(new[] { Rop.Ok(1), Rop.Ok(2), Rop.Ok(3) });
+        var result = Result.Sequence(new[] { Result.Ok(1), Result.Ok(2), Result.Ok(3) });
 
         await TestSupport.AssertSequenceAsync(result.OrThrow(), 1, 2, 3);
     }
@@ -172,12 +172,12 @@ public sealed class ResultAggregationTests
         var error = Sample.Error("E_X");
         var source = new CountingSequence<Result<int, RopError>>(
         [
-            Rop.Ok(1),
-            Rop.Err<int>(error),
-            Rop.Ok(3),
+            Result.Ok(1),
+            Result.Err<int>(error),
+            Result.Ok(3),
         ]);
 
-        var result = Rop.Sequence(source);
+        var result = Result.Sequence(source);
 
         await Assert.That(result.ErrOrThrow()).IsSameReferenceAs(error);
         await Assert.That(source.GetEnumeratorCalls).IsEqualTo(1);
@@ -191,12 +191,12 @@ public sealed class ResultAggregationTests
         var second = Sample.Error("E_SECOND");
         var source = new CountingSequence<Result<int, RopError>>(
         [
-            Rop.Ok(1),
-            Rop.Err<int>(first),
-            Rop.Err<int>(second),
+            Result.Ok(1),
+            Result.Err<int>(first),
+            Result.Err<int>(second),
         ]);
 
-        var result = Rop.SequenceValidation(source);
+        var result = Result.SequenceValidation(source);
 
         await TestSupport.AssertSequenceAsync(result.ErrOrThrow(), first, second);
         await Assert.That(source.GetEnumeratorCalls).IsEqualTo(1);
@@ -208,8 +208,8 @@ public sealed class ResultAggregationTests
     {
         var error = Sample.Error("E_ODD");
 
-        var result = Rop.Traverse([1, 2, 3, 4], value =>
-            value % 2 == 0 ? Rop.Ok(value * 10) : Rop.Err<int>(error));
+        var result = Result.Traverse([1, 2, 3, 4], value =>
+            value % 2 == 0 ? Result.Ok(value * 10) : Result.Err<int>(error));
 
         await Assert.That(result.ErrOrThrow()).IsSameReferenceAs(error);
     }
@@ -217,7 +217,7 @@ public sealed class ResultAggregationTests
     [Test]
     public async Task Traverse_WithAllSuccess_PreservesOrder()
     {
-        var result = Rop.Traverse([1, 2, 3], value => Rop.Ok(value * 2));
+        var result = Result.Traverse([1, 2, 3], value => Result.Ok(value * 2));
 
         await TestSupport.AssertSequenceAsync(result.OrThrow(), 2, 4, 6);
     }
@@ -227,11 +227,11 @@ public sealed class ResultAggregationTests
     {
         var error = Sample.Error();
 
-        var (oks, errs) = Rop.Partition(new[]
+        var (oks, errs) = Result.Partition(new[]
         {
-            Rop.Ok(1),
-            Rop.Err<int>(error),
-            Rop.Ok(2),
+            Result.Ok(1),
+            Result.Err<int>(error),
+            Result.Ok(2),
         });
 
         await TestSupport.AssertSequenceAsync(oks, 1, 2);
@@ -242,10 +242,10 @@ public sealed class ResultAggregationTests
     [Test]
     public async Task ToValidation_LiftsSuccessAndWrapsSingleError()
     {
-        var ok = Rop.Ok(1).ToValidation();
+        var ok = Result.Ok(1).ToValidation();
         var error = Sample.Error();
 
-        var err = Rop.Err<int>(error).ToValidation();
+        var err = Result.Err<int>(error).ToValidation();
 
         await Assert.That(ok.OrThrow()).IsEqualTo(1);
         await TestSupport.AssertSequenceAsync(err.ErrOrThrow(), error);
@@ -256,7 +256,7 @@ public sealed class ResultAggregationTests
     {
         var first = Sample.Error("E_FIRST");
 
-        var result = Rop.Err<int, IReadOnlyList<RopError>>([first, Sample.Error("E_SECOND")])
+        var result = Result.Err<int, IReadOnlyList<RopError>>([first, Sample.Error("E_SECOND")])
             .ToSingleError();
 
         await Assert.That(result.ErrOrThrow()).IsSameReferenceAs(first);
@@ -265,7 +265,7 @@ public sealed class ResultAggregationTests
     [Test]
     public async Task ToSingleError_WithStrategy_Combines()
     {
-        var result = Rop.Err<int, IReadOnlyList<RopError>>(
+        var result = Result.Err<int, IReadOnlyList<RopError>>(
         [
             Sample.Error("E_FIRST", "one"),
             Sample.Error("E_SECOND", "two"),
@@ -279,7 +279,7 @@ public sealed class ResultAggregationTests
     [Test]
     public async Task ToSingleError_KeepsSuccess()
     {
-        var result = Rop.Ok<int, IReadOnlyList<RopError>>(5).ToSingleError();
+        var result = Result.Ok<int, IReadOnlyList<RopError>>(5).ToSingleError();
 
         await Assert.That(result.OrThrow()).IsEqualTo(5);
     }
@@ -287,7 +287,7 @@ public sealed class ResultAggregationTests
     [Test]
     public async Task ToSingleError_WithEmptyErrorList_Throws()
     {
-        var invalid = Rop.Err<int, IReadOnlyList<RopError>>([]);
+        var invalid = Result.Err<int, IReadOnlyList<RopError>>([]);
 
         var exception = TestSupport.Catch(() => invalid.ToSingleError());
 
@@ -298,7 +298,7 @@ public sealed class ResultAggregationTests
     public async Task Combine_WithNullMerger_Throws()
     {
         var exception = TestSupport.Catch(() =>
-            Rop.Combine(Rop.Ok(1), Rop.Ok(2), (Func<int, int, int>)null!));
+            Result.Combine(Result.Ok(1), Result.Ok(2), (Func<int, int, int>)null!));
 
         await Assert.That(exception is ArgumentNullException).IsTrue();
     }

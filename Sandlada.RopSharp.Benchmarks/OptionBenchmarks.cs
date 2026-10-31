@@ -11,8 +11,8 @@ namespace Sandlada.RopSharp.Benchmarks;
 [Config(typeof(BenchConfig))]
 public class OptionBenchmarks
 {
-    private readonly Option<int> _some = Opt.Some(42);
-    private readonly Option<int> _none = Opt.None<int>();
+    private readonly Option<int> _some = Option.Some(42);
+    private readonly Option<int> _none = Option.None<int>();
 
     [Benchmark(Baseline = true, OperationsPerInvoke = 1000)]
     public int MapSome_OnSome()
@@ -32,7 +32,7 @@ public class OptionBenchmarks
         var total = 0;
         for (var index = 0; index < 1000; index++)
         {
-            total += _some.BindSome(static value => Opt.Some(value + 1)).IsSome ? 1 : 0;
+            total += _some.BindSome(static value => Option.Some(value + 1)).IsSome ? 1 : 0;
         }
 
         return total;

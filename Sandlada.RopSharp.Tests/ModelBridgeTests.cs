@@ -7,7 +7,7 @@ public sealed class ModelBridgeTests
     [Test]
     public async Task ResultToEither_Ok_BecomesRight()
     {
-        var either = Rop.Ok(42).ToEither();
+        var either = Result.Ok(42).ToEither();
 
         await Assert.That(either.IsRight).IsTrue();
         await Assert.That(either.TryGetRight(out var value)).IsTrue();
@@ -19,7 +19,7 @@ public sealed class ModelBridgeTests
     {
         var error = Sample.Error("E_LEFT");
 
-        var either = Rop.Err<int>(error).ToEither();
+        var either = Result.Err<int>(error).ToEither();
 
         await Assert.That(either.IsLeft).IsTrue();
         await Assert.That(either.TryGetLeft(out var value)).IsTrue();
@@ -29,7 +29,7 @@ public sealed class ModelBridgeTests
     [Test]
     public async Task ResultToEither_WithNullSuccess_Throws()
     {
-        var nullSuccess = Rop.Ok("x").MapOk(_ => (string?)null);
+        var nullSuccess = Result.Ok("x").MapOk(_ => (string?)null);
 
         var exception = TestSupport.Catch(() => nullSuccess.ToEither());
 
@@ -40,8 +40,8 @@ public sealed class ModelBridgeTests
     public async Task ResultToEither_RoundTripsThroughToResult()
     {
         var error = Sample.Error("E_ROUND");
-        var failed = Rop.Err<int>(error).ToEither().ToResult(identity => identity);
-        var succeeded = Rop.Ok(7).ToEither().ToResult(identity => identity);
+        var failed = Result.Err<int>(error).ToEither().ToResult(identity => identity);
+        var succeeded = Result.Ok(7).ToEither().ToResult(identity => identity);
 
         await Assert.That(failed.ErrOrThrow()).IsSameReferenceAs(error);
         await Assert.That(succeeded.OrThrow()).IsEqualTo(7);
@@ -50,7 +50,7 @@ public sealed class ModelBridgeTests
     [Test]
     public async Task OptionToEither_Some_BecomesRight()
     {
-        var either = Opt.Some(5).ToEither("missing");
+        var either = Option.Some(5).ToEither("missing");
 
         await Assert.That(either.IsRight).IsTrue();
         await Assert.That(either.TryGetRight(out var value)).IsTrue();
@@ -60,7 +60,7 @@ public sealed class ModelBridgeTests
     [Test]
     public async Task OptionToEither_None_BecomesLeft()
     {
-        var either = Opt.None<int>().ToEither("missing");
+        var either = Option.None<int>().ToEither("missing");
 
         await Assert.That(either.IsLeft).IsTrue();
         await Assert.That(either.TryGetLeft(out var value)).IsTrue();
@@ -70,7 +70,7 @@ public sealed class ModelBridgeTests
     [Test]
     public async Task OptionToEither_WithNullLeft_ThrowsEagerly()
     {
-        var exception = TestSupport.Catch(() => Opt.None<int>().ToEither((string)null!));
+        var exception = TestSupport.Catch(() => Option.None<int>().ToEither((string)null!));
 
         await Assert.That(exception is ArgumentNullException).IsTrue();
     }
@@ -80,7 +80,7 @@ public sealed class ModelBridgeTests
     {
         var called = false;
 
-        var either = Opt.Some(5).ToEither(() =>
+        var either = Option.Some(5).ToEither(() =>
         {
             called = true;
             return "missing";
@@ -93,7 +93,7 @@ public sealed class ModelBridgeTests
     [Test]
     public async Task OptionToEither_WithFactory_UsesItForNone()
     {
-        var either = Opt.None<int>().ToEither(() => "missing");
+        var either = Option.None<int>().ToEither(() => "missing");
 
         await Assert.That(either.TryGetLeft(out var value)).IsTrue();
         await Assert.That(value).IsEqualTo("missing");
@@ -103,7 +103,7 @@ public sealed class ModelBridgeTests
     public async Task OptionToEither_WithNullFactory_Throws()
     {
         var exception = TestSupport.Catch(() =>
-            Opt.None<int>().ToEither((Func<string>)null!));
+            Option.None<int>().ToEither((Func<string>)null!));
 
         await Assert.That(exception is ArgumentNullException).IsTrue();
     }
@@ -112,7 +112,7 @@ public sealed class ModelBridgeTests
     public async Task OptionToEither_WithFactoryReturningNull_Throws()
     {
         var exception = TestSupport.Catch(() =>
-            Opt.None<int>().ToEither(() => (string)null!));
+            Option.None<int>().ToEither(() => (string)null!));
 
         await Assert.That(exception is InvalidOperationException).IsTrue();
     }

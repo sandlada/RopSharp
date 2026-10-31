@@ -249,7 +249,7 @@ public readonly struct Either<TLeft, TRight> : IEquatable<Either<TLeft, TRight>>
     /// <remarks>
     /// <para>
     /// Both <c>ToResult</c> overloads reject a null error value the same way: with the library-wide
-    /// <see cref="InvalidOperationException"/> rather than the argument exception raised by <see cref="Rop.Err{TOk,TErr}"/>.
+    /// <see cref="InvalidOperationException"/> rather than the argument exception raised by <see cref="Result.Err{TOk,TErr}"/>.
     /// </para>
     /// <para>
     /// The crossing is explicit: the left payload becomes the error, and the factory decides how much of it
@@ -267,8 +267,8 @@ public readonly struct Either<TLeft, TRight> : IEquatable<Either<TLeft, TRight>>
     {
         ArgumentNullException.ThrowIfNull(errorFactory);
         return _isLeft
-            ? Rop.Err<TRight>(Rop.RequireError(errorFactory(_left)))
-            : Rop.Ok<TRight>(_right);
+            ? Result.Err<TRight>(Result.RequireError(errorFactory(_left)))
+            : Result.Ok<TRight>(_right);
     }
 
     /// <summary>
@@ -296,8 +296,8 @@ public readonly struct Either<TLeft, TRight> : IEquatable<Either<TLeft, TRight>>
     {
         ArgumentNullException.ThrowIfNull(errorFactory);
         return _isLeft
-            ? Rop.Err<TRight, TErr>(Rop.RequireError(errorFactory(_left)))
-            : Rop.Ok<TRight, TErr>(_right);
+            ? Result.Err<TRight, TErr>(Result.RequireError(errorFactory(_left)))
+            : Result.Ok<TRight, TErr>(_right);
     }
 
     /// <summary>
@@ -318,7 +318,7 @@ public readonly struct Either<TLeft, TRight> : IEquatable<Either<TLeft, TRight>>
     /// // None on the left branch - the left value is dropped, not converted.
     /// ]]></code>
     /// </remarks>
-    public Option<TRight> ToOption() => _isLeft ? Opt.None<TRight>() : Opt.Some(_right);
+    public Option<TRight> ToOption() => _isLeft ? Option.None<TRight>() : Option.Some(_right);
 
     /// <inheritdoc />
     /// <remarks>

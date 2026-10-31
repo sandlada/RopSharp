@@ -9,7 +9,7 @@ public sealed class AdditionalCoverageTests
     {
         var called = false;
 
-        var result = await Task.FromResult(Rop.Err<int>(Sample.Error("E_X"))).TeeOkAsync(_ =>
+        var result = await Task.FromResult(Result.Err<int>(Sample.Error("E_X"))).TeeOkAsync(_ =>
         {
             called = true;
             return Task.CompletedTask;
@@ -24,7 +24,7 @@ public sealed class AdditionalCoverageTests
     {
         var called = false;
 
-        var result = await Task.FromResult(Rop.Ok(1)).TeeErrAsync(_ =>
+        var result = await Task.FromResult(Result.Ok(1)).TeeErrAsync(_ =>
         {
             called = true;
             return Task.CompletedTask;
@@ -39,7 +39,7 @@ public sealed class AdditionalCoverageTests
     {
         var called = false;
 
-        var option = await Task.FromResult(Opt.None<int>()).TeeSomeAsync(_ =>
+        var option = await Task.FromResult(Option.None<int>()).TeeSomeAsync(_ =>
         {
             called = true;
             return Task.CompletedTask;
@@ -54,7 +54,7 @@ public sealed class AdditionalCoverageTests
     {
         var called = false;
 
-        var option = await Task.FromResult(Opt.Some(1)).TeeNoneAsync(() =>
+        var option = await Task.FromResult(Option.Some(1)).TeeNoneAsync(() =>
         {
             called = true;
             return Task.CompletedTask;
@@ -69,7 +69,7 @@ public sealed class AdditionalCoverageTests
     {
         var mapped = new List<int>();
 
-        var result = await Rop.TraverseAsync<int, int, RopError>(
+        var result = await Result.TraverseAsync<int, int, RopError>(
         [
             1,
             2,
@@ -77,7 +77,7 @@ public sealed class AdditionalCoverageTests
         ], (int value) =>
         {
             mapped.Add(value);
-            return Task.FromResult(value == 1 ? Rop.Err<int>(Sample.Error("E_FIRST")) : Rop.Ok(value));
+            return Task.FromResult(value == 1 ? Result.Err<int>(Sample.Error("E_FIRST")) : Result.Ok(value));
         });
 
         await Assert.That(result.ErrOrThrow().Code).IsEqualTo("E_FIRST");
@@ -89,7 +89,7 @@ public sealed class AdditionalCoverageTests
     {
         var error = Sample.Error("E_SECOND");
 
-        var result = Rop.Zip(Rop.Ok(1), Rop.Err<int>(error), Rop.Ok(3));
+        var result = Result.Zip(Result.Ok(1), Result.Err<int>(error), Result.Ok(3));
 
         await Assert.That(result.ErrOrThrow()).IsSameReferenceAs(error);
     }
@@ -99,10 +99,10 @@ public sealed class AdditionalCoverageTests
     {
         var called = false;
 
-        var result = Rop.Validate(
-            Rop.Ok(1),
-            Rop.Err<int>(Sample.Error()),
-            Rop.Ok(3),
+        var result = Result.Validate(
+            Result.Ok(1),
+            Result.Err<int>(Sample.Error()),
+            Result.Ok(3),
             (int a, int b, int c) =>
             {
                 called = true;
@@ -116,7 +116,7 @@ public sealed class AdditionalCoverageTests
     [Test]
     public async Task Try_WithBlankCode_Throws()
     {
-        var exception = TestSupport.Catch(() => Rop.Try(() => 1, code: "  "));
+        var exception = TestSupport.Catch(() => Result.Try(() => 1, code: "  "));
 
         await Assert.That(exception is ArgumentException).IsTrue();
     }
@@ -124,7 +124,7 @@ public sealed class AdditionalCoverageTests
     [Test]
     public async Task TryAsync_WithBlankCode_Throws()
     {
-        var exception = TestSupport.Catch(() => Rop.TryAsync(() => Task.FromResult(1), code: " "));
+        var exception = TestSupport.Catch(() => Result.TryAsync(() => Task.FromResult(1), code: " "));
 
         await Assert.That(exception is ArgumentException).IsTrue();
     }
@@ -140,26 +140,26 @@ public sealed class AdditionalCoverageTests
     [Test]
     public async Task Result_EqualsObject_ComparesByValue()
     {
-        object equal = Rop.Ok<int, string>(1);
-        object different = Rop.Ok<int, string>(2);
-        object error = Rop.Err<int, string>("E");
+        object equal = Result.Ok<int, string>(1);
+        object different = Result.Ok<int, string>(2);
+        object error = Result.Err<int, string>("E");
 
-        await Assert.That(Rop.Ok<int, string>(1).Equals(equal)).IsTrue();
-        await Assert.That(Rop.Ok<int, string>(1).Equals(different)).IsFalse();
-        await Assert.That(Rop.Ok<int, string>(1).Equals(error)).IsFalse();
-        await Assert.That(Rop.Ok<int, string>(1).Equals(null)).IsFalse();
+        await Assert.That(Result.Ok<int, string>(1).Equals(equal)).IsTrue();
+        await Assert.That(Result.Ok<int, string>(1).Equals(different)).IsFalse();
+        await Assert.That(Result.Ok<int, string>(1).Equals(error)).IsFalse();
+        await Assert.That(Result.Ok<int, string>(1).Equals(null)).IsFalse();
     }
 
     [Test]
     public async Task Option_EqualsObject_ComparesByValue()
     {
-        object some = Opt.Some(1);
-        object none = Opt.None<int>();
+        object some = Option.Some(1);
+        object none = Option.None<int>();
 
-        await Assert.That(Opt.Some(1).Equals(some)).IsTrue();
-        await Assert.That(Opt.Some(1).Equals(none)).IsFalse();
-        await Assert.That(Opt.None<int>().Equals(none)).IsTrue();
-        await Assert.That(Opt.Some(1).Equals(null)).IsFalse();
+        await Assert.That(Option.Some(1).Equals(some)).IsTrue();
+        await Assert.That(Option.Some(1).Equals(none)).IsFalse();
+        await Assert.That(Option.None<int>().Equals(none)).IsTrue();
+        await Assert.That(Option.Some(1).Equals(null)).IsFalse();
     }
 
     [Test]
@@ -178,7 +178,7 @@ public sealed class AdditionalCoverageTests
         using var cts = new CancellationTokenSource();
         cts.Cancel();
 
-        var result = await Task.FromResult(Rop.Err<int>(Sample.Error("E_X")))
+        var result = await Task.FromResult(Result.Err<int>(Sample.Error("E_X")))
             .MapOkAsync((value, _) => Task.FromResult(value + 1), cts.Token);
 
         await Assert.That(result.ErrOrThrow().Code).IsEqualTo("E_X");
@@ -190,11 +190,11 @@ public sealed class AdditionalCoverageTests
         var first = new TaskCompletionSource<Result<int, RopError>>(TaskCreationOptions.RunContinuationsAsynchronously);
         var second = new TaskCompletionSource<Result<int, RopError>>(TaskCreationOptions.RunContinuationsAsynchronously);
 
-        var pending = Rop.SequenceAsync([first.Task, second.Task]);
+        var pending = Result.SequenceAsync([first.Task, second.Task]);
 
         // The second task completes first, but sequencing must still report results in enumeration order.
-        second.SetResult(Rop.Ok(2));
-        first.SetResult(Rop.Ok(1));
+        second.SetResult(Result.Ok(2));
+        first.SetResult(Result.Ok(1));
 
         await TestSupport.AssertSequenceAsync((await pending).OrThrow(), 1, 2);
     }

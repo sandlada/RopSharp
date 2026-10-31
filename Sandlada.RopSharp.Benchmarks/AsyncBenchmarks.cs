@@ -13,8 +13,8 @@ public class AsyncBenchmarks
 {
     private static readonly RopError Error = RopError.Create("E_BENCH", "failure");
 
-    private readonly Result<int, RopError> _ok = Rop.Ok(42);
-    private readonly Result<int, RopError> _err = Rop.Err<int>(Error);
+    private readonly Result<int, RopError> _ok = Result.Ok(42);
+    private readonly Result<int, RopError> _err = Result.Err<int>(Error);
 
     private Task<int> _completed = Task.FromResult(42);
     private Task<int> _pending = null!;
@@ -44,11 +44,11 @@ public class AsyncBenchmarks
 
     [Benchmark]
     public async Task<Result<int, RopError>> BindOkAsync_Completed() =>
-        await _ok.BindOkAsync(static value => Task.FromResult(Rop.Ok(value + 1)));
+        await _ok.BindOkAsync(static value => Task.FromResult(Result.Ok(value + 1)));
 
     [Benchmark]
     public async Task<Result<int, RopError>> BindOkAsync_Pending() =>
-        await _ok.BindOkAsync(_ => _pending.ContinueWith(static t => Rop.Ok(t.Result), TaskContinuationOptions.ExecuteSynchronously));
+        await _ok.BindOkAsync(_ => _pending.ContinueWith(static t => Result.Ok(t.Result), TaskContinuationOptions.ExecuteSynchronously));
 
     [Benchmark]
     public async Task<Result<int, RopError>> MapErrAsync_OnErr() =>

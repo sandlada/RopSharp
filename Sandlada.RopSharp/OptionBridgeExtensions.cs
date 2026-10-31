@@ -7,7 +7,7 @@ namespace Sandlada.RopSharp;
 /// Absence and failure are different concepts, so every crossing is explicit. <c>RequireSome</c> is the only
 /// Option-to-Result bridge; <c>ToOption</c> is the only reverse bridge and deliberately discards the error.
 /// <code><![CDATA[
-/// var address = Opt.FromNullable(OrderFixtures.Sample.Customer.Address)
+/// var address = Option.FromNullable(OrderFixtures.Sample.Customer.Address)
 ///     .RequireSome(() => RopError.Create("E_ADDRESS", "the customer has no shipping address"))
 ///     .MapOk(static shipping => shipping.City);
 ///
@@ -29,7 +29,7 @@ public static class OptionBridgeExtensions
     /// <remarks>
     /// This is the boundary where an absence becomes a failure with a reason. The error is supplied eagerly.
     /// <code><![CDATA[
-    /// var city = Opt.FromNullable(OrderFixtures.CustomerWithoutAddress.Address)
+    /// var city = Option.FromNullable(OrderFixtures.CustomerWithoutAddress.Address)
     ///     .RequireSome(RopError.Create("E_ADDRESS", "the customer has no shipping address"))
     ///     .MapOk(static shipping => shipping.City);
     ///
@@ -41,8 +41,8 @@ public static class OptionBridgeExtensions
     {
         ArgumentGuards.ThrowIfNull(error, nameof(error));
         return option.TryGetValue(out var value)
-            ? Rop.Ok<T, TErr>(value)
-            : Rop.Err<T, TErr>(error);
+            ? Result.Ok<T, TErr>(value)
+            : Result.Err<T, TErr>(error);
     }
 
     /// <summary>
@@ -59,7 +59,7 @@ public static class OptionBridgeExtensions
     /// A null factory result is a programming error. It faults with <see cref="InvalidOperationException"/>, the same
     /// contract the other lazy error factories in the library follow.
     /// <code><![CDATA[
-    /// var city = Opt.FromNullable(OrderFixtures.CustomerWithoutAddress.Address)
+    /// var city = Option.FromNullable(OrderFixtures.CustomerWithoutAddress.Address)
     ///     .RequireSome(() => RopError.Create("E_ADDRESS", "the customer has no shipping address"))
     ///     .MapOk(static shipping => shipping.City);
     ///
@@ -71,8 +71,8 @@ public static class OptionBridgeExtensions
     {
         ArgumentNullException.ThrowIfNull(errorFactory);
         return option.TryGetValue(out var value)
-            ? Rop.Ok<T, TErr>(value)
-            : Rop.Err<T, TErr>(Rop.MaterializeError(errorFactory));
+            ? Result.Ok<T, TErr>(value)
+            : Result.Err<T, TErr>(Result.MaterializeError(errorFactory));
     }
 
     /// <summary>
@@ -87,7 +87,7 @@ public static class OptionBridgeExtensions
     /// A success carrying <see langword="null"/> (possible after a nullable mapping) is treated as <c>None</c>,
     /// because an option never contains null.
     /// <code><![CDATA[
-    /// var city = Rop.Try(() => OrderFixtures.Charge(OrderFixtures.Sample), "E_CHARGE")
+    /// var city = Result.Try(() => OrderFixtures.Charge(OrderFixtures.Sample), "E_CHARGE")
     ///     .MapOk(static payment => payment.Id)
     ///     .ToOption();
     ///
@@ -100,10 +100,10 @@ public static class OptionBridgeExtensions
         if (!result.TryGetOk(out var value))
         {
             result.ThrowIfUninitialized();
-            return Opt.None<T>();
+            return Option.None<T>();
         }
 
-        return value is not null ? Opt.Some(value) : Opt.None<T>();
+        return value is not null ? Option.Some(value) : Option.None<T>();
     }
 
     /// <summary>
@@ -120,7 +120,7 @@ public static class OptionBridgeExtensions
     /// <remarks>
     /// The flip moves the failure out of the option, so the caller sees the error even when the option was empty.
     /// <code><![CDATA[
-    /// var placed = Opt.Some(Rop.Try(() => OrderFixtures.Charge(OrderFixtures.Sample), "E_CHARGE"))
+    /// var placed = Option.Some(Result.Try(() => OrderFixtures.Charge(OrderFixtures.Sample), "E_CHARGE"))
     ///     .Transpose()
     ///     .MapOk(static payment => payment.MapSome(static value => value.Id));
     ///
@@ -132,15 +132,15 @@ public static class OptionBridgeExtensions
     {
         if (!option.TryGetValue(out var inner))
         {
-            return Rop.Ok<Option<T>, TErr>(Opt.None<T>());
+            return Result.Ok<Option<T>, TErr>(Option.None<T>());
         }
 
         if (!inner.TryGetOk(out var value))
         {
-            return Rop.Err<Option<T>, TErr>(inner.ErrUnsafe);
+            return Result.Err<Option<T>, TErr>(inner.ErrUnsafe);
         }
 
-        return Rop.OkUnchecked<Option<T>, TErr>(value is null ? Opt.None<T>() : Opt.Some(value));
+        return Result.OkUnchecked<Option<T>, TErr>(value is null ? Option.None<T>() : Option.Some(value));
     }
 
     /// <summary>
@@ -157,8 +157,8 @@ public static class OptionBridgeExtensions
     /// The flip moves the failure into the option, so the caller can keep working with the optional track and
     /// still see the error.
     /// <code><![CDATA[
-    /// var placed = Rop.Try(() => OrderFixtures.Charge(OrderFixtures.Sample), "E_CHARGE")
-    ///     .MapOk(static payment => Opt.Some(payment.Id))
+    /// var placed = Result.Try(() => OrderFixtures.Charge(OrderFixtures.Sample), "E_CHARGE")
+    ///     .MapOk(static payment => Option.Some(payment.Id))
     ///     .Transpose();
     ///
     /// // Some(Ok("pay-ord-1001")) for Ok(Some(receiptId)),
@@ -169,11 +169,11 @@ public static class OptionBridgeExtensions
     {
         if (!result.TryGetOk(out var inner))
         {
-            return Opt.Some(Rop.Err<T, TErr>(result.ErrUnsafe));
+            return Option.Some(Result.Err<T, TErr>(result.ErrUnsafe));
         }
 
         return inner.TryGetValue(out var value)
-            ? Opt.Some(Rop.Ok<T, TErr>(value))
-            : Opt.None<Result<T, TErr>>();
+            ? Option.Some(Result.Ok<T, TErr>(value))
+            : Option.None<Result<T, TErr>>();
     }
 }

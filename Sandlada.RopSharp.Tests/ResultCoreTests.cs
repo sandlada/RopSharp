@@ -7,7 +7,7 @@ public sealed class ResultCoreTests
     [Test]
     public async Task Ok_SetsSuccessTrackAndValue()
     {
-        var result = Rop.Ok<int, RopError>(42);
+        var result = Result.Ok<int, RopError>(42);
 
         await Assert.That(result.IsOk).IsTrue();
         await Assert.That(result.IsErr).IsFalse();
@@ -21,7 +21,7 @@ public sealed class ResultCoreTests
     {
         var error = Sample.Error("E_X", "bad");
 
-        var result = Rop.Err<int, RopError>(error);
+        var result = Result.Err<int, RopError>(error);
 
         await Assert.That(result.IsErr).IsTrue();
         await Assert.That(result.IsOk).IsFalse();
@@ -33,8 +33,8 @@ public sealed class ResultCoreTests
     [Test]
     public async Task SingleTypeParameterFactories_UseRopError()
     {
-        Result<int, RopError> ok = Rop.Ok(1);
-        Result<int, RopError> err = Rop.Err<int>(Sample.Error());
+        Result<int, RopError> ok = Result.Ok(1);
+        Result<int, RopError> err = Result.Err<int>(Sample.Error());
 
         await Assert.That(ok.IsOk).IsTrue();
         await Assert.That(err.IsErr).IsTrue();
@@ -44,8 +44,8 @@ public sealed class ResultCoreTests
     [Test]
     public async Task CustomErrorType_IsSupported()
     {
-        Result<int, string> ok = Rop.Ok<int, string>(42);
-        Result<int, string> err = Rop.Err<int, string>("bad");
+        Result<int, string> ok = Result.Ok<int, string>(42);
+        Result<int, string> err = Result.Err<int, string>("bad");
 
         await Assert.That(ok.OrThrow()).IsEqualTo(42);
         await Assert.That(err.ErrOrThrow()).IsEqualTo("bad");
@@ -54,7 +54,7 @@ public sealed class ResultCoreTests
     [Test]
     public async Task Ok_WithNullReference_Throws()
     {
-        var exception = TestSupport.Catch(() => Rop.Ok<string, RopError>(null!));
+        var exception = TestSupport.Catch(() => Result.Ok<string, RopError>(null!));
 
         await Assert.That(exception is ArgumentNullException).IsTrue();
     }
@@ -62,7 +62,7 @@ public sealed class ResultCoreTests
     [Test]
     public async Task Ok_WithNullNullableValue_Throws()
     {
-        var exception = TestSupport.Catch(() => Rop.Ok<int?, RopError>(null));
+        var exception = TestSupport.Catch(() => Result.Ok<int?, RopError>(null));
 
         await Assert.That(exception is ArgumentNullException).IsTrue();
     }
@@ -70,7 +70,7 @@ public sealed class ResultCoreTests
     [Test]
     public async Task Err_WithNull_Throws()
     {
-        var exception = TestSupport.Catch(() => Rop.Err<int, string>(null!));
+        var exception = TestSupport.Catch(() => Result.Err<int, string>(null!));
 
         await Assert.That(exception is ArgumentNullException).IsTrue();
     }
@@ -78,19 +78,19 @@ public sealed class ResultCoreTests
     [Test]
     public async Task OkOrDefault_ReturnsValueOrDefault()
     {
-        await Assert.That(Rop.Ok<int, RopError>(7).OkOrDefault()).IsEqualTo(7);
-        await Assert.That(Rop.Err<int, RopError>(Sample.Error()).OkOrDefault()).IsEqualTo(0);
-        await Assert.That(Rop.Err<string, RopError>(Sample.Error()).OkOrDefault()).IsNull();
+        await Assert.That(Result.Ok<int, RopError>(7).OkOrDefault()).IsEqualTo(7);
+        await Assert.That(Result.Err<int, RopError>(Sample.Error()).OkOrDefault()).IsEqualTo(0);
+        await Assert.That(Result.Err<string, RopError>(Sample.Error()).OkOrDefault()).IsNull();
     }
 
     [Test]
     public async Task Equality_ComparesTrackAndPayload()
     {
-        var ok = Rop.Ok<int, string>(1);
-        var otherOk = Rop.Ok<int, string>(1);
-        var differentOk = Rop.Ok<int, string>(2);
-        var err = Rop.Err<int, string>("a");
-        var otherErr = Rop.Err<int, string>("a");
+        var ok = Result.Ok<int, string>(1);
+        var otherOk = Result.Ok<int, string>(1);
+        var differentOk = Result.Ok<int, string>(2);
+        var err = Result.Err<int, string>("a");
+        var otherErr = Result.Err<int, string>("a");
 
         await Assert.That(ok.Equals(otherOk)).IsTrue();
         await Assert.That(ok == otherOk).IsTrue();
@@ -104,8 +104,8 @@ public sealed class ResultCoreTests
     [Test]
     public async Task Equality_WithRopError_UsesErrorValueEquality()
     {
-        var left = Rop.Err<int, RopError>(RopError.Create("E_A", "message"));
-        var right = Rop.Err<int, RopError>(RopError.Create("E_A", "message"));
+        var left = Result.Err<int, RopError>(RopError.Create("E_A", "message"));
+        var right = Result.Err<int, RopError>(RopError.Create("E_A", "message"));
 
         await Assert.That(left.Equals(right)).IsTrue();
     }
@@ -113,8 +113,8 @@ public sealed class ResultCoreTests
     [Test]
     public async Task ToString_ShowsTrackAndPayload()
     {
-        await Assert.That(Rop.Ok<int, string>(1).ToString()).IsEqualTo("Ok(1)");
-        await Assert.That(Rop.Err<int, string>("bad").ToString()).IsEqualTo("Err(bad)");
+        await Assert.That(Result.Ok<int, string>(1).ToString()).IsEqualTo("Ok(1)");
+        await Assert.That(Result.Err<int, string>("bad").ToString()).IsEqualTo("Err(bad)");
     }
 
     [Test]
@@ -123,7 +123,7 @@ public sealed class ResultCoreTests
         var okCalls = 0;
         var errCalls = 0;
 
-        var okText = Rop.Ok<int, RopError>(2).Match(
+        var okText = Result.Ok<int, RopError>(2).Match(
             ok: value =>
             {
                 okCalls++;
@@ -139,7 +139,7 @@ public sealed class ResultCoreTests
         await Assert.That(okCalls).IsEqualTo(1);
         await Assert.That(errCalls).IsEqualTo(0);
 
-        var errText = Rop.Err<int, RopError>(Sample.Error("E_X")).Match(
+        var errText = Result.Err<int, RopError>(Sample.Error("E_X")).Match(
             ok: value => $"ok:{value}",
             err: error => $"err:{error.Code}");
 
@@ -149,7 +149,7 @@ public sealed class ResultCoreTests
     [Test]
     public async Task Match_WithNullDelegates_Throws()
     {
-        var result = Rop.Ok(1);
+        var result = Result.Ok(1);
 
         await Assert.That(TestSupport.Catch(() => result.Match(null!, _ => 0)) is ArgumentNullException).IsTrue();
         await Assert.That(TestSupport.Catch(() => result.Match(_ => 0, null!)) is ArgumentNullException).IsTrue();
@@ -158,14 +158,14 @@ public sealed class ResultCoreTests
     [Test]
     public async Task OrThrow_ReturnsValueOnSuccess()
     {
-        await Assert.That(Rop.Ok<int, RopError>(5).OrThrow()).IsEqualTo(5);
-        await Assert.That(Rop.Ok<int, RopError>(5).OkOrThrow()).IsEqualTo(5);
+        await Assert.That(Result.Ok<int, RopError>(5).OrThrow()).IsEqualTo(5);
+        await Assert.That(Result.Ok<int, RopError>(5).OkOrThrow()).IsEqualTo(5);
     }
 
     [Test]
     public async Task OrThrow_OnError_ThrowsInvalidOperation()
     {
-        var exception = TestSupport.Catch(() => Rop.Err<int, RopError>(Sample.Error()).OrThrow());
+        var exception = TestSupport.Catch(() => Result.Err<int, RopError>(Sample.Error()).OrThrow());
 
         await Assert.That(exception is InvalidOperationException).IsTrue();
         await Assert.That(exception!.Message).Contains("E_TEST");
@@ -176,13 +176,13 @@ public sealed class ResultCoreTests
     {
         var error = Sample.Error();
 
-        await Assert.That(Rop.Err<int, RopError>(error).ErrOrThrow()).IsSameReferenceAs(error);
+        await Assert.That(Result.Err<int, RopError>(error).ErrOrThrow()).IsSameReferenceAs(error);
     }
 
     [Test]
     public async Task ErrOrThrow_OnSuccess_Throws()
     {
-        var exception = TestSupport.Catch(() => Rop.Ok<int, RopError>(1).ErrOrThrow());
+        var exception = TestSupport.Catch(() => Result.Ok<int, RopError>(1).ErrOrThrow());
 
         await Assert.That(exception is InvalidOperationException).IsTrue();
     }

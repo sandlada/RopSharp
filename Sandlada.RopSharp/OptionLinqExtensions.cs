@@ -7,7 +7,7 @@ namespace Sandlada.RopSharp;
 /// Unlike <see cref="Result{TOk,TErr}"/>, options support <c>where</c>: filtering only needs to produce <c>None</c>,
 /// so no error value is required.
 /// <code><![CDATA[
-/// var city = Opt.FromNullable(OrderFixtures.Sample.Customer.Address)
+/// var city = Option.FromNullable(OrderFixtures.Sample.Customer.Address)
 ///     .Select(static shipping => shipping.City);
 ///
 /// // Some("London") on the present track,
@@ -28,7 +28,7 @@ public static class OptionLinqExtensions
     /// <c>Select</c> is the query-syntax spelling of <see cref="OptionExtensions.MapSome{T,TOut}"/>. It exists so
     /// that an option can be used inside a LINQ query expression.
     /// <code><![CDATA[
-    /// var city = Opt.FromNullable(OrderFixtures.Sample.Customer.Address)
+    /// var city = Option.FromNullable(OrderFixtures.Sample.Customer.Address)
     ///     .Select(static shipping => shipping.City);
     ///
     /// // Some("London") on the present track,
@@ -50,8 +50,8 @@ public static class OptionLinqExtensions
     /// <c>SelectMany</c> is the query-syntax spelling of <see cref="OptionExtensions.BindSome{T,TOut}"/>: it
     /// expands the present track into another option.
     /// <code><![CDATA[
-    /// var city = Opt.FromNullable(OrderFixtures.Sample.Customer.Address)
-    ///     .SelectMany(static shipping => Opt.Some(shipping.City));
+    /// var city = Option.FromNullable(OrderFixtures.Sample.Customer.Address)
+    ///     .SelectMany(static shipping => Option.Some(shipping.City));
     ///
     /// // Some("London") when the address is present and the binding succeeded,
     /// // None when it is missing - the binder never runs on the empty track.
@@ -75,9 +75,9 @@ public static class OptionLinqExtensions
     /// This overload carries both values into the projection, which is what a query with two <c>from</c> clauses
     /// needs.
     /// <code><![CDATA[
-    /// var label = Opt.FromNullable(OrderFixtures.Sample.Customer.Address)
+    /// var label = Option.FromNullable(OrderFixtures.Sample.Customer.Address)
     ///     .SelectMany(
-    ///         static shipping => Opt.Some(shipping.City),
+    ///         static shipping => Option.Some(shipping.City),
     ///         static (shipping, city) => $"{shipping.Country}/{city}");
     ///
     /// // Some("GB/London") when both steps succeeded,
@@ -102,7 +102,7 @@ public static class OptionLinqExtensions
     /// <c>Where</c> is the query-syntax spelling of <see cref="OptionExtensions.Filter{T}"/>. Unlike a result,
     /// an option can filter without producing an error value.
     /// <code><![CDATA[
-    /// var city = Opt.FromNullable(OrderFixtures.Sample.Customer.Address)
+    /// var city = Option.FromNullable(OrderFixtures.Sample.Customer.Address)
     ///     .Where(static shipping => shipping.Country is "GB")
     ///     .Select(static shipping => shipping.City);
     ///
@@ -124,7 +124,7 @@ public static class OptionLinqExtensions
     /// <remarks>
     /// The asynchronous spelling of <c>select</c>: the projection runs after the task completes.
     /// <code><![CDATA[
-    /// var city = await Task.FromResult(Opt.FromNullable(OrderFixtures.Sample.Customer.Address))
+    /// var city = await Task.FromResult(Option.FromNullable(OrderFixtures.Sample.Customer.Address))
     ///     .Select(static shipping => shipping.City);
     ///
     /// // Some("London") on the present track,
@@ -149,9 +149,9 @@ public static class OptionLinqExtensions
     /// <exception cref="InvalidOperationException">The collection selector returned a null task.</exception>
     /// <remarks>Query syntax has no token slot; cancellation remains an outer concern.
     /// <code><![CDATA[
-    /// var label = await Task.FromResult(Opt.FromNullable(OrderFixtures.Sample.Customer.Address))
+    /// var label = await Task.FromResult(Option.FromNullable(OrderFixtures.Sample.Customer.Address))
     ///     .SelectMany(
-    ///         static shipping => Task.FromResult(Opt.Some(shipping.City)),
+    ///         static shipping => Task.FromResult(Option.Some(shipping.City)),
     ///         static (shipping, city) => $"{shipping.Country}/{city}");
     ///
     /// // Some("GB/London") when both steps succeeded,
@@ -170,7 +170,7 @@ public static class OptionLinqExtensions
         var option = await source.ConfigureAwait(false);
         if (!option.TryGetValue(out var value))
         {
-            return Opt.None<TOut>();
+            return Option.None<TOut>();
         }
 
         var intermediate = await AsyncGuards.Require(collectionSelector(value), "collectionSelector")
@@ -191,9 +191,9 @@ public static class OptionLinqExtensions
     /// <returns>A task that completes with the projected value, or <c>None</c>.</returns>
     /// <remarks>Query syntax has no token slot; cancellation remains an outer concern.
     /// <code><![CDATA[
-    /// var label = await Task.FromResult(Opt.FromNullable(OrderFixtures.Sample.Customer.Address))
+    /// var label = await Task.FromResult(Option.FromNullable(OrderFixtures.Sample.Customer.Address))
     ///     .SelectMany(
-    ///         static shipping => Opt.Some(shipping.City),
+    ///         static shipping => Option.Some(shipping.City),
     ///         static (shipping, city) => $"{shipping.Country}/{city}");
     ///
     /// // Some("GB/London") when both steps succeeded,
@@ -212,7 +212,7 @@ public static class OptionLinqExtensions
         var option = await source.ConfigureAwait(false);
         if (!option.TryGetValue(out var value))
         {
-            return Opt.None<TOut>();
+            return Option.None<TOut>();
         }
 
         return collectionSelector(value).MapSome(second => resultSelector(value, second));
@@ -228,7 +228,7 @@ public static class OptionLinqExtensions
     /// <remarks>
     /// The asynchronous spelling of <c>where</c>: the predicate runs after the task completes.
     /// <code><![CDATA[
-    /// var city = await Task.FromResult(Opt.FromNullable(OrderFixtures.Sample.Customer.Address))
+    /// var city = await Task.FromResult(Option.FromNullable(OrderFixtures.Sample.Customer.Address))
     ///     .Where(static shipping => shipping.Country is "GB")
     ///     .Select(static shipping => shipping.City);
     ///

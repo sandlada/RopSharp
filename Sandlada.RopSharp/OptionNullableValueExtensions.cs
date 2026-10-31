@@ -7,7 +7,7 @@ namespace Sandlada.RopSharp;
 /// C# does not allow two overloads that differ only by generic constraints, so the reference and value-type
 /// variants live under distinct names (<c>ToNullable</c> and <c>ToNullableValue</c>).
 /// <code><![CDATA[
-/// var count = Opt.FromNullableValue<int>(OrderFixtures.Sample.ItemCount)
+/// var count = Option.FromNullableValue<int>(OrderFixtures.Sample.ItemCount)
 ///     .ToNullableValue();
 ///
 /// // 3 for Some(count),
@@ -22,14 +22,14 @@ public static class OptionNullableValueExtensions
     /// <typeparam name="T">The underlying value type.</typeparam>
     /// <param name="option">The source option.</param>
     /// <returns>The contained value, or <see langword="null"/> when empty.</returns>
-    /// <remarks>Cross back immediately with <see cref="Opt.FromNullableValue{T}(T?)"/> at the consuming boundary.
+    /// <remarks>Cross back immediately with <see cref="Option.FromNullableValue{T}(T?)"/> at the consuming boundary.
     /// <code><![CDATA[
     /// int? quantity = OrderFixtures.Sample.ItemCount;
-    /// var count = Opt.FromNullableValue(quantity)
+    /// var count = Option.FromNullableValue(quantity)
     ///     .ToNullableValue();
     ///
     /// // 3 for Some(count),
-    /// // null for None - cross back with Opt.FromNullableValue right away.
+    /// // null for None - cross back with Option.FromNullableValue right away.
     /// ]]></code>
     /// </remarks>
     public static T? ToNullableValue<T>(this Option<T> option)
@@ -48,7 +48,7 @@ public static class OptionNullableValueExtensions
     /// returns is turned back into an empty option instead of leaking out.
     /// <code><![CDATA[
     /// int? quantity = OrderFixtures.Sample.ItemCount;
-    /// var count = Opt.FromNullableValue(quantity)
+    /// var count = Option.FromNullableValue(quantity)
     ///     .BindSomeNullableValue(static value => (int?)(value + 1));
     ///
     /// // Some(4) when the binder returns a value,
@@ -61,10 +61,10 @@ public static class OptionNullableValueExtensions
         ArgumentNullException.ThrowIfNull(binder);
         if (!option.TryGetValue(out var value))
         {
-            return Opt.None<TOut>();
+            return Option.None<TOut>();
         }
 
         var mapped = binder(value);
-        return mapped is null ? Opt.None<TOut>() : Opt.Some(mapped.GetValueOrDefault());
+        return mapped is null ? Option.None<TOut>() : Option.Some(mapped.GetValueOrDefault());
     }
 }

@@ -7,7 +7,7 @@ public sealed class OptionAsyncTests
     [Test]
     public async Task AsTask_WrapsOption()
     {
-        var option = await Opt.Some(5).AsTask();
+        var option = await Option.Some(5).AsTask();
 
         await Assert.That(option.OrThrow()).IsEqualTo(5);
     }
@@ -15,7 +15,7 @@ public sealed class OptionAsyncTests
     [Test]
     public async Task MapSomeAsync_WithSyncMapper()
     {
-        var option = await Task.FromResult(Opt.Some(2)).MapSomeAsync(value => value * 10);
+        var option = await Task.FromResult(Option.Some(2)).MapSomeAsync(value => value * 10);
 
         await Assert.That(option.OrThrow()).IsEqualTo(20);
     }
@@ -23,7 +23,7 @@ public sealed class OptionAsyncTests
     [Test]
     public async Task MapSomeAsync_WithAsyncMapper()
     {
-        var option = await Task.FromResult(Opt.Some(2)).MapSomeAsync(value => Task.FromResult(value * 10));
+        var option = await Task.FromResult(Option.Some(2)).MapSomeAsync(value => Task.FromResult(value * 10));
 
         await Assert.That(option.OrThrow()).IsEqualTo(20);
     }
@@ -33,7 +33,7 @@ public sealed class OptionAsyncTests
     {
         using var cts = new CancellationTokenSource();
 
-        var option = await Task.FromResult(Opt.Some(2))
+        var option = await Task.FromResult(Option.Some(2))
             .MapSomeAsync((value, token) => Task.FromResult(token == cts.Token ? value + 1 : -1), cts.Token);
 
         await Assert.That(option.OrThrow()).IsEqualTo(3);
@@ -44,7 +44,7 @@ public sealed class OptionAsyncTests
     {
         var called = false;
 
-        var option = await Task.FromResult(Opt.None<int>()).MapSomeAsync(value =>
+        var option = await Task.FromResult(Option.None<int>()).MapSomeAsync(value =>
         {
             called = true;
             return value;
@@ -57,9 +57,9 @@ public sealed class OptionAsyncTests
     [Test]
     public async Task BindSomeAsync_ChainsTaskOptions()
     {
-        var option = await Task.FromResult(Opt.Some(2))
-            .BindSomeAsync(value => Task.FromResult(Opt.Some(value * 3)))
-            .BindSomeAsync(value => Task.FromResult(Opt.Some(value + 1)));
+        var option = await Task.FromResult(Option.Some(2))
+            .BindSomeAsync(value => Task.FromResult(Option.Some(value * 3)))
+            .BindSomeAsync(value => Task.FromResult(Option.Some(value + 1)));
 
         await Assert.That(option.OrThrow()).IsEqualTo(7);
     }
@@ -69,8 +69,8 @@ public sealed class OptionAsyncTests
     {
         using var cts = new CancellationTokenSource();
 
-        var option = await Task.FromResult(Opt.Some(2))
-            .BindSomeAsync((value, token) => Task.FromResult(Opt.Some(token == cts.Token ? value + 1 : 0)), cts.Token);
+        var option = await Task.FromResult(Option.Some(2))
+            .BindSomeAsync((value, token) => Task.FromResult(Option.Some(token == cts.Token ? value + 1 : 0)), cts.Token);
 
         await Assert.That(option.OrThrow()).IsEqualTo(3);
     }
@@ -78,7 +78,7 @@ public sealed class OptionAsyncTests
     [Test]
     public async Task BindSomeAsync_FromSyncOption()
     {
-        var option = await Opt.Some(2).BindSomeAsync(value => Task.FromResult(Opt.Some(value * 4)));
+        var option = await Option.Some(2).BindSomeAsync(value => Task.FromResult(Option.Some(value * 4)));
 
         await Assert.That(option.OrThrow()).IsEqualTo(8);
     }
@@ -86,7 +86,7 @@ public sealed class OptionAsyncTests
     [Test]
     public async Task BindNoneAsync_Recovers()
     {
-        var option = await Task.FromResult(Opt.None<int>()).BindNoneAsync(() => Task.FromResult(Opt.Some(7)));
+        var option = await Task.FromResult(Option.None<int>()).BindNoneAsync(() => Task.FromResult(Option.Some(7)));
 
         await Assert.That(option.OrThrow()).IsEqualTo(7);
     }
@@ -96,8 +96,8 @@ public sealed class OptionAsyncTests
     {
         using var cts = new CancellationTokenSource();
 
-        var option = await Task.FromResult(Opt.None<int>())
-            .BindNoneAsync(token => Task.FromResult(Opt.Some(token == cts.Token ? 1 : 0)), cts.Token);
+        var option = await Task.FromResult(Option.None<int>())
+            .BindNoneAsync(token => Task.FromResult(Option.Some(token == cts.Token ? 1 : 0)), cts.Token);
 
         await Assert.That(option.OrThrow()).IsEqualTo(1);
     }
@@ -107,10 +107,10 @@ public sealed class OptionAsyncTests
     {
         var called = false;
 
-        var option = await Task.FromResult(Opt.Some(1)).BindNoneAsync(() =>
+        var option = await Task.FromResult(Option.Some(1)).BindNoneAsync(() =>
         {
             called = true;
-            return Task.FromResult(Opt.Some(9));
+            return Task.FromResult(Option.Some(9));
         });
 
         await Assert.That(called).IsFalse();
@@ -122,7 +122,7 @@ public sealed class OptionAsyncTests
     {
         var observed = 0;
 
-        var option = await Task.FromResult(Opt.Some(3)).TeeSomeAsync(value =>
+        var option = await Task.FromResult(Option.Some(3)).TeeSomeAsync(value =>
         {
             observed = value;
             return Task.CompletedTask;
@@ -137,7 +137,7 @@ public sealed class OptionAsyncTests
     {
         var observed = false;
 
-        var option = await Task.FromResult(Opt.None<int>()).TeeNoneAsync(() =>
+        var option = await Task.FromResult(Option.None<int>()).TeeNoneAsync(() =>
         {
             observed = true;
             return Task.CompletedTask;
@@ -150,8 +150,8 @@ public sealed class OptionAsyncTests
     [Test]
     public async Task FilterAsync_WithSyncPredicate()
     {
-        var kept = await Task.FromResult(Opt.Some(2)).FilterAsync(value => value % 2 == 0);
-        var dropped = await Task.FromResult(Opt.Some(3)).FilterAsync(value => value % 2 == 0);
+        var kept = await Task.FromResult(Option.Some(2)).FilterAsync(value => value % 2 == 0);
+        var dropped = await Task.FromResult(Option.Some(3)).FilterAsync(value => value % 2 == 0);
 
         await Assert.That(kept.OrThrow()).IsEqualTo(2);
         await Assert.That(dropped.IsNone).IsTrue();
@@ -160,8 +160,8 @@ public sealed class OptionAsyncTests
     [Test]
     public async Task FilterAsync_WithAsyncPredicate()
     {
-        var kept = await Task.FromResult(Opt.Some(2)).FilterAsync(value => Task.FromResult(value % 2 == 0));
-        var dropped = await Task.FromResult(Opt.Some(3)).FilterAsync(value => Task.FromResult(value % 2 == 0));
+        var kept = await Task.FromResult(Option.Some(2)).FilterAsync(value => Task.FromResult(value % 2 == 0));
+        var dropped = await Task.FromResult(Option.Some(3)).FilterAsync(value => Task.FromResult(value % 2 == 0));
 
         await Assert.That(kept.OrThrow()).IsEqualTo(2);
         await Assert.That(dropped.IsNone).IsTrue();
@@ -187,7 +187,7 @@ public sealed class OptionAsyncTests
 
         await Assert.That(exception is OperationCanceledException).IsTrue();
         await Assert.That(called).IsFalse();
-        pending.SetResult(Opt.Some(1));
+        pending.SetResult(Option.Some(1));
     }
 
     [Test]
@@ -196,7 +196,7 @@ public sealed class OptionAsyncTests
         using var cts = new CancellationTokenSource();
         cts.Cancel();
 
-        var task = Task.FromResult(Opt.Some(1)).MapSomeAsync(value => value + 1, cts.Token);
+        var task = Task.FromResult(Option.Some(1)).MapSomeAsync(value => value + 1, cts.Token);
 
         var exception = await TestSupport.CatchAsync(() => task);
 
@@ -209,7 +209,7 @@ public sealed class OptionAsyncTests
         using var cts = new CancellationTokenSource();
         cts.Cancel();
 
-        var option = await Task.FromResult(Opt.None<int>()).MapSomeAsync(value => value + 1, cts.Token);
+        var option = await Task.FromResult(Option.None<int>()).MapSomeAsync(value => value + 1, cts.Token);
 
         await Assert.That(option.IsNone).IsTrue();
     }

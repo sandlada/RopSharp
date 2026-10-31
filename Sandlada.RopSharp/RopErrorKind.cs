@@ -16,7 +16,7 @@ namespace Sandlada.RopSharp;
 /// </para>
 /// <code><![CDATA[
 /// var error = RopError.Create("E_AMOUNT_RANGE", "amount must be positive", RopErrorKind.Validation);
-/// var placed = Rop.Err<Payment>(error);
+/// var placed = Result.Err<Payment>(error);
 ///
 /// // Err("E_AMOUNT_RANGE", "amount must be positive", RopErrorKind.Validation) is categorized as RopErrorKind.Validation,
 /// // Ok(payment) is the other track of the same result.
@@ -32,7 +32,7 @@ public enum RopErrorKind
     /// </para>
     /// <code><![CDATA[
     /// var error = RopError.Create("E_ORDER_NOT_FOUND", "order 42 does not exist", RopErrorKind.Failure);
-    /// var placed = Rop.Err<Payment>(error);
+    /// var placed = Result.Err<Payment>(error);
     ///
     /// // Err("E_ORDER_NOT_FOUND", "order 42 does not exist", RopErrorKind.Failure) is categorized as RopErrorKind.Failure,
     /// // Ok(payment) is the other track of the same result.
@@ -48,7 +48,7 @@ public enum RopErrorKind
     /// </para>
     /// <code><![CDATA[
     /// var error = RopError.Create("E_AMOUNT_RANGE", "amount must be positive", RopErrorKind.Validation);
-    /// var placed = Rop.Err<Payment>(error);
+    /// var placed = Result.Err<Payment>(error);
     ///
     /// // Err("E_AMOUNT_RANGE", "amount must be positive", RopErrorKind.Validation) is categorized as RopErrorKind.Validation,
     /// // Ok(payment) is the other track of the same result.
@@ -63,7 +63,7 @@ public enum RopErrorKind
     /// </para>
     /// <code><![CDATA[
     /// var error = RopError.Create("E_ORDER_NOT_FOUND", "order 42 does not exist", RopErrorKind.NotFound);
-    /// var placed = Rop.Err<Payment>(error);
+    /// var placed = Result.Err<Payment>(error);
     ///
     /// // Err("E_ORDER_NOT_FOUND", "order 42 does not exist", RopErrorKind.NotFound) is categorized as RopErrorKind.NotFound,
     /// // Ok(payment) is the other track of the same result.
@@ -79,7 +79,7 @@ public enum RopErrorKind
     /// </para>
     /// <code><![CDATA[
     /// var error = RopError.Create("E_ORDER_STATE", "the order is already shipped", RopErrorKind.Conflict);
-    /// var placed = Rop.Err<Payment>(error);
+    /// var placed = Result.Err<Payment>(error);
     ///
     /// // Err("E_ORDER_STATE", "the order is already shipped", RopErrorKind.Conflict) is categorized as RopErrorKind.Conflict,
     /// // Ok(payment) is the other track of the same result.
@@ -95,7 +95,7 @@ public enum RopErrorKind
     /// </para>
     /// <code><![CDATA[
     /// var error = RopError.Create("E_AUTH", "the caller is not signed in", RopErrorKind.Unauthorized);
-    /// var placed = Rop.Err<Payment>(error);
+    /// var placed = Result.Err<Payment>(error);
     ///
     /// // Err("E_AUTH", "the caller is not signed in", RopErrorKind.Unauthorized) is categorized as RopErrorKind.Unauthorized,
     /// // Ok(payment) is the other track of the same result.
@@ -110,7 +110,7 @@ public enum RopErrorKind
     /// </para>
     /// <code><![CDATA[
     /// var error = RopError.Create("E_AUTH", "the caller may not refund this order", RopErrorKind.Forbidden);
-    /// var placed = Rop.Err<Payment>(error);
+    /// var placed = Result.Err<Payment>(error);
     ///
     /// // Err("E_AUTH", "the caller may not refund this order", RopErrorKind.Forbidden) is categorized as RopErrorKind.Forbidden,
     /// // Ok(payment) is the other track of the same result.
@@ -126,7 +126,7 @@ public enum RopErrorKind
     /// </para>
     /// <code><![CDATA[
     /// var error = RopError.Create("E_PROVIDER", "the provider failed unexpectedly", RopErrorKind.Unexpected);
-    /// var placed = Rop.Err<Payment>(error);
+    /// var placed = Result.Err<Payment>(error);
     ///
     /// // Err("E_PROVIDER", "the provider failed unexpectedly", RopErrorKind.Unexpected) is categorized as RopErrorKind.Unexpected,
     /// // Ok(payment) is the other track of the same result.
@@ -142,7 +142,7 @@ public enum RopErrorKind
     /// </para>
     /// <code><![CDATA[
     /// var error = RopError.Create("E_CARRIER_TIMEOUT", "the carrier did not answer", RopErrorKind.Timeout);
-    /// var placed = Rop.Err<Payment>(error);
+    /// var placed = Result.Err<Payment>(error);
     ///
     /// // Err("E_CARRIER_TIMEOUT", "the carrier did not answer", RopErrorKind.Timeout) is categorized as RopErrorKind.Timeout,
     /// // Ok(payment) is the other track of the same result.
@@ -158,7 +158,7 @@ public enum RopErrorKind
     /// </para>
     /// <code><![CDATA[
     /// var error = RopError.Create("E_CARRIER_DOWN", "the carrier is unavailable", RopErrorKind.Unavailable);
-    /// var placed = Rop.Err<Payment>(error);
+    /// var placed = Result.Err<Payment>(error);
     ///
     /// // Err("E_CARRIER_DOWN", "the carrier is unavailable", RopErrorKind.Unavailable) is categorized as RopErrorKind.Unavailable,
     /// // Ok(payment) is the other track of the same result.
@@ -174,7 +174,7 @@ public enum RopErrorKind
     /// </para>
     /// <code><![CDATA[
     /// var error = RopError.Create("E_TOO_MANY_REQUESTS", "too many order updates", RopErrorKind.RateLimited);
-    /// var placed = Rop.Err<Payment>(error);
+    /// var placed = Result.Err<Payment>(error);
     ///
     /// // Err("E_TOO_MANY_REQUESTS", "too many order updates", RopErrorKind.RateLimited) is categorized as RopErrorKind.RateLimited,
     /// // Ok(payment) is the other track of the same result.

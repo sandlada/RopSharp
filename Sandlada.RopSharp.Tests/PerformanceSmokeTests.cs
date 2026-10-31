@@ -22,15 +22,15 @@ public sealed class PerformanceSmokeTests
         // Warm up JIT and static delegate caches before measuring.
         for (var index = 0; index < Iterations; index++)
         {
-            Consume(Rop.Ok(index).MapOk(static value => value + 1).BindOk(static value => Rop.Ok(value * 2)));
+            Consume(Result.Ok(index).MapOk(static value => value + 1).BindOk(static value => Result.Ok(value * 2)));
         }
 
         var before = GC.GetAllocatedBytesForCurrentThread();
         for (var index = 0; index < Iterations; index++)
         {
-            Consume(Rop.Ok(index)
+            Consume(Result.Ok(index)
                 .MapOk(static value => value + 1)
-                .BindOk(static value => Rop.Ok(value * 2))
+                .BindOk(static value => Result.Ok(value * 2))
                 .Ensure(static value => value >= 0, unreachable));
         }
 
@@ -45,13 +45,13 @@ public sealed class PerformanceSmokeTests
     {
         for (var index = 0; index < Iterations; index++)
         {
-            Consume(Opt.Some(index).MapSome(static value => value + 1).Filter(static value => value > 0));
+            Consume(Option.Some(index).MapSome(static value => value + 1).Filter(static value => value > 0));
         }
 
         var before = GC.GetAllocatedBytesForCurrentThread();
         for (var index = 0; index < Iterations; index++)
         {
-            Consume(Opt.Some(index)
+            Consume(Option.Some(index)
                 .MapSome(static value => value + 1)
                 .Filter(static value => value > 0)
                 .BindNoneValue(0));

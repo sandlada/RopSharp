@@ -13,21 +13,21 @@ public sealed class AllocationGuardTests
 {
     private const int BoundedIterations = 10_000;
 
-    private static readonly Result<int, RopError> Ok = Rop.Ok(42);
-    private static readonly Result<int, RopError> Err = Rop.Err<int>(RopError.Create("E_GUARD", "guard"));
-    private static readonly Option<int> Some = Opt.Some(42);
-    private static readonly Option<int> None = Opt.None<int>();
+    private static readonly Result<int, RopError> Ok = Result.Ok(42);
+    private static readonly Result<int, RopError> Err = Result.Err<int>(RopError.Create("E_GUARD", "guard"));
+    private static readonly Option<int> Some = Option.Some(42);
+    private static readonly Option<int> None = Option.None<int>();
     private static readonly Either<string, int> Right = Either.Right<string, int>(42);
     private static readonly RopError GuardError = RopError.Create("E_GUARD", "never");
 
     private static readonly Result<int, RopError>[] Oks16 =
-        [.. Enumerable.Range(0, 16).Select(static value => Rop.Ok(value))];
+        [.. Enumerable.Range(0, 16).Select(static value => Result.Ok(value))];
 
     private static readonly Result<int, RopError>[] OkWithError16 =
-        [.. Enumerable.Range(0, 16).Select(static value => value == 8 ? Rop.Err<int>(GuardError) : Rop.Ok(value))];
+        [.. Enumerable.Range(0, 16).Select(static value => value == 8 ? Result.Err<int>(GuardError) : Result.Ok(value))];
 
     private static readonly Result<int, RopError>[] AllErrors16 =
-        [.. Enumerable.Range(0, 16).Select(static _ => Rop.Err<int>(GuardError))];
+        [.. Enumerable.Range(0, 16).Select(static _ => Result.Err<int>(GuardError))];
 
     private static readonly RopError[] Errors10 =
         [.. Enumerable.Range(0, 10).Select(static i => RopError.Create($"E_{i}", $"message {i}"))];
@@ -45,7 +45,7 @@ public sealed class AllocationGuardTests
     [Test]
     public async Task ResultBindOk_OnOk_AllocatesNothing()
     {
-        var bytes = AllocationMeter.BytesPerRun(_ => Sink.Consume(Ok.BindOk(static value => Rop.Ok(value + 1))));
+        var bytes = AllocationMeter.BytesPerRun(_ => Sink.Consume(Ok.BindOk(static value => Result.Ok(value + 1))));
 
         await Assert.That(bytes).IsEqualTo(ZeroBytes);
     }
@@ -119,21 +119,21 @@ public sealed class AllocationGuardTests
     [Test]
     public async Task ResultSequence_SuccessPath_StaysWithinBudget()
     {
-        var bytes = AllocationMeter.BytesPerRun(_ => Sink.Consume(Rop.Sequence(Oks16)), iterations: BoundedIterations);
+        var bytes = AllocationMeter.BytesPerRun(_ => Sink.Consume(Result.Sequence(Oks16)), iterations: BoundedIterations);
         await Assert.That(bytes).IsLessThanOrEqualTo(SequenceSuccess16PerCallBytes * BoundedIterations);
     }
 
     [Test]
     public async Task ResultSequence_ShortCircuitPath_StaysWithinBudget()
     {
-        var bytes = AllocationMeter.BytesPerRun(_ => Sink.Consume(Rop.Sequence(OkWithError16)), iterations: BoundedIterations);
+        var bytes = AllocationMeter.BytesPerRun(_ => Sink.Consume(Result.Sequence(OkWithError16)), iterations: BoundedIterations);
         await Assert.That(bytes).IsLessThanOrEqualTo(SequenceShortCircuit16PerCallBytes * BoundedIterations);
     }
 
     [Test]
     public async Task ResultSequenceValidation_AllErrors_StaysWithinBudget()
     {
-        var bytes = AllocationMeter.BytesPerRun(_ => Sink.Consume(Rop.SequenceValidation(AllErrors16)), iterations: BoundedIterations);
+        var bytes = AllocationMeter.BytesPerRun(_ => Sink.Consume(Result.SequenceValidation(AllErrors16)), iterations: BoundedIterations);
         await Assert.That(bytes).IsLessThanOrEqualTo(SequenceValidationAllErrors16PerCallBytes * BoundedIterations);
     }
 

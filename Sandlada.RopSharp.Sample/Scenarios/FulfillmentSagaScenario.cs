@@ -152,7 +152,7 @@ internal static class FulfillmentSagaScenario
         }
 
         Console.WriteLine($"   ship: {shipped.Carrier} {shipped.Tracking}");
-        return Rop.Ok<Fulfillment, SagaFailure>(new Fulfillment(
+        return Result.Ok<Fulfillment, SagaFailure>(new Fulfillment(
             request.OrderId,
             total,
             shipped.Tracking,
@@ -167,7 +167,7 @@ internal static class FulfillmentSagaScenario
     private static async Task<Result<Fulfillment, SagaFailure>> AbortAsync(RopError primary, CompensationStack compensations)
     {
         var compensationErrors = await compensations.RunAllAsync();
-        return Rop.Err<Fulfillment, SagaFailure>(new SagaFailure(primary, compensationErrors));
+        return Result.Err<Fulfillment, SagaFailure>(new SagaFailure(primary, compensationErrors));
     }
 
     private static RopError ErrorOrThrow<T>(Result<T, RopError> result) =>
@@ -176,20 +176,20 @@ internal static class FulfillmentSagaScenario
             : throw new InvalidOperationException("Expected the error track.");
 
     private static Result<Header, IReadOnlyList<RopError>> ValidateHeader(FulfillmentRequest request) =>
-        Rop.Validate(
+        Result.Validate(
             RequireCustomer(request.Customer),
             RequireAddress(request.Address),
             ParseCoupon(request.CouponCode),
             static (customer, address, coupon) => new Header(customer, address, coupon));
 
     private static Result<string, RopError> RequireCustomer(string customer) =>
-        Rop.FromNullable(customer.Trim(), static () => RopError.Create("E_CUSTOMER_REQUIRED", "customer is required"))
+        Result.FromNullable(customer.Trim(), static () => RopError.Create("E_CUSTOMER_REQUIRED", "customer is required"))
             .Ensure(
                 static value => value.Length >= 2,
                 static value => RopError.Create("E_CUSTOMER_TOO_SHORT", $"customer '{value}' is too short"));
 
     private static Result<string, RopError> RequireAddress(string address) =>
-        Rop.FromNullable(address.Trim(), static () => RopError.Create("E_ADDRESS_REQUIRED", "address is required"))
+        Result.FromNullable(address.Trim(), static () => RopError.Create("E_ADDRESS_REQUIRED", "address is required"))
             .Ensure(
                 static value => value.Length >= 5,
                 static value => RopError.Create("E_ADDRESS_TOO_SHORT", $"address '{value}' is too short"));
@@ -199,31 +199,31 @@ internal static class FulfillmentSagaScenario
     /// those two outcomes apart without using null or a sentinel discount.
     /// </summary>
     private static Result<Option<decimal>, RopError> ParseCoupon(string? code) =>
-        Opt.FromNullable(code?.Trim())
+        Option.FromNullable(code?.Trim())
             .MapSome(static value => value.ToUpperInvariant())
             .MapSome(static value => Coupons.TryGetValue(value, out var rate)
-                ? Rop.Ok(rate)
-                : Rop.Err<decimal>(RopError.Create("E_COUPON_UNKNOWN", $"unknown coupon: {value}")))
+                ? Result.Ok(rate)
+                : Result.Err<decimal>(RopError.Create("E_COUPON_UNKNOWN", $"unknown coupon: {value}")))
             .Transpose();
 
     private static Result<IReadOnlyList<PricedLine>, IReadOnlyList<RopError>> PriceLines(IReadOnlyList<OrderLine> lines) =>
         lines.Count == 0
-            ? Rop.Err<IReadOnlyList<PricedLine>, IReadOnlyList<RopError>>(
+            ? Result.Err<IReadOnlyList<PricedLine>, IReadOnlyList<RopError>>(
                 [RopError.Create("E_NO_LINES", "at least one order line is required")])
-            : Rop.SequenceValidation(lines.Select(PriceLine));
+            : Result.SequenceValidation(lines.Select(PriceLine));
 
     private static Result<PricedLine, RopError> PriceLine(OrderLine line) =>
         Catalog.TryGetValue(line.Sku, out var entry)
-            ? Rop.Ok(line.Quantity)
+            ? Result.Ok(line.Quantity)
                 .Ensure(
                     static quantity => quantity > 0,
                     static quantity => RopError.Create("E_QUANTITY", $"quantity {quantity} must be positive"))
                 .MapOk(quantity => new PricedLine(line.Sku, quantity, entry.Price, entry.Price * quantity))
-            : Rop.Err<PricedLine>(RopError.Create("E_SKU_UNKNOWN", $"unknown sku: {line.Sku}"));
+            : Result.Err<PricedLine>(RopError.Create("E_SKU_UNKNOWN", $"unknown sku: {line.Sku}"));
 
     private static async Task<Result<decimal, RopError>> TaxRateAsync(string country, CancellationToken cancellationToken)
     {
-        var live = await Rop.TryAsync(
+        var live = await Result.TryAsync(
             () => LiveTaxRateAsync(country, cancellationToken),
             "E_TAX_SERVICE",
             cancellationToken);
@@ -235,10 +235,10 @@ internal static class FulfillmentSagaScenario
                 if (TaxRates.TryGetValue(country, out var fallback))
                 {
                     Console.WriteLine($"   tax: {error.Code}, fallback {fallback * 100m:0}%");
-                    return Task.FromResult(Rop.Ok<decimal, RopError>(fallback));
+                    return Task.FromResult(Result.Ok<decimal, RopError>(fallback));
                 }
 
-                return Task.FromResult(Rop.Err<decimal, RopError>(
+                return Task.FromResult(Result.Err<decimal, RopError>(
                     error.WithDetails($"no fallback for country={country}")));
             },
             cancellationToken);
@@ -272,8 +272,8 @@ internal static class FulfillmentSagaScenario
             .ToList();
 
         return shortages.Count == 0
-            ? Rop.Ok(new InventoryReservation(order.OrderId, "WH-A"))
-            : Rop.Err<InventoryReservation>(RopError.Combine(shortages));
+            ? Result.Ok(new InventoryReservation(order.OrderId, "WH-A"))
+            : Result.Err<InventoryReservation>(RopError.Combine(shortages));
     }
 
     private static async Task<Result<PaymentAuthorization, RopError>> AuthorizeAsync(
@@ -289,7 +289,7 @@ internal static class FulfillmentSagaScenario
             {
                 if (error.Code != "E_GATEWAY_TIMEOUT")
                 {
-                    return Task.FromResult(Rop.Err<PaymentAuthorization>(error));
+                    return Task.FromResult(Result.Err<PaymentAuthorization>(error));
                 }
 
                 Console.WriteLine("   payment: gateway timeout, retrying once");
@@ -309,19 +309,19 @@ internal static class FulfillmentSagaScenario
 
         return token switch
         {
-            "tok_declined" => Rop.Err<PaymentAuthorization>(
+            "tok_declined" => Result.Err<PaymentAuthorization>(
                 RopError.Create("E_DECLINED", "issuer declined the card")),
-            "tok_timeout_once" when attempt == 1 => Rop.Err<PaymentAuthorization>(
+            "tok_timeout_once" when attempt == 1 => Result.Err<PaymentAuthorization>(
                 RopError.Create("E_GATEWAY_TIMEOUT", "gateway timed out")),
-            "tok_void_fails" => Rop.Ok(new PaymentAuthorization(
+            "tok_void_fails" => Result.Ok(new PaymentAuthorization(
                 "auth-void-fails",
                 amount,
                 CancellationWillFail: true)),
-            "tok_timeout_once" => Rop.Ok(new PaymentAuthorization(
+            "tok_timeout_once" => Result.Ok(new PaymentAuthorization(
                 $"auth-retry-{attempt}",
                 amount,
                 CancellationWillFail: false)),
-            _ => Rop.Ok(new PaymentAuthorization("auth-primary", amount, CancellationWillFail: false)),
+            _ => Result.Ok(new PaymentAuthorization("auth-primary", amount, CancellationWillFail: false)),
         };
     }
 
@@ -333,8 +333,8 @@ internal static class FulfillmentSagaScenario
         cancellationToken.ThrowIfCancellationRequested();
 
         return request.Address.Contains("invalid", StringComparison.OrdinalIgnoreCase)
-            ? Rop.Err<Shipment>(RopError.Create("E_ADDRESS_REJECTED", "carrier rejected the address"))
-            : Rop.Ok(new Shipment($"TRK-{request.OrderId}", "ground"));
+            ? Result.Err<Shipment>(RopError.Create("E_ADDRESS_REJECTED", "carrier rejected the address"))
+            : Result.Ok(new Shipment($"TRK-{request.OrderId}", "ground"));
     }
 
     private static Task<Result<Unit, RopError>> ReleaseAsync(
@@ -343,7 +343,7 @@ internal static class FulfillmentSagaScenario
     {
         cancellationToken.ThrowIfCancellationRequested();
         Console.WriteLine($"   compensate: release {reservation.OrderId} at {reservation.Warehouse}");
-        return Task.FromResult(Rop.Ok<Unit, RopError>(Unit.Value));
+        return Task.FromResult(Result.Ok<Unit, RopError>(Unit.Value));
     }
 
     private static Task<Result<Unit, RopError>> VoidAsync(
@@ -355,13 +355,13 @@ internal static class FulfillmentSagaScenario
         if (authorization.CancellationWillFail)
         {
             Console.WriteLine($"   compensate: void {authorization.Reference} FAILED");
-            return Task.FromResult(Rop.Err<Unit>(RopError.Create(
+            return Task.FromResult(Result.Err<Unit>(RopError.Create(
                 "E_VOID_FAILED",
                 $"issuer refused to void {authorization.Reference}")));
         }
 
         Console.WriteLine($"   compensate: void {authorization.Reference}");
-        return Task.FromResult(Rop.Ok<Unit, RopError>(Unit.Value));
+        return Task.FromResult(Result.Ok<Unit, RopError>(Unit.Value));
     }
 
     private static string Describe(SagaFailure failure) =>

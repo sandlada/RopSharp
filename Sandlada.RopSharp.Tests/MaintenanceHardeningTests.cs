@@ -71,9 +71,9 @@ public sealed class MaintenanceHardeningTests
     [Test]
     public async Task Result_GetHashCode_IsStableOnTheSuccessTrack()
     {
-        var first = Rop.Ok<int, RopError>(7);
-        var same = Rop.Ok<int, RopError>(7);
-        var failed = Rop.Err<int, RopError>(Sample.Error());
+        var first = Result.Ok<int, RopError>(7);
+        var same = Result.Ok<int, RopError>(7);
+        var failed = Result.Err<int, RopError>(Sample.Error());
 
         await Assert.That(first.GetHashCode()).IsEqualTo(same.GetHashCode());
         await Assert.That(first.Equals(failed)).IsFalse();
@@ -89,8 +89,8 @@ public sealed class MaintenanceHardeningTests
     [Test]
     public async Task Option_GetHashCode_TreatsNoneAndTheDefaultValueAlike()
     {
-        await Assert.That(Opt.None<int>().GetHashCode()).IsEqualTo(default(Option<int>).GetHashCode());
-        await Assert.That(Opt.Some(1).GetHashCode()).IsEqualTo(Opt.Some(1).GetHashCode());
+        await Assert.That(Option.None<int>().GetHashCode()).IsEqualTo(default(Option<int>).GetHashCode());
+        await Assert.That(Option.Some(1).GetHashCode()).IsEqualTo(Option.Some(1).GetHashCode());
     }
 
     [Test]
@@ -113,8 +113,8 @@ public sealed class MaintenanceHardeningTests
     [Test]
     public async Task Result_GetHashCode_CoversANullSuccessPayload()
     {
-        var withNull = Rop.Ok<int, RopError>(1).MapOk<int, string?, RopError>(_ => null);
-        var same = Rop.Ok<int, RopError>(1).MapOk<int, string?, RopError>(_ => null);
+        var withNull = Result.Ok<int, RopError>(1).MapOk<int, string?, RopError>(_ => null);
+        var same = Result.Ok<int, RopError>(1).MapOk<int, string?, RopError>(_ => null);
 
         await Assert.That(withNull.GetHashCode()).IsEqualTo(same.GetHashCode());
         await Assert.That(withNull.OrThrow()).IsNull();
@@ -126,7 +126,7 @@ public sealed class MaintenanceHardeningTests
     public async Task FailIf_WithFactory_DoesNotRunTheFactoryOnTheErrorTrack()
     {
         var called = false;
-        Result<int, RopError> source = Rop.Err<int>(Sample.Error());
+        Result<int, RopError> source = Result.Err<int>(Sample.Error());
 
         var result = source.FailIf(_ => true, _ =>
         {
@@ -141,7 +141,7 @@ public sealed class MaintenanceHardeningTests
     [Test]
     public async Task FailIf_WithFactory_UsesTheFactoryWhenThePredicateHolds()
     {
-        var result = Rop.Ok<int, RopError>(5)
+        var result = Result.Ok<int, RopError>(5)
             .FailIf(value => value > 0, value => RopError.Create("E_REJECT", $"rejected {value}"));
 
         await Assert.That(result.ErrOrThrow().Code).IsEqualTo("E_REJECT");
@@ -152,7 +152,7 @@ public sealed class MaintenanceHardeningTests
     public async Task RequireNotNull_WithCustomError_PreservesANonNullSuccess()
     {
         Result<string?, AppError> source =
-            Rop.Ok<string, AppError>("x").MapOk<string, string?, AppError>(_ => "x");
+            Result.Ok<string, AppError>("x").MapOk<string, string?, AppError>(_ => "x");
 
         var result = source.RequireNotNull(() => App("E_NULL", "required"));
 
@@ -162,10 +162,10 @@ public sealed class MaintenanceHardeningTests
     [Test]
     public async Task Validate_WithThreeInputs_ReturnsOkWhenEveryInputSucceeds()
     {
-        var result = Rop.Validate(
-            Rop.Ok<int, RopError>(1),
-            Rop.Ok<int, RopError>(2),
-            Rop.Ok<int, RopError>(3),
+        var result = Result.Validate(
+            Result.Ok<int, RopError>(1),
+            Result.Ok<int, RopError>(2),
+            Result.Ok<int, RopError>(3),
             (a, b, c) => a + b + c);
 
         await Assert.That(result.IsOk).IsTrue();
@@ -177,7 +177,7 @@ public sealed class MaintenanceHardeningTests
     {
         var called = false;
 
-        var result = Rop.SuccessIf(true, 1, () =>
+        var result = Result.SuccessIf(true, 1, () =>
         {
             called = true;
             return Sample.Error();
@@ -190,7 +190,7 @@ public sealed class MaintenanceHardeningTests
     [Test]
     public async Task SuccessIf_WithRopErrorFactory_UsesTheFactoryWhenTheConditionFails()
     {
-        var result = Rop.SuccessIf(false, 1, () => Sample.Error("E_CONDITION"));
+        var result = Result.SuccessIf(false, 1, () => Sample.Error("E_CONDITION"));
 
         await Assert.That(result.ErrOrThrow().Code).IsEqualTo("E_CONDITION");
     }
@@ -198,7 +198,7 @@ public sealed class MaintenanceHardeningTests
     [Test]
     public async Task FailureIf_WithRopErrorFactory_UsesTheFactoryWhenTheConditionHolds()
     {
-        var result = Rop.FailureIf(true, 1, () => Sample.Error("E_REJECT"));
+        var result = Result.FailureIf(true, 1, () => Sample.Error("E_REJECT"));
 
         await Assert.That(result.ErrOrThrow().Code).IsEqualTo("E_REJECT");
     }
@@ -206,7 +206,7 @@ public sealed class MaintenanceHardeningTests
     [Test]
     public async Task SuccessIf_WithCustomFactory_UsesTheFactoryWhenTheConditionFails()
     {
-        var result = Rop.SuccessIf(false, 1, () => App("E_CONDITION", "not allowed"));
+        var result = Result.SuccessIf(false, 1, () => App("E_CONDITION", "not allowed"));
 
         await Assert.That(result.ErrOrThrow().Code).IsEqualTo("E_CONDITION");
     }
@@ -216,7 +216,7 @@ public sealed class MaintenanceHardeningTests
     {
         var called = false;
 
-        var result = Rop.FailureIf(false, 1, () =>
+        var result = Result.FailureIf(false, 1, () =>
         {
             called = true;
             return Sample.Error();
@@ -232,7 +232,7 @@ public sealed class MaintenanceHardeningTests
     public async Task RequireSome_WithNullProducingFactory_FaultsWithInvalidOperation()
     {
         var exception = TestSupport.Catch(() =>
-            Opt.None<string>().RequireSome(() => (AppError)null!));
+            Option.None<string>().RequireSome(() => (AppError)null!));
 
         await Assert.That(exception is InvalidOperationException).IsTrue();
     }
@@ -250,7 +250,7 @@ public sealed class MaintenanceHardeningTests
     public async Task MapErr_WithNullProducingMapper_FaultsWithInvalidOperation()
     {
         var exception = TestSupport.Catch(() =>
-            Rop.Err<int, RopError>(Sample.Error()).MapErr<int, RopError, RopError>(_ => null!));
+            Result.Err<int, RopError>(Sample.Error()).MapErr<int, RopError, RopError>(_ => null!));
 
         await Assert.That(exception is InvalidOperationException).IsTrue();
     }
@@ -259,7 +259,7 @@ public sealed class MaintenanceHardeningTests
     public async Task Ensure_WithNullProducingFactory_FaultsWithInvalidOperation()
     {
         var exception = TestSupport.Catch(() =>
-            Rop.Ok<int, RopError>(1).Ensure(_ => false, _ => (RopError)null!));
+            Result.Ok<int, RopError>(1).Ensure(_ => false, _ => (RopError)null!));
 
         await Assert.That(exception is InvalidOperationException).IsTrue();
     }
@@ -268,7 +268,7 @@ public sealed class MaintenanceHardeningTests
     public async Task FailIf_WithNullProducingFactory_FaultsWithInvalidOperation()
     {
         var exception = TestSupport.Catch(() =>
-            Rop.Ok<int, RopError>(1).FailIf(_ => true, _ => (RopError)null!));
+            Result.Ok<int, RopError>(1).FailIf(_ => true, _ => (RopError)null!));
 
         await Assert.That(exception is InvalidOperationException).IsTrue();
     }
@@ -276,9 +276,9 @@ public sealed class MaintenanceHardeningTests
     [Test]
     public async Task ToSingleError_WithNullProducingCombine_FaultsWithInvalidOperation()
     {
-        Result<int, IReadOnlyList<RopError>> source = Rop.Validate(
-            Rop.Err<int>(Sample.Error("E_A")),
-            Rop.Err<int>(Sample.Error("E_B")),
+        Result<int, IReadOnlyList<RopError>> source = Result.Validate(
+            Result.Err<int>(Sample.Error("E_A")),
+            Result.Err<int>(Sample.Error("E_B")),
             (a, b) => a + b);
 
         var exception = TestSupport.Catch(() => source.ToSingleError<int, RopError>(_ => null!));
@@ -290,7 +290,7 @@ public sealed class MaintenanceHardeningTests
     public async Task MapErrAsync_WithNullProducingSynchronousMapper_FaultsWithInvalidOperation()
     {
         var exception = await TestSupport.CatchAsync(() =>
-            Task.FromResult(Rop.Err<int>(Sample.Error()))
+            Task.FromResult(Result.Err<int>(Sample.Error()))
                 .MapErrAsync<int, RopError, RopError>(_ => (RopError)null!));
 
         await Assert.That(exception is InvalidOperationException).IsTrue();
@@ -300,7 +300,7 @@ public sealed class MaintenanceHardeningTests
     public async Task MapErrAsync_WithNullProducingAsynchronousMapper_FaultsWithInvalidOperation()
     {
         var exception = await TestSupport.CatchAsync(() =>
-            Task.FromResult(Rop.Err<int>(Sample.Error()))
+            Task.FromResult(Result.Err<int>(Sample.Error()))
                 .MapErrAsync<int, RopError, RopError>(_ => Task.FromResult<RopError>(null!)));
 
         await Assert.That(exception is InvalidOperationException).IsTrue();
@@ -311,7 +311,7 @@ public sealed class MaintenanceHardeningTests
     [Test]
     public async Task TryParse_WhenTheParsableTypeReturnsNull_ReturnsNone()
     {
-        var option = Rop.TryParse<NullParsable>("anything");
+        var option = Result.TryParse<NullParsable>("anything");
 
         await Assert.That(option.IsNone).IsTrue();
     }
@@ -319,7 +319,7 @@ public sealed class MaintenanceHardeningTests
     [Test]
     public async Task Parse_WhenTheParsableTypeReturnsNull_ReturnsAParseFailure()
     {
-        var result = Rop.Parse<NullParsable, AppError>(
+        var result = Result.Parse<NullParsable, AppError>(
             "anything",
             failure => new AppError(failure.Code, failure.Message));
 
@@ -329,7 +329,7 @@ public sealed class MaintenanceHardeningTests
     [Test]
     public async Task Parse_WithRopError_WhenTheParsableTypeReturnsNull_ReturnsAParseFailure()
     {
-        var result = Rop.Parse<NullParsable>("anything");
+        var result = Result.Parse<NullParsable>("anything");
 
         await Assert.That(result.ErrOrThrow().Code).IsEqualTo("E_PARSE");
         await Assert.That(result.ErrOrThrow().Details).IsEqualTo("input=\"anything\"");
@@ -342,7 +342,7 @@ public sealed class MaintenanceHardeningTests
     {
         Task<Result<int, RopError>>[] tasks = [null!];
 
-        var exception = await TestSupport.CatchAsync(() => Rop.PartitionAsync<int, RopError>(tasks));
+        var exception = await TestSupport.CatchAsync(() => Result.PartitionAsync<int, RopError>(tasks));
 
         await Assert.That(exception is InvalidOperationException).IsTrue();
     }
@@ -352,13 +352,13 @@ public sealed class MaintenanceHardeningTests
     {
         Task<Result<int, RopError>>[] tasks =
         [
-            Task.FromResult(Rop.Ok<int, RopError>(1)),
-            Task.FromResult(Rop.Err<int, RopError>(Sample.Error("E_A"))),
-            Task.FromResult(Rop.Ok<int, RopError>(3)),
-            Task.FromResult(Rop.Err<int, RopError>(Sample.Error("E_B"))),
+            Task.FromResult(Result.Ok<int, RopError>(1)),
+            Task.FromResult(Result.Err<int, RopError>(Sample.Error("E_A"))),
+            Task.FromResult(Result.Ok<int, RopError>(3)),
+            Task.FromResult(Result.Err<int, RopError>(Sample.Error("E_B"))),
         ];
 
-        var (oks, errs) = await Rop.PartitionAsync<int, RopError>(tasks);
+        var (oks, errs) = await Result.PartitionAsync<int, RopError>(tasks);
 
         await Assert.That(oks.Count).IsEqualTo(2);
         await Assert.That(oks[0]).IsEqualTo(1);
@@ -371,7 +371,7 @@ public sealed class MaintenanceHardeningTests
     [Test]
     public async Task PartitionAsync_WithAnEmptySequence_ReturnsEmptyLists()
     {
-        var (oks, errs) = await Rop.PartitionAsync<int, RopError>(Array.Empty<Task<Result<int, RopError>>>());
+        var (oks, errs) = await Result.PartitionAsync<int, RopError>(Array.Empty<Task<Result<int, RopError>>>());
 
         await Assert.That(oks.Count).IsEqualTo(0);
         await Assert.That(errs.Count).IsEqualTo(0);
@@ -411,11 +411,11 @@ public sealed class MaintenanceHardeningTests
     {
         var source = new SinglePassEnumerable<Result<int, RopError>>(
         [
-            Rop.Ok<int, RopError>(1),
-            Rop.Ok<int, RopError>(2),
+            Result.Ok<int, RopError>(1),
+            Result.Ok<int, RopError>(2),
         ]);
 
-        var result = Rop.Sequence(source);
+        var result = Result.Sequence(source);
 
         await Assert.That(source.Enumerations).IsEqualTo(1);
         await Assert.That(result.OrThrow().Count).IsEqualTo(2);
@@ -426,7 +426,7 @@ public sealed class MaintenanceHardeningTests
     {
         var source = new SinglePassEnumerable<int>([1, 2, 3]);
 
-        var result = Rop.Traverse<int, int, RopError>(source, value => Rop.Ok<int, RopError>(value * 2));
+        var result = Result.Traverse<int, int, RopError>(source, value => Result.Ok<int, RopError>(value * 2));
 
         await Assert.That(source.Enumerations).IsEqualTo(1);
         await Assert.That(result.OrThrow().Count).IsEqualTo(3);
@@ -437,11 +437,11 @@ public sealed class MaintenanceHardeningTests
     {
         var source = new SinglePassEnumerable<Result<int, RopError>>(
         [
-            Rop.Err<int>(Sample.Error("E_A")),
-            Rop.Ok<int, RopError>(2),
+            Result.Err<int>(Sample.Error("E_A")),
+            Result.Ok<int, RopError>(2),
         ]);
 
-        var result = Rop.SequenceValidation(source);
+        var result = Result.SequenceValidation(source);
 
         await Assert.That(source.Enumerations).IsEqualTo(1);
         await Assert.That(result.TryGetErr(out var errors)).IsTrue();
@@ -453,9 +453,9 @@ public sealed class MaintenanceHardeningTests
     {
         var source = new SinglePassEnumerable<int>([1, 2, 3]);
 
-        var result = Rop.TraverseValidation<int, int, RopError>(
+        var result = Result.TraverseValidation<int, int, RopError>(
             source,
-            value => value == 2 ? Rop.Err<int>(Sample.Error("E_EVEN")) : Rop.Ok<int, RopError>(value));
+            value => value == 2 ? Result.Err<int>(Sample.Error("E_EVEN")) : Result.Ok<int, RopError>(value));
 
         await Assert.That(source.Enumerations).IsEqualTo(1);
         await Assert.That(result.IsErr).IsTrue();
@@ -466,11 +466,11 @@ public sealed class MaintenanceHardeningTests
     {
         var source = new SinglePassEnumerable<Result<int, RopError>>(
         [
-            Rop.Ok<int, RopError>(1),
-            Rop.Err<int>(Sample.Error()),
+            Result.Ok<int, RopError>(1),
+            Result.Err<int>(Sample.Error()),
         ]);
 
-        var (oks, errs) = Rop.Partition(source);
+        var (oks, errs) = Result.Partition(source);
 
         await Assert.That(source.Enumerations).IsEqualTo(1);
         await Assert.That(oks.Count).IsEqualTo(1);
@@ -480,9 +480,9 @@ public sealed class MaintenanceHardeningTests
     [Test]
     public async Task OptionValues_EnumeratesTheSourceExactlyOnce()
     {
-        var source = new SinglePassEnumerable<Option<int>>([Opt.Some(1), Opt.None<int>(), Opt.Some(3)]);
+        var source = new SinglePassEnumerable<Option<int>>([Option.Some(1), Option.None<int>(), Option.Some(3)]);
 
-        var values = Opt.Values(source);
+        var values = Option.Values(source);
 
         await Assert.That(source.Enumerations).IsEqualTo(1);
         await Assert.That(values.Count).IsEqualTo(2);
@@ -491,7 +491,7 @@ public sealed class MaintenanceHardeningTests
     [Test]
     public async Task Choose_EnumeratesTheSourceExactlyOnce()
     {
-        var source = new SinglePassEnumerable<Option<int>>([Opt.Some(1), Opt.None<int>(), Opt.Some(3)]);
+        var source = new SinglePassEnumerable<Option<int>>([Option.Some(1), Option.None<int>(), Option.Some(3)]);
 
         var values = source.Choose(value => value * 10);
 
@@ -505,11 +505,11 @@ public sealed class MaintenanceHardeningTests
     {
         var source = new SinglePassEnumerable<Task<Result<int, RopError>>>(
         [
-            Task.FromResult(Rop.Ok<int, RopError>(1)),
-            Task.FromResult(Rop.Err<int>(Sample.Error())),
+            Task.FromResult(Result.Ok<int, RopError>(1)),
+            Task.FromResult(Result.Err<int>(Sample.Error())),
         ]);
 
-        var (oks, errs) = await Rop.PartitionAsync<int, RopError>(source);
+        var (oks, errs) = await Result.PartitionAsync<int, RopError>(source);
 
         await Assert.That(source.Enumerations).IsEqualTo(1);
         await Assert.That(oks.Count).IsEqualTo(1);
@@ -521,11 +521,11 @@ public sealed class MaintenanceHardeningTests
     {
         var source = new SinglePassEnumerable<Task<Result<int, RopError>>>(
         [
-            Task.FromResult(Rop.Ok<int, RopError>(1)),
-            Task.FromResult(Rop.Err<int>(Sample.Error())),
+            Task.FromResult(Result.Ok<int, RopError>(1)),
+            Task.FromResult(Result.Err<int>(Sample.Error())),
         ]);
 
-        var result = await Rop.SequenceValidationAsync<int, RopError>(source);
+        var result = await Result.SequenceValidationAsync<int, RopError>(source);
 
         await Assert.That(source.Enumerations).IsEqualTo(1);
         await Assert.That(result.IsErr).IsTrue();
@@ -536,11 +536,11 @@ public sealed class MaintenanceHardeningTests
     {
         var source = new SinglePassEnumerable<int>([1, 2, 3]);
 
-        var result = await Rop.TraverseValidationAsync<int, int, RopError>(
+        var result = await Result.TraverseValidationAsync<int, int, RopError>(
             source,
             value => Task.FromResult(value == 2
-                ? Rop.Err<int>(Sample.Error("E_EVEN"))
-                : Rop.Ok<int, RopError>(value)));
+                ? Result.Err<int>(Sample.Error("E_EVEN"))
+                : Result.Ok<int, RopError>(value)));
 
         await Assert.That(source.Enumerations).IsEqualTo(1);
         await Assert.That(result.IsErr).IsTrue();
@@ -551,10 +551,10 @@ public sealed class MaintenanceHardeningTests
     [Test]
     public async Task MaterializedCollections_AreReadOnly()
     {
-        var values = Rop.Sequence([Rop.Ok<int, RopError>(1), Rop.Ok<int, RopError>(2)]).OrThrow();
-        var errors = Rop.Validate(
-            Rop.Err<int>(Sample.Error("E_A")),
-            Rop.Err<int>(Sample.Error("E_B")),
+        var values = Result.Sequence([Result.Ok<int, RopError>(1), Result.Ok<int, RopError>(2)]).OrThrow();
+        var errors = Result.Validate(
+            Result.Err<int>(Sample.Error("E_A")),
+            Result.Err<int>(Sample.Error("E_B")),
             (a, b) => a + b).ErrOrThrow();
 
         var valueMutation = TestSupport.Catch(() => ((IList<int>)values).Add(3));
@@ -567,7 +567,7 @@ public sealed class MaintenanceHardeningTests
     [Test]
     public async Task SharedImmutableValues_AreSafeForConcurrentReaders()
     {
-        var shared = Rop.Ok<int, RopError>(42);
+        var shared = Result.Ok<int, RopError>(42);
         var error = RopError.Create("E_SHARED", "shared");
 
         var outcomes = await Task.WhenAll(Enumerable.Range(0, 64).Select(offset => Task.Run(() =>
@@ -595,7 +595,7 @@ public sealed class MaintenanceHardeningTests
             .Throws<InvalidOperationException>();
         await Assert.That(() => result.MapErr(error => error.WithCode("E_MAPPED")))
             .Throws<InvalidOperationException>();
-        await Assert.That(() => result.BindErr(_ => Rop.Ok<int, RopError>(1)))
+        await Assert.That(() => result.BindErr(_ => Result.Ok<int, RopError>(1)))
             .Throws<InvalidOperationException>();
         await Assert.That(() => result.BindErrValue(1))
             .Throws<InvalidOperationException>();
@@ -617,7 +617,7 @@ public sealed class MaintenanceHardeningTests
             .Throws<InvalidOperationException>();
         await Assert.That(() => result.FailIf(_ => false, _ => Sample.Error()))
             .Throws<InvalidOperationException>();
-        await Assert.That(() => result.ThenEnsure(_ => Rop.Ok<Unit, RopError>(Unit.Value)))
+        await Assert.That(() => result.ThenEnsure(_ => Result.Ok<Unit, RopError>(Unit.Value)))
             .Throws<InvalidOperationException>();
         await Assert.That(() => result.ToOption())
             .Throws<InvalidOperationException>();
@@ -631,8 +631,8 @@ public sealed class MaintenanceHardeningTests
     public async Task ValidResults_AreUnaffectedByDefaultGuards()
     {
         var error = RopError.Create("E_VALID", "valid");
-        var failed = Rop.Err<int, RopError>(error);
-        var succeeded = Rop.Ok<int, RopError>(7);
+        var failed = Result.Err<int, RopError>(error);
+        var succeeded = Result.Ok<int, RopError>(7);
 
         await Assert.That(failed.TryGetErr(out var actual)).IsTrue();
         await Assert.That(ReferenceEquals(actual, error)).IsTrue();
@@ -646,7 +646,7 @@ public sealed class MaintenanceHardeningTests
     [Test]
     public async Task DefaultStructError_RemainsAValidValue()
     {
-        var result = Rop.Err<int, StructError>(default);
+        var result = Result.Err<int, StructError>(default);
 
         await Assert.That(result.TryGetErr(out var error)).IsTrue();
         await Assert.That(error.Status).IsEqualTo(0);
@@ -662,7 +662,7 @@ public sealed class MaintenanceHardeningTests
         await Assert.That(() => result.TryGetErr(out _)).Throws<InvalidOperationException>();
         await Assert.That(() => result.ErrOrThrow()).Throws<InvalidOperationException>();
 
-        var valid = Rop.Err<int, int?>(5);
+        var valid = Result.Err<int, int?>(5);
         await Assert.That(valid.TryGetErr(out var error)).IsTrue();
         await Assert.That(error).IsEqualTo(5);
     }
@@ -694,7 +694,7 @@ public sealed class MaintenanceHardeningTests
     public async Task DefaultValues_FollowTheirDocumentedContracts()
     {
         await Assert.That(default(Option<int>).IsNone).IsTrue();
-        await Assert.That(default(Option<int>).Equals(Opt.None<int>())).IsTrue();
+        await Assert.That(default(Option<int>).Equals(Option.None<int>())).IsTrue();
         await Assert.That(default(Result<int, RopError>).IsErr).IsTrue();
         await Assert.That(default(Result<int, RopError>).Equals(default)).IsTrue();
         await Assert.That(default(Either<int, string>).IsRight).IsTrue();

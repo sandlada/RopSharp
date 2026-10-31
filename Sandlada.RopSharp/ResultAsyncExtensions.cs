@@ -30,7 +30,7 @@ namespace Sandlada.RopSharp;
 /// </remarks>
 /// <remarks>
 /// <code><![CDATA[
-/// var receiptId = await Rop.TryAsync(
+/// var receiptId = await Result.TryAsync(
 ///         () => OrderFixtures.ChargeAsync(OrderFixtures.Sample),
 ///         "E_CHARGE")
 ///     .MapOkAsync(static payment => payment.Id);
@@ -50,7 +50,7 @@ public static class ResultAsyncExtensions
     /// <returns>A task that completes with <paramref name="result"/>.</returns>
     /// <remarks>
     /// <code><![CDATA[
-    /// var receiptId = Rop.Try(() => OrderFixtures.Charge(OrderFixtures.Sample), "E_CHARGE")
+    /// var receiptId = Result.Try(() => OrderFixtures.Charge(OrderFixtures.Sample), "E_CHARGE")
     ///     .AsTask()
     ///     .MapOkAsync(static payment => payment.Id);
     ///
@@ -74,7 +74,7 @@ public static class ResultAsyncExtensions
     /// <exception cref="OperationCanceledException">The token was cancelled.</exception>
     /// <remarks>
     /// <code><![CDATA[
-    /// var receiptId = await Task.FromResult(Rop.Try(() => OrderFixtures.Charge(OrderFixtures.Sample), "E_CHARGE"))
+    /// var receiptId = await Task.FromResult(Result.Try(() => OrderFixtures.Charge(OrderFixtures.Sample), "E_CHARGE"))
     ///     .MapOkAsync(static payment => payment.Id);
     ///
     /// // Ok("pay-ord-1001") when the charge succeeded,
@@ -93,11 +93,11 @@ public static class ResultAsyncExtensions
         var result = await task.WaitAsync(cancellationToken).ConfigureAwait(false);
         if (!result.TryGetOk(out var value))
         {
-            return Rop.Err<TOut, TErr>(result.ErrUnsafe);
+            return Result.Err<TOut, TErr>(result.ErrUnsafe);
         }
 
         cancellationToken.ThrowIfCancellationRequested();
-        return Rop.OkUnchecked<TOut, TErr>(mapper(value));
+        return Result.OkUnchecked<TOut, TErr>(mapper(value));
     }
 
     /// <summary>
@@ -113,7 +113,7 @@ public static class ResultAsyncExtensions
     /// <exception cref="OperationCanceledException">The token was cancelled.</exception>
     /// <remarks>
     /// <code><![CDATA[
-    /// var receiptId = await Task.FromResult(Rop.Try(() => OrderFixtures.Charge(OrderFixtures.Sample), "E_CHARGE"))
+    /// var receiptId = await Task.FromResult(Result.Try(() => OrderFixtures.Charge(OrderFixtures.Sample), "E_CHARGE"))
     ///     .MapOkAsync(static payment => Task.FromResult(payment.Id));
     ///
     /// // Ok("pay-ord-1001") when the charge succeeded,
@@ -132,12 +132,12 @@ public static class ResultAsyncExtensions
         var result = await task.WaitAsync(cancellationToken).ConfigureAwait(false);
         if (!result.TryGetOk(out var value))
         {
-            return Rop.Err<TOut, TErr>(result.ErrUnsafe);
+            return Result.Err<TOut, TErr>(result.ErrUnsafe);
         }
 
         cancellationToken.ThrowIfCancellationRequested();
         var mapped = await AsyncGuards.Require(mapper(value), "mapper").ConfigureAwait(false);
-        return Rop.OkUnchecked<TOut, TErr>(mapped);
+        return Result.OkUnchecked<TOut, TErr>(mapped);
     }
 
     /// <summary>
@@ -153,7 +153,7 @@ public static class ResultAsyncExtensions
     /// <exception cref="OperationCanceledException">The token was cancelled.</exception>
     /// <remarks>
     /// <code><![CDATA[
-    /// var receiptId = await Task.FromResult(Rop.Try(() => OrderFixtures.Charge(OrderFixtures.Sample), "E_CHARGE"))
+    /// var receiptId = await Task.FromResult(Result.Try(() => OrderFixtures.Charge(OrderFixtures.Sample), "E_CHARGE"))
     ///     .MapOkAsync(static (payment, token) => Task.FromResult(payment.Id));
     ///
     /// // Ok("pay-ord-1001") when the charge succeeded,
@@ -172,12 +172,12 @@ public static class ResultAsyncExtensions
         var result = await task.WaitAsync(cancellationToken).ConfigureAwait(false);
         if (!result.TryGetOk(out var value))
         {
-            return Rop.Err<TOut, TErr>(result.ErrUnsafe);
+            return Result.Err<TOut, TErr>(result.ErrUnsafe);
         }
 
         cancellationToken.ThrowIfCancellationRequested();
         var mapped = await AsyncGuards.Require(mapper(value, cancellationToken), "mapper").ConfigureAwait(false);
-        return Rop.OkUnchecked<TOut, TErr>(mapped);
+        return Result.OkUnchecked<TOut, TErr>(mapped);
     }
 
     /// <summary>
@@ -193,7 +193,7 @@ public static class ResultAsyncExtensions
     /// <exception cref="OperationCanceledException">The token was cancelled.</exception>
     /// <remarks>
     /// <code><![CDATA[
-    /// var receiptId = await Rop.Try(() => OrderFixtures.Charge(OrderFixtures.Sample), "E_CHARGE")
+    /// var receiptId = await Result.Try(() => OrderFixtures.Charge(OrderFixtures.Sample), "E_CHARGE")
     ///     .MapOkAsync(static payment => Task.FromResult(payment.Id));
     ///
     /// // Ok("pay-ord-1001") when the charge succeeded,
@@ -210,12 +210,12 @@ public static class ResultAsyncExtensions
 
         if (!result.TryGetOk(out var value))
         {
-            return Rop.Err<TOut, TErr>(result.ErrUnsafe);
+            return Result.Err<TOut, TErr>(result.ErrUnsafe);
         }
 
         cancellationToken.ThrowIfCancellationRequested();
         var mapped = await AsyncGuards.Require(mapper(value), "mapper").ConfigureAwait(false);
-        return Rop.OkUnchecked<TOut, TErr>(mapped);
+        return Result.OkUnchecked<TOut, TErr>(mapped);
     }
 
     /// <summary>
@@ -232,7 +232,7 @@ public static class ResultAsyncExtensions
     /// <exception cref="InvalidOperationException">The mapper returned a null task.</exception>
     /// <remarks>
     /// <code><![CDATA[
-    /// var receiptId = await Rop.Try(() => OrderFixtures.Charge(OrderFixtures.Sample), "E_CHARGE")
+    /// var receiptId = await Result.Try(() => OrderFixtures.Charge(OrderFixtures.Sample), "E_CHARGE")
     ///     .MapOkAsync(static (payment, token) => Task.FromResult(payment.Id));
     ///
     /// // Ok("pay-ord-1001") when the charge succeeded,
@@ -253,12 +253,12 @@ public static class ResultAsyncExtensions
 
         if (!result.TryGetOk(out var value))
         {
-            return Rop.Err<TOut, TErr>(result.ErrUnsafe);
+            return Result.Err<TOut, TErr>(result.ErrUnsafe);
         }
 
         cancellationToken.ThrowIfCancellationRequested();
         var mapped = await AsyncGuards.Require(mapper(value, cancellationToken), "mapper").ConfigureAwait(false);
-        return Rop.OkUnchecked<TOut, TErr>(mapped);
+        return Result.OkUnchecked<TOut, TErr>(mapped);
     }
 
     /// <summary>
@@ -277,7 +277,7 @@ public static class ResultAsyncExtensions
     /// </exception>
     /// <remarks>
     /// <code><![CDATA[
-    /// var placed = await Task.FromResult(Rop.Try(() => OrderFixtures.Charge(OrderFixtures.Declined), "E_CHARGE"))
+    /// var placed = await Task.FromResult(Result.Try(() => OrderFixtures.Charge(OrderFixtures.Declined), "E_CHARGE"))
     ///     .MapErrAsync(static error => error.WithCode("E_PAYMENT_DECLINED"));
     ///
     /// // Err(E_PAYMENT_DECLINED) when the provider refused the order,
@@ -296,11 +296,11 @@ public static class ResultAsyncExtensions
         var result = await task.WaitAsync(cancellationToken).ConfigureAwait(false);
         if (!result.TryGetErr(out var error))
         {
-            return Rop.OkUnchecked<TOk, TErr2>(result.OkUnsafe);
+            return Result.OkUnchecked<TOk, TErr2>(result.OkUnsafe);
         }
 
         cancellationToken.ThrowIfCancellationRequested();
-        return Rop.Err<TOk, TErr2>(Rop.RequireError(mapper(error)));
+        return Result.Err<TOk, TErr2>(Result.RequireError(mapper(error)));
     }
 
     /// <summary>
@@ -315,7 +315,7 @@ public static class ResultAsyncExtensions
     /// <returns>The original success or the mapped error.</returns>
     /// <remarks>
     /// <code><![CDATA[
-    /// var placed = await Task.FromResult(Rop.Try(() => OrderFixtures.Charge(OrderFixtures.Declined), "E_CHARGE"))
+    /// var placed = await Task.FromResult(Result.Try(() => OrderFixtures.Charge(OrderFixtures.Declined), "E_CHARGE"))
     ///     .MapErrAsync(static error => Task.FromResult(error.WithCode("E_PAYMENT_DECLINED")));
     ///
     /// // Err(E_PAYMENT_DECLINED) when the provider refused the order,
@@ -334,11 +334,11 @@ public static class ResultAsyncExtensions
         var result = await task.WaitAsync(cancellationToken).ConfigureAwait(false);
         if (!result.TryGetErr(out var error))
         {
-            return Rop.OkUnchecked<TOk, TErr2>(result.OkUnsafe);
+            return Result.OkUnchecked<TOk, TErr2>(result.OkUnsafe);
         }
 
         cancellationToken.ThrowIfCancellationRequested();
-        return Rop.Err<TOk, TErr2>(Rop.RequireError(await AsyncGuards.Require(mapper(error), "mapper").ConfigureAwait(false)));
+        return Result.Err<TOk, TErr2>(Result.RequireError(await AsyncGuards.Require(mapper(error), "mapper").ConfigureAwait(false)));
     }
 
     /// <summary>
@@ -353,7 +353,7 @@ public static class ResultAsyncExtensions
     /// <returns>The original success or the mapped error.</returns>
     /// <remarks>
     /// <code><![CDATA[
-    /// var placed = await Task.FromResult(Rop.Try(() => OrderFixtures.Charge(OrderFixtures.Declined), "E_CHARGE"))
+    /// var placed = await Task.FromResult(Result.Try(() => OrderFixtures.Charge(OrderFixtures.Declined), "E_CHARGE"))
     ///     .MapErrAsync(static (error, token) => Task.FromResult(error.WithCode("E_PAYMENT_DECLINED")));
     ///
     /// // Err(E_PAYMENT_DECLINED) when the provider refused the order,
@@ -372,12 +372,12 @@ public static class ResultAsyncExtensions
         var result = await task.WaitAsync(cancellationToken).ConfigureAwait(false);
         if (!result.TryGetErr(out var error))
         {
-            return Rop.OkUnchecked<TOk, TErr2>(result.OkUnsafe);
+            return Result.OkUnchecked<TOk, TErr2>(result.OkUnsafe);
         }
 
         cancellationToken.ThrowIfCancellationRequested();
-        return Rop.Err<TOk, TErr2>(
-            Rop.RequireError(
+        return Result.Err<TOk, TErr2>(
+            Result.RequireError(
                 await AsyncGuards.Require(mapper(error, cancellationToken), "mapper").ConfigureAwait(false)));
     }
 
@@ -395,7 +395,7 @@ public static class ResultAsyncExtensions
     /// <exception cref="InvalidOperationException">The mapper returned a null task.</exception>
     /// <remarks>
     /// <code><![CDATA[
-    /// var placed = await Rop.Try(() => OrderFixtures.Charge(OrderFixtures.Declined), "E_CHARGE")
+    /// var placed = await Result.Try(() => OrderFixtures.Charge(OrderFixtures.Declined), "E_CHARGE")
     ///     .MapErrAsync(static error => Task.FromResult(error.WithCode("E_PAYMENT_DECLINED")));
     ///
     /// // Err(E_PAYMENT_DECLINED) when the provider refused the order,
@@ -415,11 +415,11 @@ public static class ResultAsyncExtensions
 
         if (!result.TryGetErr(out var error))
         {
-            return Rop.OkUnchecked<TOk, TErr2>(result.OkUnsafe);
+            return Result.OkUnchecked<TOk, TErr2>(result.OkUnsafe);
         }
 
         cancellationToken.ThrowIfCancellationRequested();
-        return Rop.Err<TOk, TErr2>(Rop.RequireError(await AsyncGuards.Require(mapper(error), "mapper").ConfigureAwait(false)));
+        return Result.Err<TOk, TErr2>(Result.RequireError(await AsyncGuards.Require(mapper(error), "mapper").ConfigureAwait(false)));
     }
 
     /// <summary>
@@ -436,7 +436,7 @@ public static class ResultAsyncExtensions
     /// <exception cref="InvalidOperationException">The mapper returned a null task.</exception>
     /// <remarks>
     /// <code><![CDATA[
-    /// var placed = await Rop.Try(() => OrderFixtures.Charge(OrderFixtures.Declined), "E_CHARGE")
+    /// var placed = await Result.Try(() => OrderFixtures.Charge(OrderFixtures.Declined), "E_CHARGE")
     ///     .MapErrAsync(static (error, token) => Task.FromResult(error.WithCode("E_PAYMENT_DECLINED")));
     ///
     /// // Err(E_PAYMENT_DECLINED) when the provider refused the order,
@@ -456,12 +456,12 @@ public static class ResultAsyncExtensions
 
         if (!result.TryGetErr(out var error))
         {
-            return Rop.OkUnchecked<TOk, TErr2>(result.OkUnsafe);
+            return Result.OkUnchecked<TOk, TErr2>(result.OkUnsafe);
         }
 
         cancellationToken.ThrowIfCancellationRequested();
-        return Rop.Err<TOk, TErr2>(
-            Rop.RequireError(
+        return Result.Err<TOk, TErr2>(
+            Result.RequireError(
                 await AsyncGuards.Require(mapper(error, cancellationToken), "mapper").ConfigureAwait(false)));
     }
 
@@ -478,8 +478,8 @@ public static class ResultAsyncExtensions
     /// <exception cref="OperationCanceledException">The token was cancelled.</exception>
     /// <remarks>
     /// <code><![CDATA[
-    /// var receiptId = await Task.FromResult(Rop.Try(() => OrderFixtures.Charge(OrderFixtures.Sample), "E_CHARGE"))
-    ///     .BindOkAsync(static payment => Task.FromResult(Rop.Ok(payment.Id)));
+    /// var receiptId = await Task.FromResult(Result.Try(() => OrderFixtures.Charge(OrderFixtures.Sample), "E_CHARGE"))
+    ///     .BindOkAsync(static payment => Task.FromResult(Result.Ok(payment.Id)));
     ///
     /// // Ok("pay-ord-1001") when the charge and the binding succeeded,
     /// // Err(E_CHARGE) when the charge failed - the binder never runs on the error track.
@@ -497,7 +497,7 @@ public static class ResultAsyncExtensions
         var result = await task.WaitAsync(cancellationToken).ConfigureAwait(false);
         if (!result.TryGetOk(out var value))
         {
-            return Rop.Err<TOut, TErr>(result.ErrUnsafe);
+            return Result.Err<TOut, TErr>(result.ErrUnsafe);
         }
 
         cancellationToken.ThrowIfCancellationRequested();
@@ -517,8 +517,8 @@ public static class ResultAsyncExtensions
     /// <exception cref="OperationCanceledException">The token was cancelled.</exception>
     /// <remarks>
     /// <code><![CDATA[
-    /// var receiptId = await Task.FromResult(Rop.Try(() => OrderFixtures.Charge(OrderFixtures.Sample), "E_CHARGE"))
-    ///     .BindOkAsync(static (payment, token) => Task.FromResult(Rop.Ok(payment.Id)));
+    /// var receiptId = await Task.FromResult(Result.Try(() => OrderFixtures.Charge(OrderFixtures.Sample), "E_CHARGE"))
+    ///     .BindOkAsync(static (payment, token) => Task.FromResult(Result.Ok(payment.Id)));
     ///
     /// // Ok("pay-ord-1001") when the charge and the binding succeeded,
     /// // Err(E_CHARGE) when the charge failed - the binder receives the same token.
@@ -536,7 +536,7 @@ public static class ResultAsyncExtensions
         var result = await task.WaitAsync(cancellationToken).ConfigureAwait(false);
         if (!result.TryGetOk(out var value))
         {
-            return Rop.Err<TOut, TErr>(result.ErrUnsafe);
+            return Result.Err<TOut, TErr>(result.ErrUnsafe);
         }
 
         cancellationToken.ThrowIfCancellationRequested();
@@ -556,8 +556,8 @@ public static class ResultAsyncExtensions
     /// <exception cref="OperationCanceledException">The token was cancelled.</exception>
     /// <remarks>
     /// <code><![CDATA[
-    /// var receiptId = await Rop.Try(() => OrderFixtures.Charge(OrderFixtures.Sample), "E_CHARGE")
-    ///     .BindOkAsync(static payment => Task.FromResult(Rop.Ok(payment.Id)));
+    /// var receiptId = await Result.Try(() => OrderFixtures.Charge(OrderFixtures.Sample), "E_CHARGE")
+    ///     .BindOkAsync(static payment => Task.FromResult(Result.Ok(payment.Id)));
     ///
     /// // Ok("pay-ord-1001") when the charge and the binding succeeded,
     /// // Err(E_CHARGE) when the charge failed - the binder never runs on the error track.
@@ -573,7 +573,7 @@ public static class ResultAsyncExtensions
 
         if (!result.TryGetOk(out var value))
         {
-            return Rop.Err<TOut, TErr>(result.ErrUnsafe);
+            return Result.Err<TOut, TErr>(result.ErrUnsafe);
         }
 
         cancellationToken.ThrowIfCancellationRequested();
@@ -593,8 +593,8 @@ public static class ResultAsyncExtensions
     /// <exception cref="OperationCanceledException">The token was cancelled.</exception>
     /// <remarks>
     /// <code><![CDATA[
-    /// var receiptId = await Rop.Try(() => OrderFixtures.Charge(OrderFixtures.Sample), "E_CHARGE")
-    ///     .BindOkAsync(static (payment, token) => Task.FromResult(Rop.Ok(payment.Id)));
+    /// var receiptId = await Result.Try(() => OrderFixtures.Charge(OrderFixtures.Sample), "E_CHARGE")
+    ///     .BindOkAsync(static (payment, token) => Task.FromResult(Result.Ok(payment.Id)));
     ///
     /// // Ok("pay-ord-1001") when the charge and the binding succeeded,
     /// // Err(E_CHARGE) when the charge failed - the binder receives the same token.
@@ -610,7 +610,7 @@ public static class ResultAsyncExtensions
 
         if (!result.TryGetOk(out var value))
         {
-            return Rop.Err<TOut, TErr>(result.ErrUnsafe);
+            return Result.Err<TOut, TErr>(result.ErrUnsafe);
         }
 
         cancellationToken.ThrowIfCancellationRequested();
@@ -628,8 +628,8 @@ public static class ResultAsyncExtensions
     /// <returns>The original success, or the fallback result.</returns>
     /// <remarks>
     /// <code><![CDATA[
-    /// var receiptId = await Task.FromResult(Rop.Try(() => OrderFixtures.Charge(OrderFixtures.Declined), "E_CHARGE"))
-    ///     .BindErrAsync(static error => Task.FromResult(Rop.Ok<Payment, RopError>(OrderFixtures.Charge(OrderFixtures.Sample))))
+    /// var receiptId = await Task.FromResult(Result.Try(() => OrderFixtures.Charge(OrderFixtures.Declined), "E_CHARGE"))
+    ///     .BindErrAsync(static error => Task.FromResult(Result.Ok<Payment, RopError>(OrderFixtures.Charge(OrderFixtures.Sample))))
     ///     .MapOkAsync(static payment => payment.Id);
     ///
     /// // Ok("pay-ord-1001") when the fallback succeeded,
@@ -666,8 +666,8 @@ public static class ResultAsyncExtensions
     /// <returns>The original success, or the fallback result.</returns>
     /// <remarks>
     /// <code><![CDATA[
-    /// var receiptId = await Task.FromResult(Rop.Try(() => OrderFixtures.Charge(OrderFixtures.Declined), "E_CHARGE"))
-    ///     .BindErrAsync(static (error, token) => Task.FromResult(Rop.Ok<Payment, RopError>(OrderFixtures.Charge(OrderFixtures.Sample))))
+    /// var receiptId = await Task.FromResult(Result.Try(() => OrderFixtures.Charge(OrderFixtures.Declined), "E_CHARGE"))
+    ///     .BindErrAsync(static (error, token) => Task.FromResult(Result.Ok<Payment, RopError>(OrderFixtures.Charge(OrderFixtures.Sample))))
     ///     .MapOkAsync(static payment => payment.Id);
     ///
     /// // Ok("pay-ord-1001") when the fallback succeeded,
@@ -704,8 +704,8 @@ public static class ResultAsyncExtensions
     /// <returns>The original success, or the fallback result.</returns>
     /// <remarks>
     /// <code><![CDATA[
-    /// var receiptId = await Rop.Try(() => OrderFixtures.Charge(OrderFixtures.Declined), "E_CHARGE")
-    ///     .BindErrAsync(static error => Task.FromResult(Rop.Ok<Payment, RopError>(OrderFixtures.Charge(OrderFixtures.Sample))))
+    /// var receiptId = await Result.Try(() => OrderFixtures.Charge(OrderFixtures.Declined), "E_CHARGE")
+    ///     .BindErrAsync(static error => Task.FromResult(Result.Ok<Payment, RopError>(OrderFixtures.Charge(OrderFixtures.Sample))))
     ///     .MapOkAsync(static payment => payment.Id);
     ///
     /// // Ok("pay-ord-1001") when the fallback succeeded,
@@ -740,8 +740,8 @@ public static class ResultAsyncExtensions
     /// <returns>The original success, or the fallback result.</returns>
     /// <remarks>
     /// <code><![CDATA[
-    /// var receiptId = await Rop.Try(() => OrderFixtures.Charge(OrderFixtures.Declined), "E_CHARGE")
-    ///     .BindErrAsync(static (error, token) => Task.FromResult(Rop.Ok<Payment, RopError>(OrderFixtures.Charge(OrderFixtures.Sample))))
+    /// var receiptId = await Result.Try(() => OrderFixtures.Charge(OrderFixtures.Declined), "E_CHARGE")
+    ///     .BindErrAsync(static (error, token) => Task.FromResult(Result.Ok<Payment, RopError>(OrderFixtures.Charge(OrderFixtures.Sample))))
     ///     .MapOkAsync(static payment => payment.Id);
     ///
     /// // Ok("pay-ord-1001") when the fallback succeeded,
@@ -776,7 +776,7 @@ public static class ResultAsyncExtensions
     /// <returns>The same result value.</returns>
     /// <remarks>
     /// <code><![CDATA[
-    /// await Task.FromResult(Rop.Try(() => OrderFixtures.Charge(OrderFixtures.Sample), "E_CHARGE"))
+    /// await Task.FromResult(Result.Try(() => OrderFixtures.Charge(OrderFixtures.Sample), "E_CHARGE"))
     ///     .TeeOkAsync(static payment => Task.CompletedTask);
     ///
     /// // Ok(payment) runs the side effect and keeps the result,
@@ -817,7 +817,7 @@ public static class ResultAsyncExtensions
     /// <returns>The same result value.</returns>
     /// <remarks>
     /// <code><![CDATA[
-    /// await Task.FromResult(Rop.Try(() => OrderFixtures.Charge(OrderFixtures.Sample), "E_CHARGE"))
+    /// await Task.FromResult(Result.Try(() => OrderFixtures.Charge(OrderFixtures.Sample), "E_CHARGE"))
     ///     .TeeOkAsync(static (payment, token) => Task.CompletedTask);
     ///
     /// // Ok(payment) runs the side effect and keeps the result,
@@ -858,7 +858,7 @@ public static class ResultAsyncExtensions
     /// <returns>The same result value.</returns>
     /// <remarks>
     /// <code><![CDATA[
-    /// await Task.FromResult(Rop.Try(() => OrderFixtures.Charge(OrderFixtures.Declined), "E_CHARGE"))
+    /// await Task.FromResult(Result.Try(() => OrderFixtures.Charge(OrderFixtures.Declined), "E_CHARGE"))
     ///     .TeeErrAsync(static error => Task.CompletedTask);
     ///
     /// // Err(E_CHARGE) runs the side effect and keeps the result,
@@ -895,7 +895,7 @@ public static class ResultAsyncExtensions
     /// <returns>The same result value.</returns>
     /// <remarks>
     /// <code><![CDATA[
-    /// await Task.FromResult(Rop.Try(() => OrderFixtures.Charge(OrderFixtures.Declined), "E_CHARGE"))
+    /// await Task.FromResult(Result.Try(() => OrderFixtures.Charge(OrderFixtures.Declined), "E_CHARGE"))
     ///     .TeeErrAsync(static (error, token) => Task.CompletedTask);
     ///
     /// // Err(E_CHARGE) runs the side effect and keeps the result,

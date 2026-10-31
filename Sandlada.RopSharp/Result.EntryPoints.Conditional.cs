@@ -12,7 +12,7 @@ namespace Sandlada.RopSharp;
 /// business rule such as "the order must have lines" into a value the rest of the code can compose with.
 /// </para>
 /// <code><![CDATA[
-/// var placed = Rop.SuccessIf(
+/// var placed = Result.SuccessIf(
 ///         OrderFixtures.Sample.ItemCount > 0,
 ///         OrderFixtures.Sample,
 ///         RopError.Create("E_EMPTY_ORDER", "the order has no lines"))
@@ -22,7 +22,7 @@ namespace Sandlada.RopSharp;
 /// // Err(E_EMPTY_ORDER) when it has none - the condition selects the track.
 /// ]]></code>
 /// </remarks>
-public static partial class Rop
+public static partial class Result
 {
     /// <summary>
     /// Creates a success when <paramref name="condition"/> is <see langword="true"/>; otherwise the supplied error.
@@ -37,7 +37,7 @@ public static partial class Rop
     /// The error is supplied eagerly, so use it when the error value is cheap. Use the factory overload when it
     /// is not.
     /// <code><![CDATA[
-    /// var placed = Rop.SuccessIf(
+    /// var placed = Result.SuccessIf(
     ///         OrderFixtures.Sample.ItemCount > 0,
     ///         OrderFixtures.Sample,
     ///         RopError.Create("E_EMPTY_ORDER", "the order has no lines"))
@@ -65,7 +65,7 @@ public static partial class Rop
     /// <remarks>
     /// The factory is lazy, so an expensive error is only built when the condition actually fails.
     /// <code><![CDATA[
-    /// var placed = Rop.SuccessIf(
+    /// var placed = Result.SuccessIf(
     ///         OrderFixtures.Sample.ItemCount > 0,
     ///         OrderFixtures.Sample,
     ///         static () => RopError.Create("E_EMPTY_ORDER", "the order has no lines"))
@@ -95,7 +95,7 @@ public static partial class Rop
     /// <remarks>
     /// Use this overload when the caller's error system is not <see cref="RopError"/>.
     /// <code><![CDATA[
-    /// var placed = Rop.SuccessIf<string, string>(
+    /// var placed = Result.SuccessIf<string, string>(
     ///         OrderFixtures.Sample.ItemCount > 0,
     ///         OrderFixtures.Sample.Id,
     ///         "the order has no lines")
@@ -126,7 +126,7 @@ public static partial class Rop
     /// <remarks>
     /// The factory is lazy, so an expensive error is only built when the condition actually fails.
     /// <code><![CDATA[
-    /// var placed = Rop.SuccessIf<string, string>(
+    /// var placed = Result.SuccessIf<string, string>(
     ///         OrderFixtures.Sample.ItemCount > 0,
     ///         OrderFixtures.Sample.Id,
     ///         static () => "the order has no lines")
@@ -155,7 +155,7 @@ public static partial class Rop
     /// <c>FailureIf</c> inverts the usual success condition. It reads best when the failure is the exceptional
     /// case that has to be spelled out.
     /// <code><![CDATA[
-    /// var charged = Rop.FailureIf(
+    /// var charged = Result.FailureIf(
     ///         OrderFixtures.Sample.Id.EndsWith("-declined", StringComparison.Ordinal),
     ///         OrderFixtures.Sample,
     ///         RopError.Create("E_PAYMENT_DECLINED", "the provider refused the order"))
@@ -183,7 +183,7 @@ public static partial class Rop
     /// <remarks>
     /// The factory is lazy, so an expensive error is only built when the condition actually holds.
     /// <code><![CDATA[
-    /// var charged = Rop.FailureIf(
+    /// var charged = Result.FailureIf(
     ///         OrderFixtures.Sample.Id.EndsWith("-declined", StringComparison.Ordinal),
     ///         OrderFixtures.Sample,
     ///         static () => RopError.Create("E_PAYMENT_DECLINED", "the provider refused the order"))
@@ -213,7 +213,7 @@ public static partial class Rop
     /// <remarks>
     /// Use this overload when the caller's error system is not <see cref="RopError"/>.
     /// <code><![CDATA[
-    /// var charged = Rop.FailureIf<string, string>(
+    /// var charged = Result.FailureIf<string, string>(
     ///         OrderFixtures.Sample.Id.EndsWith("-declined", StringComparison.Ordinal),
     ///         OrderFixtures.Sample.Id,
     ///         "the provider refused the order")
@@ -244,7 +244,7 @@ public static partial class Rop
     /// <remarks>
     /// The factory is lazy, so an expensive error is only built when the condition actually holds.
     /// <code><![CDATA[
-    /// var charged = Rop.FailureIf<string, string>(
+    /// var charged = Result.FailureIf<string, string>(
     ///         OrderFixtures.Sample.Id.EndsWith("-declined", StringComparison.Ordinal),
     ///         OrderFixtures.Sample.Id,
     ///         static () => "the provider refused the order")
@@ -274,7 +274,7 @@ public static partial class Rop
     /// echo is bounded and escapes control characters; <see langword="null"/> renders as the literal <c>null</c>
     /// instead of an empty pair of quotes.
     /// <code><![CDATA[
-    /// var amount = Rop.Parse<decimal>("19.50")
+    /// var amount = Result.Parse<decimal>("19.50")
     ///     .MapOk(static value => value.ToString("0.00", CultureInfo.InvariantCulture));
     ///
     /// // Ok("19.50") when the text is a number,
@@ -322,7 +322,7 @@ public static partial class Rop
     /// overload remains the default.
     /// </para>
     /// <code><![CDATA[
-    /// var amount = Rop.Parse<decimal, string>("19.50", static failure => failure.Code)
+    /// var amount = Result.Parse<decimal, string>("19.50", static failure => failure.Code)
     ///     .MapOk(static value => value.ToString("0.00", CultureInfo.InvariantCulture));
     ///
     /// // Ok("19.50") when the text is a number,
@@ -362,7 +362,7 @@ public static partial class Rop
     /// <c>Some(null)</c>: an option never contains null, so a third-party <see cref="IParsable{T}"/> that reports
     /// success with a null value yields <c>None</c>.
     /// <code><![CDATA[
-    /// var amount = Rop.TryParse<decimal>("19.50")
+    /// var amount = Result.TryParse<decimal>("19.50")
     ///     .BindNoneValue(0m);
     ///
     /// // Some(19.50) when the text is a number,
@@ -374,9 +374,9 @@ public static partial class Rop
     {
         if (!T.TryParse(value, CultureInfo.InvariantCulture, out var parsed) || parsed is null)
         {
-            return Opt.None<T>();
+            return Option.None<T>();
         }
 
-        return Opt.Some(parsed);
+        return Option.Some(parsed);
     }
 }

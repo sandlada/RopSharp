@@ -12,13 +12,13 @@ namespace Sandlada.RopSharp.Benchmarks;
 [Config(typeof(BenchConfig))]
 public class EqualityBenchmarks
 {
-    private readonly Result<int, RopError> _okA = Rop.Ok(42);
-    private readonly Result<int, RopError> _okB = Rop.Ok(42);
-    private readonly Result<int, RopError> _err = Rop.Err<int>(RopError.Create("E_BENCH", "failure"));
+    private readonly Result<int, RopError> _okA = Result.Ok(42);
+    private readonly Result<int, RopError> _okB = Result.Ok(42);
+    private readonly Result<int, RopError> _err = Result.Err<int>(RopError.Create("E_BENCH", "failure"));
 
-    private readonly Option<int> _someA = Opt.Some(42);
-    private readonly Option<int> _someB = Opt.Some(42);
-    private readonly Option<int> _none = Opt.None<int>();
+    private readonly Option<int> _someA = Option.Some(42);
+    private readonly Option<int> _someB = Option.Some(42);
+    private readonly Option<int> _none = Option.None<int>();
 
     private readonly Either<string, int> _rightA = Either.Right<string, int>(42);
     private readonly Either<string, int> _rightB = Either.Right<string, int>(42);

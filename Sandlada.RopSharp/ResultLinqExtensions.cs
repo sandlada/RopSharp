@@ -7,7 +7,7 @@ namespace Sandlada.RopSharp;
 /// Only <c>select</c> and <c>from</c> are supported. <c>where</c> is intentionally absent because a result query
 /// has no error value to produce for a failing predicate; use <see cref="ResultExtensions.Ensure{TOk,TErr}(Result{TOk,TErr},Func{TOk,bool},TErr)"/> instead.
 /// <code><![CDATA[
-/// var receiptId = Rop.Try(() => OrderFixtures.Charge(OrderFixtures.Sample), "E_CHARGE")
+/// var receiptId = Result.Try(() => OrderFixtures.Charge(OrderFixtures.Sample), "E_CHARGE")
 ///     .Select(static payment => payment.Id);
 ///
 /// // Ok("pay-ord-1001") on the success track,
@@ -29,7 +29,7 @@ public static class ResultLinqExtensions
     /// <c>Select</c> is the query-syntax spelling of <see cref="ResultExtensions.MapOk{TOk,TOut,TErr}"/>. It exists
     /// so that a result can be used inside a LINQ query expression.
     /// <code><![CDATA[
-    /// var receiptId = Rop.Try(() => OrderFixtures.Charge(OrderFixtures.Sample), "E_CHARGE")
+    /// var receiptId = Result.Try(() => OrderFixtures.Charge(OrderFixtures.Sample), "E_CHARGE")
     ///     .Select(static payment => payment.Id);
     ///
     /// // Ok("pay-ord-1001") on the success track,
@@ -53,8 +53,8 @@ public static class ResultLinqExtensions
     /// <c>SelectMany</c> is the query-syntax spelling of <see cref="ResultExtensions.BindOk{TOk,TOut,TErr}"/>: it
     /// expands the success track into another result.
     /// <code><![CDATA[
-    /// var receiptId = Rop.Try(() => OrderFixtures.Charge(OrderFixtures.Sample), "E_CHARGE")
-    ///     .SelectMany(static payment => Rop.Ok(payment.Id));
+    /// var receiptId = Result.Try(() => OrderFixtures.Charge(OrderFixtures.Sample), "E_CHARGE")
+    ///     .SelectMany(static payment => Result.Ok(payment.Id));
     ///
     /// // Ok("pay-ord-1001") when the charge and the binding succeeded,
     /// // Err(E_CHARGE) when the charge failed - the binder never runs on the failure track.
@@ -79,9 +79,9 @@ public static class ResultLinqExtensions
     /// This overload carries both success values into the projection, which is what a query with two
     /// <c>from</c> clauses needs.
     /// <code><![CDATA[
-    /// var summary = Rop.Try(() => OrderFixtures.Charge(OrderFixtures.Sample), "E_CHARGE")
+    /// var summary = Result.Try(() => OrderFixtures.Charge(OrderFixtures.Sample), "E_CHARGE")
     ///     .SelectMany(
-    ///         static payment => Rop.Ok(payment.Amount),
+    ///         static payment => Result.Ok(payment.Amount),
     ///         static (payment, amount) => $"{payment.Id}:{amount}");
     ///
     /// // Ok("pay-ord-1001:44") when both steps succeeded,
@@ -106,7 +106,7 @@ public static class ResultLinqExtensions
     /// <remarks>
     /// The asynchronous spelling of <c>select</c>: the projection runs after the task completes.
     /// <code><![CDATA[
-    /// var receiptId = await Task.FromResult(Rop.Try(() => OrderFixtures.Charge(OrderFixtures.Sample), "E_CHARGE"))
+    /// var receiptId = await Task.FromResult(Result.Try(() => OrderFixtures.Charge(OrderFixtures.Sample), "E_CHARGE"))
     ///     .Select(static payment => payment.Id);
     ///
     /// // Ok("pay-ord-1001") on the success track,
@@ -132,9 +132,9 @@ public static class ResultLinqExtensions
     /// <remarks>
     /// The intermediate binding is awaited, so both steps of the query are asynchronous.
     /// <code><![CDATA[
-    /// var summary = await Task.FromResult(Rop.Try(() => OrderFixtures.Charge(OrderFixtures.Sample), "E_CHARGE"))
+    /// var summary = await Task.FromResult(Result.Try(() => OrderFixtures.Charge(OrderFixtures.Sample), "E_CHARGE"))
     ///     .SelectMany(
-    ///         static payment => Task.FromResult(Rop.Ok(payment.Amount)),
+    ///         static payment => Task.FromResult(Result.Ok(payment.Amount)),
     ///         static (payment, amount) => $"{payment.Id}:{amount}");
     ///
     /// // Ok("pay-ord-1001:44") when both steps succeeded,
@@ -153,7 +153,7 @@ public static class ResultLinqExtensions
         var first = await source.ConfigureAwait(false);
         if (!first.TryGetOk(out var value))
         {
-            return Rop.Err<TOut, TErr>(first.ErrUnsafe);
+            return Result.Err<TOut, TErr>(first.ErrUnsafe);
         }
 
         var intermediate = await AsyncGuards.Require(collectionSelector(value), "collectionSelector")
@@ -176,9 +176,9 @@ public static class ResultLinqExtensions
     /// <remarks>
     /// The intermediate binding is synchronous, so the second step of the query does not need a task.
     /// <code><![CDATA[
-    /// var summary = await Task.FromResult(Rop.Try(() => OrderFixtures.Charge(OrderFixtures.Sample), "E_CHARGE"))
+    /// var summary = await Task.FromResult(Result.Try(() => OrderFixtures.Charge(OrderFixtures.Sample), "E_CHARGE"))
     ///     .SelectMany(
-    ///         static payment => Rop.Ok(payment.Amount),
+    ///         static payment => Result.Ok(payment.Amount),
     ///         static (payment, amount) => $"{payment.Id}:{amount}");
     ///
     /// // Ok("pay-ord-1001:44") when both steps succeeded,
@@ -197,7 +197,7 @@ public static class ResultLinqExtensions
         var first = await source.ConfigureAwait(false);
         if (!first.TryGetOk(out var value))
         {
-            return Rop.Err<TOut, TErr>(first.ErrUnsafe);
+            return Result.Err<TOut, TErr>(first.ErrUnsafe);
         }
 
         return collectionSelector(value).MapOk(intermediate => resultSelector(value, intermediate));

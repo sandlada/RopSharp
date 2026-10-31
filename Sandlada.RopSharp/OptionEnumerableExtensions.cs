@@ -18,7 +18,7 @@ namespace Sandlada.RopSharp;
 /// An <see cref="Option{T}"/> never contains <see langword="null"/>, so a <see langword="null"/> element, dictionary
 /// value or mapped value is a programming error: the probing helpers and the projecting <c>Choose</c> throw
 /// <see cref="ArgumentNullException"/> instead of turning the null into <c>Some(null)</c> or a null list entry. Use
-/// <see cref="Opt.FromNullable{T}(T)"/> or filter the sequence when nulls are expected data.
+/// <see cref="Option.FromNullable{T}(T)"/> or filter the sequence when nulls are expected data.
 /// </para>
 /// <code><![CDATA[
 /// var firstLine = OrderFixtures.Sample.Lines
@@ -32,10 +32,10 @@ namespace Sandlada.RopSharp;
 public static class OptionEnumerableExtensions
 {
     private const string NullElementMessage =
-        "The sequence contained null. An Option never contains null; remove the null element or use Opt.FromNullable.";
+        "The sequence contained null. An Option never contains null; remove the null element or use Option.FromNullable.";
 
     private const string NullMappedValueMessage =
-        "The mapper returned null. An Option never contains null; return Opt.None or use Opt.FromNullable instead.";
+        "The mapper returned null. An Option never contains null; return Option.None or use Option.FromNullable instead.";
 
     /// <summary>
     /// Returns the first element of a sequence as <c>Some</c>, or <c>None</c> when the sequence is empty.
@@ -62,8 +62,8 @@ public static class OptionEnumerableExtensions
         ArgumentNullException.ThrowIfNull(source);
         using var enumerator = source.GetEnumerator();
         return enumerator.MoveNext()
-            ? Opt.Some(RequireElement(enumerator.Current, nameof(source), NullElementMessage))
-            : Opt.None<T>();
+            ? Option.Some(RequireElement(enumerator.Current, nameof(source), NullElementMessage))
+            : Option.None<T>();
     }
 
     /// <summary>
@@ -96,11 +96,11 @@ public static class OptionEnumerableExtensions
         {
             if (predicate(element))
             {
-                return Opt.Some(RequireElement(element, nameof(source), NullElementMessage));
+                return Option.Some(RequireElement(element, nameof(source), NullElementMessage));
             }
         }
 
-        return Opt.None<T>();
+        return Option.None<T>();
     }
 
     /// <summary>
@@ -134,7 +134,7 @@ public static class OptionEnumerableExtensions
             last = element;
         }
 
-        return found ? Opt.Some(RequireElement(last, nameof(source), NullElementMessage)) : Opt.None<T>();
+        return found ? Option.Some(RequireElement(last, nameof(source), NullElementMessage)) : Option.None<T>();
     }
 
     /// <summary>
@@ -174,7 +174,7 @@ public static class OptionEnumerableExtensions
             }
         }
 
-        return found ? Opt.Some(RequireElement(last, nameof(source), NullElementMessage)) : Opt.None<T>();
+        return found ? Option.Some(RequireElement(last, nameof(source), NullElementMessage)) : Option.None<T>();
     }
 
     /// <summary>
@@ -206,8 +206,8 @@ public static class OptionEnumerableExtensions
     {
         ArgumentNullException.ThrowIfNull(source);
         return source.TryGetValue(key, out var value)
-            ? Opt.Some(RequireElement(value, nameof(source), NullElementMessage))
-            : Opt.None<TValue>();
+            ? Option.Some(RequireElement(value, nameof(source), NullElementMessage))
+            : Option.None<TValue>();
     }
 
     /// <summary>
@@ -221,14 +221,14 @@ public static class OptionEnumerableExtensions
     /// <c>Choose</c> keeps the present values and drops the empty ones. The result is a list, so it is never
     /// <see langword="null"/> and never empty-by-accident.
     /// <code><![CDATA[
-    /// var skus = new[] { Opt.Some("SKU-1"), Opt.None<string>(), Opt.Some("SKU-2") }
+    /// var skus = new[] { Option.Some("SKU-1"), Option.None<string>(), Option.Some("SKU-2") }
     ///     .Choose();
     ///
     /// // ["SKU-1", "SKU-2"] keeps the Some(sku) entries,
     /// // None is dropped instead of failing - the result is never null.
     /// ]]></code>
     /// </remarks>
-    public static IReadOnlyList<T> Choose<T>(this IEnumerable<Option<T>> source) => Opt.Values(source);
+    public static IReadOnlyList<T> Choose<T>(this IEnumerable<Option<T>> source) => Option.Values(source);
 
     /// <summary>
     /// Maps each present value and materializes the results in source order, discarding <c>None</c> values.
@@ -246,7 +246,7 @@ public static class OptionEnumerableExtensions
     /// The mapping happens only for the present values, and the mapper must not return null: an option never
     /// contains null.
     /// <code><![CDATA[
-    /// var totals = new[] { Opt.Some(OrderFixtures.Sample), Opt.None<Order>() }
+    /// var totals = new[] { Option.Some(OrderFixtures.Sample), Option.None<Order>() }
     ///     .Choose(static order => order.Total);
     ///
     /// // [44.00] keeps the Some(order) entries,
@@ -259,7 +259,7 @@ public static class OptionEnumerableExtensions
     {
         ArgumentNullException.ThrowIfNull(source);
         ArgumentNullException.ThrowIfNull(mapper);
-        var values = Rop.CreateList<Option<T>, TOut>(source);
+        var values = Result.CreateList<Option<T>, TOut>(source);
         foreach (var option in source)
         {
             if (option.TryGetValue(out var value))
@@ -268,7 +268,7 @@ public static class OptionEnumerableExtensions
             }
         }
 
-        return Rop.ToReadOnlyList(values);
+        return Result.ToReadOnlyList(values);
     }
 
     /// <summary>
@@ -282,7 +282,7 @@ public static class OptionEnumerableExtensions
     /// <c>Execute</c> is the side-effecting counterpart of <see cref="OptionExtensions.TeeSome{T}(Option{T},Action{T})"/>:
     /// it returns nothing, so it can only be the last statement of a pipeline.
     /// <code><![CDATA[
-    /// Opt.FromNullable(OrderFixtures.Sample.Customer.Address)
+    /// Option.FromNullable(OrderFixtures.Sample.Customer.Address)
     ///     .Execute(static shipping => Console.WriteLine($"shipping to {shipping.City}"));
     ///
     /// // Some(address) runs the action,
@@ -308,7 +308,7 @@ public static class OptionEnumerableExtensions
     /// <remarks>
     /// <c>ExecuteNoValue</c> is the empty-track counterpart of <see cref="Execute{T}(Option{T},Action{T})"/>.
     /// <code><![CDATA[
-    /// Opt.FromNullable(OrderFixtures.CustomerWithoutAddress.Address)
+    /// Option.FromNullable(OrderFixtures.CustomerWithoutAddress.Address)
     ///     .ExecuteNoValue(static () => Console.WriteLine("no shipping address on file"));
     ///
     /// // None runs the action,
