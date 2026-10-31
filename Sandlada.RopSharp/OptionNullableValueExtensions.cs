@@ -56,15 +56,12 @@ public static class OptionNullableValueExtensions
     /// ]]></code>
     /// </remarks>
     public static Option<TOut> BindSomeNullableValue<T, TOut>(this Option<T> option, Func<T, TOut?> binder)
+        where TOut : struct =>
+        OptionNullableCore.BindSomeNullable<T, TOut, TOut?>(option, binder, Cache<TOut>.Unwrap);
+
+    private static class Cache<TOut>
         where TOut : struct
     {
-        ArgumentNullException.ThrowIfNull(binder);
-        if (!option.TryGetValue(out var value))
-        {
-            return Option.None<TOut>();
-        }
-
-        var mapped = binder(value);
-        return mapped is null ? Option.None<TOut>() : Option.Some(mapped.GetValueOrDefault());
+        internal static readonly Func<TOut?, TOut> Unwrap = static value => value.GetValueOrDefault();
     }
 }
