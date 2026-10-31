@@ -40,7 +40,7 @@ jobs:
         run: dotnet build Sandlada.RopSharp/Sandlada.RopSharp.csproj -c Release --no-restore
 
       - name: Test
-        run: dotnet test Sandlada.RopSharp.Tests/Sandlada.RopSharp.Tests.csproj -c Release
+        run: dotnet test "${{ github.workspace }}/Sandlada.RopSharp.Tests/Sandlada.RopSharp.Tests.csproj" -c Release
 
       - name: Pack
         run: |
