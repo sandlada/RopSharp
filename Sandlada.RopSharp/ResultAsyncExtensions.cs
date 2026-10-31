@@ -798,6 +798,10 @@ public static class ResultAsyncExtensions
             cancellationToken.ThrowIfCancellationRequested();
             await AsyncGuards.Require(action(value), "action").ConfigureAwait(false);
         }
+        else
+        {
+            result.ThrowIfUninitialized();
+        }
 
         return result;
     }
@@ -834,6 +838,10 @@ public static class ResultAsyncExtensions
         {
             cancellationToken.ThrowIfCancellationRequested();
             await AsyncGuards.Require(action(value, cancellationToken), "action").ConfigureAwait(false);
+        }
+        else
+        {
+            result.ThrowIfUninitialized();
         }
 
         return result;

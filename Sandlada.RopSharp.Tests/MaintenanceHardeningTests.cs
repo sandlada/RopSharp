@@ -607,6 +607,24 @@ public sealed class MaintenanceHardeningTests
             .Throws<InvalidOperationException>();
         await Assert.That(() => result.TryGetErr(out _))
             .Throws<InvalidOperationException>();
+        await Assert.That(() => result.TeeOk(_ => { }))
+            .Throws<InvalidOperationException>();
+        await Assert.That(() => result.Ensure(_ => true, Sample.Error()))
+            .Throws<InvalidOperationException>();
+        await Assert.That(() => result.Ensure(_ => true, _ => Sample.Error()))
+            .Throws<InvalidOperationException>();
+        await Assert.That(() => result.FailIf(_ => false, Sample.Error()))
+            .Throws<InvalidOperationException>();
+        await Assert.That(() => result.FailIf(_ => false, _ => Sample.Error()))
+            .Throws<InvalidOperationException>();
+        await Assert.That(() => result.ThenEnsure(_ => Rop.Ok<Unit, RopError>(Unit.Value)))
+            .Throws<InvalidOperationException>();
+        await Assert.That(() => result.ToOption())
+            .Throws<InvalidOperationException>();
+        await Assert.That(async () => await Task.FromResult(result).TeeOkAsync(_ => Task.CompletedTask))
+            .Throws<InvalidOperationException>();
+        await Assert.That(async () => await Task.FromResult(result).TeeOkAsync((_, _) => Task.CompletedTask))
+            .Throws<InvalidOperationException>();
     }
 
     [Test]

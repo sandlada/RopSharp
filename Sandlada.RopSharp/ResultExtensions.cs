@@ -128,6 +128,10 @@ public static class ResultExtensions
         {
             action(value);
         }
+        else
+        {
+            result.ThrowIfUninitialized();
+        }
 
         return result;
     }
@@ -188,9 +192,13 @@ public static class ResultExtensions
     {
         ArgumentNullException.ThrowIfNull(predicate);
         ArgumentGuards.ThrowIfNull(error, nameof(error));
-        return result.TryGetOk(out var value) && !predicate(value)
-            ? Rop.Err<TOk, TErr>(error)
-            : result;
+        if (!result.TryGetOk(out var value))
+        {
+            result.ThrowIfUninitialized();
+            return result;
+        }
+
+        return predicate(value) ? result : Rop.Err<TOk, TErr>(error);
     }
 
     /// <summary>
@@ -222,9 +230,15 @@ public static class ResultExtensions
     {
         ArgumentNullException.ThrowIfNull(predicate);
         ArgumentNullException.ThrowIfNull(errorFactory);
-        return result.TryGetOk(out var value) && !predicate(value)
-            ? Rop.Err<TOk, TErr>(Rop.RequireError(errorFactory(value)))
-            : result;
+        if (!result.TryGetOk(out var value))
+        {
+            result.ThrowIfUninitialized();
+            return result;
+        }
+
+        return predicate(value)
+            ? result
+            : Rop.Err<TOk, TErr>(Rop.RequireError(errorFactory(value)));
     }
 
     /// <summary>

@@ -95,8 +95,16 @@ public static class OptionBridgeExtensions
     /// // None for an error - the reason is dropped and cannot be recovered.
     /// ]]></code>
     /// </remarks>
-    public static Option<T> ToOption<T, TErr>(this Result<T, TErr> result) =>
-        result.TryGetOk(out var value) && value is not null ? Opt.Some(value) : Opt.None<T>();
+    public static Option<T> ToOption<T, TErr>(this Result<T, TErr> result)
+    {
+        if (!result.TryGetOk(out var value))
+        {
+            result.ThrowIfUninitialized();
+            return Opt.None<T>();
+        }
+
+        return value is not null ? Opt.Some(value) : Opt.None<T>();
+    }
 
     /// <summary>
     /// Flips <c>Option&lt;Result&lt;T, TErr&gt;&gt;</c> into <c>Result&lt;Option&lt;T&gt;, TErr&gt;</c>.

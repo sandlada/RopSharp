@@ -45,9 +45,13 @@ public static class ResultEnsureExtensions
     {
         ArgumentNullException.ThrowIfNull(predicate);
         ArgumentGuards.ThrowIfNull(error, nameof(error));
-        return result.TryGetOk(out var value) && predicate(value)
-            ? Rop.Err<TOk, TErr>(error)
-            : result;
+        if (!result.TryGetOk(out var value))
+        {
+            result.ThrowIfUninitialized();
+            return result;
+        }
+
+        return predicate(value) ? Rop.Err<TOk, TErr>(error) : result;
     }
 
     /// <summary>
@@ -80,7 +84,13 @@ public static class ResultEnsureExtensions
     {
         ArgumentNullException.ThrowIfNull(predicate);
         ArgumentNullException.ThrowIfNull(errorFactory);
-        return result.TryGetOk(out var value) && predicate(value)
+        if (!result.TryGetOk(out var value))
+        {
+            result.ThrowIfUninitialized();
+            return result;
+        }
+
+        return predicate(value)
             ? Rop.Err<TOk, TErr>(Rop.RequireError(errorFactory(value)))
             : result;
     }
@@ -120,6 +130,7 @@ public static class ResultEnsureExtensions
         ArgumentNullException.ThrowIfNull(ensure);
         if (!result.TryGetOk(out var value))
         {
+            result.ThrowIfUninitialized();
             return result;
         }
 
