@@ -12,6 +12,8 @@ allocation counts are deterministic, while nanosecond timings on shared CI runne
 - Lambdas under test are `static` and capture no per-iteration state, so the closure itself is not counted.
 - Results are sunk through `Sink` so the JIT cannot discard the call under test.
 - Zero-byte budgets are exact. Bounded budgets are the observed bytes per call multiplied by 1.2, rounded up.
+- The zero-byte budgets hold in a debug build as well. An unoptimized build keeps the boxes that the JIT would
+  otherwise fold away, so a library path that boxes its payload fails the gate in `dotnet test` without `-c Release`.
 
 ## Zero-byte hot paths
 
@@ -27,6 +29,8 @@ allocation counts are deterministic, while nanosecond timings on shared CI runne
 | `Option.Filter` on `Some` | `OptionFilter_OnSome_AllocatesNothing` | 0 B |
 | `Option.MapSome` on `None` | `OptionMapSome_OnNone_AllocatesNothing` | 0 B |
 | `Either.MapRight` on `Right` | `EitherMapRight_OnRight_AllocatesNothing` | 0 B |
+| `Result.Ok` with a value-type payload | `ResultOk_WithValueTypePayload_AllocatesNothing` | 0 B |
+| `Option.Some` with a value-type payload | `OptionSome_WithValueTypePayload_AllocatesNothing` | 0 B |
 
 ## Bounded hot paths
 

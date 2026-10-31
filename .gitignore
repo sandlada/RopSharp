@@ -6,6 +6,8 @@ obj/
 .idea/
 artifacts/
 TestResults/
+perfout.txt
+probeout.txt
 BenchmarkDotNet.Artifacts/
 *.nupkg
 *.snupkg

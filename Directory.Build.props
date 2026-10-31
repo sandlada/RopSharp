@@ -9,6 +9,9 @@
     <AnalysisLevel>latest</AnalysisLevel>
     <Deterministic>true</Deterministic>
     <ContinuousIntegrationBuild Condition="'$(CI)' == 'true'">true</ContinuousIntegrationBuild>
+    <!-- Only the library ships XML documentation. The default stays false for the test, benchmark and sample
+         projects: turning it on for them would make CS1591 (missing XML comment) an error in projects that
+         deliberately do not document their internals. The library overrides the value to true. -->
     <GenerateDocumentationFile>false</GenerateDocumentationFile>
     <SatelliteResourceLanguages>en</SatelliteResourceLanguages>
     <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>

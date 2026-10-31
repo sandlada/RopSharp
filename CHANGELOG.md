@@ -139,6 +139,9 @@ additive work below into the first version.
 - `TeeOk`, `TeeOkAsync`, `Ensure`, `FailIf`, `ThenEnsure` and `ToOption` now fault with `InvalidOperationException`
   on an uninitialized `default(Result<TOk,TErr>)` instead of returning it unchanged, so the invalid state cannot
   travel unnoticed through a pipeline. A real `Err` is unaffected.
+- The null guards of `Result.Ok`, `Result.Err`, `Option.Some`, `Either.Left` and `Either.Right` no longer box a
+  value-type payload. An unoptimized build (a debug build, or tier-0 code before the runtime re-jits it) allocated
+  24 bytes per call for every value-type payload; the zero-byte allocation guards now hold in debug builds too.
 
 ### Documentation
 
