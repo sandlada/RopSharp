@@ -26,7 +26,6 @@ BenchmarkDotNet.Artifacts/
 !docs/**/*.md
 !Sandlada.*/*.md
 !perf/README.md
-!TASK*.md
 
 # AI
 .codex
