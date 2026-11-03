@@ -63,10 +63,13 @@ builder.
 **Consequence:** async queries stay readable; cancellation remains an outer concern because query syntax has no
 token slot.
 
+- **Revised:** 2026-11-03. `Either` gains `BindLeft`/`BindRight`; `default(Either<,>)` is uninitialized (not `Right`).
+
 ### D20 — `Either<TLeft,TRight>` is the general two-branch union
 
-`Either<TLeft,TRight>` provides `IsLeft`/`IsRight`, non-throwing probes, `Match`, `MapLeft`, `MapRight`, `Swap`,
-`ToResult` and value equality. It is intentionally minimal and AOT-safe.
+`Either<TLeft,TRight>` provides `IsLeft`/`IsRight`, non-throwing probes, `Match`, `MapLeft`, `MapRight`, `BindLeft`,
+`BindRight`, `Swap`, `ToResult` and value equality. It is intentionally minimal and AOT-safe. There is no async
+either surface; cross into `Result`/`ResultTask` when I/O is required.
 
 A three-or-more-way `Choice` type is retained as a rejection for this release: callers can compose nested
 `Either` values or model the decision with a domain type. A full union family would multiply the surface without a

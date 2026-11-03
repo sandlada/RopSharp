@@ -36,15 +36,19 @@ namespace Sandlada.RopSharp;
 [DebuggerDisplay("{ToString(),nq}")]
 public readonly struct Result<TOk, TErr> : IEquatable<Result<TOk, TErr>>
 {
+    internal const byte TagUninitialized = 0;
+    internal const byte TagOk = 1;
+    internal const byte TagErr = 2;
+
     private readonly TOk _ok;
     private readonly TErr _err;
-    private readonly bool _isOk;
+    private readonly byte _tag;
 
-    internal Result(TOk ok, TErr err, bool isOk)
+    internal Result(TOk ok, TErr err, byte tag)
     {
         _ok = ok;
         _err = err;
-        _isOk = isOk;
+        _tag = tag;
     }
 
     /// <summary>
@@ -63,15 +67,15 @@ public readonly struct Result<TOk, TErr> : IEquatable<Result<TOk, TErr>>
     /// // Err(E_CHARGE) makes IsOk false - the error is still reachable through TryGetErr.
     /// ]]></code>
     /// </remarks>
-    public bool IsOk => _isOk;
+    public bool IsOk => _tag == TagOk;
 
     /// <summary>
     /// Gets a value indicating whether this instance is on the failure track.
     /// </summary>
     /// <remarks>
     /// <para>
-    /// This is the exact complement of <see cref="IsOk"/>: a success reports <see langword="false"/> here and a
-    /// failure reports <see langword="true"/>. It never inspects the error value itself.
+    /// This is <see langword="true"/> for both an ordinary <c>Err</c> and an uninitialized
+    /// <see langword="default"/> value. It never inspects the error payload itself.
     /// </para>
     /// <code><![CDATA[
     /// var charged = Result.Try(() => OrderFixtures.Charge(OrderFixtures.Declined), "E_CHARGE");
@@ -81,7 +85,7 @@ public readonly struct Result<TOk, TErr> : IEquatable<Result<TOk, TErr>>
     /// // Ok(payment) makes IsErr false - the error code is read with TryGetErr.
     /// ]]></code>
     /// </remarks>
-    public bool IsErr => !_isOk;
+    public bool IsErr => _tag != TagOk;
 
     /// <summary>
     /// Attempts to read the success value without throwing.
@@ -110,7 +114,7 @@ public readonly struct Result<TOk, TErr> : IEquatable<Result<TOk, TErr>>
     public bool TryGetOk([MaybeNullWhen(false)] out TOk value)
     {
         value = _ok;
-        return _isOk;
+        return _tag == TagOk;
     }
 
     /// <summary>
@@ -147,7 +151,7 @@ public readonly struct Result<TOk, TErr> : IEquatable<Result<TOk, TErr>>
     {
         ThrowIfUninitialized();
         error = _err;
-        return !_isOk;
+        return _tag == TagErr;
     }
 
     /// <summary>
@@ -173,7 +177,7 @@ public readonly struct Result<TOk, TErr> : IEquatable<Result<TOk, TErr>>
 
     internal TOk OkUnsafe => _ok;
 
-    internal bool IsInitialized => _isOk || _err is not null || default(TErr) is not null;
+    internal bool IsInitialized => _tag != TagUninitialized;
 
     internal TErr ErrUnsafe
     {
@@ -210,29 +214,32 @@ public readonly struct Result<TOk, TErr> : IEquatable<Result<TOk, TErr>>
     /// </remarks>
     public bool Equals(Result<TOk, TErr> other)
     {
-        if (_isOk != other._isOk)
+        if (_tag != other._tag)
         {
             return false;
         }
 
-        return _isOk
-            ? EqualityComparer<TOk>.Default.Equals(_ok, other._ok)
-            : EqualityComparer<TErr>.Default.Equals(_err, other._err);
+        return _tag switch
+        {
+            TagUninitialized => true,
+            TagOk => EqualityComparer<TOk>.Default.Equals(_ok, other._ok),
+            TagErr => EqualityComparer<TErr>.Default.Equals(_err, other._err),
+            _ => false,
+        };
     }
 
     /// <inheritdoc />
     /// <remarks>
     /// <para>
     /// The boxed overload defers to the strongly typed comparison, so a result stored in an
-    /// <see cref="object"/> still compares by value and not by reference.
+    /// <see cref="object"/> still compares by value.
     /// </para>
     /// <code><![CDATA[
-    /// var charged = Result.Try(() => OrderFixtures.Charge(OrderFixtures.Sample), "E_CHARGE")
-    ///     .MapOk(static payment => payment.Id);
-    /// var same = charged.Equals((object)charged);
+    /// var outcome = Result.Ok(OrderFixtures.Sample).MapOk(static order => order.Id);
+    /// var same = outcome.Equals((object)outcome);
     ///
-    /// // Ok("pay-ord-1001") equals its own boxed copy,
-    /// // Err(E_CHARGE) equals its own boxed copy - the boxed form compares by value.
+    /// // Ok("ord-1001") equals its own boxed copy,
+    /// // Err(E_X) equals its own boxed copy - the boxed form compares by value.
     /// ]]></code>
     /// </remarks>
     public override bool Equals(object? obj) => obj is Result<TOk, TErr> other && Equals(other);
@@ -240,21 +247,25 @@ public readonly struct Result<TOk, TErr> : IEquatable<Result<TOk, TErr>>
     /// <inheritdoc />
     /// <remarks>
     /// <para>
-    /// The hash code is derived from the payload of the track the result sits on, so equal results always share
-    /// a hash code and can be used as dictionary keys.
+    /// The hash code is derived from the payload of the track the result sits on, so equal values always share
+    /// a hash code.
     /// </para>
     /// <code><![CDATA[
-    /// var placed = Result.Ok(OrderFixtures.Sample).MapOk(static order => order.Id);
-    /// var bucket = placed.GetHashCode() % 16;
+    /// var outcome = Result.Ok(OrderFixtures.Sample).MapOk(static order => order.Id);
+    /// var bucket = outcome.GetHashCode() % 16;
     ///
     /// // Ok("ord-1001") hashes by its payload,
     /// // Err(E_X) hashes by its error - equal values land in the same bucket.
     /// ]]></code>
     /// </remarks>
     public override int GetHashCode() =>
-        _isOk
-            ? HashCode.Combine(true, _ok is null ? 0 : EqualityComparer<TOk>.Default.GetHashCode(_ok))
-            : HashCode.Combine(false, _err is null ? 0 : EqualityComparer<TErr>.Default.GetHashCode(_err));
+        _tag switch
+        {
+            TagUninitialized => HashCode.Combine(TagUninitialized),
+            TagOk => HashCode.Combine(TagOk, _ok is null ? 0 : EqualityComparer<TOk>.Default.GetHashCode(_ok)),
+            TagErr => HashCode.Combine(TagErr, _err is null ? 0 : EqualityComparer<TErr>.Default.GetHashCode(_err)),
+            _ => HashCode.Combine(_tag),
+        };
 
     /// <inheritdoc />
     /// <remarks>
@@ -263,28 +274,34 @@ public readonly struct Result<TOk, TErr> : IEquatable<Result<TOk, TErr>>
     /// the combinators instead of parsing this string.
     /// </para>
     /// <code><![CDATA[
-    /// var charged = Result.Try(() => OrderFixtures.Charge(OrderFixtures.Sample), "E_CHARGE")
-    ///     .MapOk(static payment => payment.Id);
-    /// var text = charged.ToString();
+    /// var outcome = Result.Ok(OrderFixtures.Sample).MapOk(static order => order.Id);
+    /// var text = outcome.ToString();
     ///
-    /// // Ok("pay-ord-1001") for a successful charge,
-    /// // Err(E_CHARGE) for a failed one - the text is meant for logs, not for branching.
+    /// // Ok("ord-1001") on the success track,
+    /// // Err(E_X) on the error track - the text is meant for logs, not for branching.
     /// ]]></code>
     /// </remarks>
-    public override string ToString() => _isOk ? $"Ok({_ok})" : $"Err({_err})";
+    public override string ToString() =>
+        _tag switch
+        {
+            TagOk => $"Ok({_ok})",
+            TagErr => $"Err({_err})",
+            _ => "Err(uninitialized)",
+        };
 
     /// <summary>Determines whether two results are equal (success values or error values must be equal).</summary>
-    /// <param name="left">The left result.</param>
-    /// <param name="right">The right result.</param>
-    /// <returns><see langword="true"/> when both are on the same track with equal payloads.</returns>
+    /// <param name="left">The left value.</param>
+    /// <param name="right">The right value.</param>
+    /// <returns><see langword="true"/> when both sit on the same track with equal payloads.</returns>
     /// <remarks>
     /// <para>
-    /// The operator is the ergonomic form of <see cref="Equals(Result{TOk,TErr})"/> and is what a test or a
-    /// cache lookup naturally reaches for.
+    /// The operator is the ergonomic form of <see cref="Equals(Result{TOk,TErr})"/> and is what a cache
+    /// lookup or a test assertion naturally reaches for.
     /// </para>
     /// <code><![CDATA[
-    /// var placed = Result.Ok(OrderFixtures.Sample).MapOk(static order => order.Id);
-    /// var same = placed == Result.Ok(OrderFixtures.Sample).MapOk(static order => order.Id);
+    /// var first = Result.Ok(OrderFixtures.Sample).MapOk(static order => order.Id);
+    /// var second = Result.Ok(OrderFixtures.Sample).MapOk(static order => order.Id);
+    /// var same = first == second;
     ///
     /// // Ok("ord-1001") == Ok("ord-1001") because the payloads are equal,
     /// // Err(E_X) == Err(E_Y) only when the two errors are equal.
@@ -293,21 +310,21 @@ public readonly struct Result<TOk, TErr> : IEquatable<Result<TOk, TErr>>
     public static bool operator ==(Result<TOk, TErr> left, Result<TOk, TErr> right) => left.Equals(right);
 
     /// <summary>Determines whether two results are different.</summary>
-    /// <param name="left">The left result.</param>
-    /// <param name="right">The right result.</param>
+    /// <param name="left">The left value.</param>
+    /// <param name="right">The right value.</param>
     /// <returns><see langword="true"/> when they differ.</returns>
     /// <remarks>
     /// <para>
-    /// The operator is the ergonomic form of the negated equality, and is how two results of the same shape are
-    /// told apart in a test assertion.
+    /// The operator is the ergonomic form of the negated equality, and is how a result is compared against a
+    /// known expected value.
     /// </para>
     /// <code><![CDATA[
-    /// var placed = Result.Ok(OrderFixtures.Sample).MapOk(static order => order.Id);
-    /// var other = Result.Ok(OrderFixtures.Sample).MapOk(static order => order.Id + "-retry");
-    /// var differs = placed != other;
+    /// var first = Result.Ok(OrderFixtures.Sample).MapOk(static order => order.Id);
+    /// var second = Result.Err<string>(RopError.Create("E_ORDER_NOT_FOUND", "order was not found"));
+    /// var differs = first != second;
     ///
-    /// // Ok("ord-1001") != Ok("ord-1001-retry") because the payloads differ,
-    /// // Err(E_X) != Err(E_Y) as soon as the two errors are not equal.
+    /// // Ok("ord-1001") != Err(E_ORDER_NOT_FOUND) because the tracks differ,
+    /// // Ok(a) != Ok(b) as soon as the two payloads are not equal.
     /// ]]></code>
     /// </remarks>
     public static bool operator !=(Result<TOk, TErr> left, Result<TOk, TErr> right) => !left.Equals(right);

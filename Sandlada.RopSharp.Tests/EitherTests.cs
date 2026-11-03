@@ -112,5 +112,6 @@ public sealed class EitherTests
         await Assert.That(TestSupport.Catch(() => Either.Right<string, string>(null!)) is ArgumentNullException).IsTrue();
         await Assert.That(TestSupport.Catch(() => Either.Left<string, int>("x").Match(null!, value => value)) is ArgumentNullException).IsTrue();
         await Assert.That(TestSupport.Catch(() => Either.Left<string, int>("x").ToResult(null!)) is ArgumentNullException).IsTrue();
+        await Assert.That(TestSupport.Catch(() => Either.Right<string, int>(1).BindRight<int>(null!)) is ArgumentNullException).IsTrue();
     }
 }

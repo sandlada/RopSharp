@@ -59,8 +59,8 @@ dotnet restore --locked-mode   # must succeed
 2. Add TUnit coverage for every new call site (including null guards and the opposite track).
 3. Add the new symbol to `PublicAPI.Unshipped.txt` (the analyzer reports the exact signature in `RS0016`).
 4. On release, move the entries to `PublicAPI.Shipped.txt` and keep both files ordinally sorted.
-5. Record design decisions in `docs/adr/` (add a new ADR for behaviour or surface changes) and update
-   `CHANGELOG.md` for user-visible changes.
+5. Record design decisions in `docs/adr/` (add a new ADR or revise an existing ADR in place with a
+   `- **Revised:** YYYY-MM-DD` line under the title) and update `CHANGELOG.md` for user-visible changes.
 
 ## Testing expectations
 

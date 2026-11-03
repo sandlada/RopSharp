@@ -1,4 +1,6 @@
 #nullable enable
+Sandlada.RopSharp.Either<TLeft, TRight>.BindLeft<TLeftOut>(System.Func<TLeft, Sandlada.RopSharp.Either<TLeftOut, TRight>>! binder) -> Sandlada.RopSharp.Either<TLeftOut, TRight>
+Sandlada.RopSharp.Either<TLeft, TRight>.BindRight<TRightOut>(System.Func<TRight, Sandlada.RopSharp.Either<TLeft, TRightOut>>! binder) -> Sandlada.RopSharp.Either<TLeft, TRightOut>
 Sandlada.RopSharp.Either<TLeft, TRight>.ToOption() -> Sandlada.RopSharp.Option<TRight>
 Sandlada.RopSharp.EitherBridgeExtensions
 static Sandlada.RopSharp.EitherBridgeExtensions.ToEither<TOk, TErr>(this Sandlada.RopSharp.Result<TOk, TErr> result) -> Sandlada.RopSharp.Either<TErr, TOk>
@@ -54,7 +56,7 @@ static Sandlada.RopSharp.ParseFailure.operator ==(Sandlada.RopSharp.ParseFailure
 static Sandlada.RopSharp.ParseFailure.operator !=(Sandlada.RopSharp.ParseFailure left, Sandlada.RopSharp.ParseFailure right) -> bool
 override Sandlada.RopSharp.ParseFailure.GetHashCode() -> int
 override Sandlada.RopSharp.ParseFailure.ToString() -> string!
-~override Sandlada.RopSharp.ParseFailure.Equals(object obj) -> bool
+override Sandlada.RopSharp.ParseFailure.Equals(object? obj) -> bool
 Sandlada.RopSharp.Either<TLeft, TRight>.ToResult<TErr>(System.Func<TLeft, TErr>! errorFactory) -> Sandlada.RopSharp.Result<TRight, TErr>
 static Sandlada.RopSharp.ResultExtensions.RequireNotNull<T, TErr>(this Sandlada.RopSharp.Result<T?, TErr> result, System.Func<TErr>! errorFactory) -> Sandlada.RopSharp.Result<T!, TErr>
 static Sandlada.RopSharp.ResultValidationExtensions.ToSingleError<T, TErr>(this Sandlada.RopSharp.Result<T, System.Collections.Generic.IReadOnlyList<TErr>!> result) -> Sandlada.RopSharp.Result<T, TErr>

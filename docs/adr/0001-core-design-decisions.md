@@ -17,16 +17,17 @@ This ADR records the decisions that shape the public surface so future changes c
 
 ## Decisions
 
+- **Revised:** 2026-11-03. `Result<TOk,TErr>` and `Either<TLeft,TRight>` use a three-state tag (`0` = uninitialized, `1`/`2` = branch). `default(Result<,>)` and `default(Either<,>)` are never valid branch values; value-type error payloads at `default(TErr)` no longer make `default(Result<,>)` look like `Err(default(TErr))`.
+
 ### D1 — Core types are readonly structs with value equality
 
 `Result<TOk, TErr>` and `Option<T>` are `readonly struct`s. They are immutable, allocation-free as values, have
 value-based equality and `GetHashCode`, and implement `IEquatable<T>` plus `==`/`!=`.
 
-**Consequence:** `default(Option<T>)` is contractually `None`; `default(Result<,>)` is not a valid result. It
-reports `IsErr` but carries no error, so `TryGetErr` and every terminal/error-track combinator that reads the error
-fault with `InvalidOperationException` instead of exposing a null error; non-nullable value-type errors cannot be
-distinguished from a legitimate default and remain valid. This asymmetry is documented and intentional: an option
-has a natural empty value, a result does not.
+**Consequence:** `default(Option<T>)` is contractually `None`. `default(Result<,>)` and `default(Either<,>)` are
+uninitialized: they report failure routing flags that keep them off the success track, but reading an error or
+calling branch combinators throws `InvalidOperationException`. An option has a natural empty value; a result and
+an either do not.
 
 ### D2 — Expected failures are values; exceptions are boundary-only
 

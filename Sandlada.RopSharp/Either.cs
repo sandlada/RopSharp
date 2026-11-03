@@ -16,8 +16,8 @@ namespace Sandlada.RopSharp;
 /// </para>
 /// <para>
 /// Instances are immutable and safe to share across threads. The parameterless <see langword="default"/> value is
-/// undefined; create values through <see cref="Either.Left{TLeft,TRight}(TLeft)"/> and
-/// <see cref="Either.Right{TLeft,TRight}(TRight)"/>.
+/// uninitialized: both <see cref="IsLeft"/> and <see cref="IsRight"/> are <see langword="false"/>. Create values
+/// through <see cref="Either.Left{TLeft,TRight}(TLeft)"/> and <see cref="Either.Right{TLeft,TRight}(TRight)"/>.
 /// </para>
 /// <para>
 /// An either is consumed by projecting both branches into one value with <see cref="Match{TResult}(Func{TLeft,TResult},Func{TRight,TResult})"/>,
@@ -35,15 +35,28 @@ namespace Sandlada.RopSharp;
 [DebuggerDisplay("{ToString(),nq}")]
 public readonly struct Either<TLeft, TRight> : IEquatable<Either<TLeft, TRight>>
 {
+    internal const byte TagUninitialized = 0;
+    internal const byte TagLeft = 1;
+    internal const byte TagRight = 2;
+
     private readonly TLeft _left;
     private readonly TRight _right;
-    private readonly bool _isLeft;
+    private readonly byte _tag;
 
-    internal Either(TLeft left, TRight right, bool isLeft)
+    internal Either(TLeft left, TRight right, byte tag)
     {
         _left = left;
         _right = right;
-        _isLeft = isLeft;
+        _tag = tag;
+    }
+
+    internal void ThrowIfUninitialized()
+    {
+        if (_tag == TagUninitialized)
+        {
+            throw new InvalidOperationException(
+                "The either is an uninitialized default value; construct values with Either.Left or Either.Right.");
+        }
     }
 
     /// <summary>Gets a value indicating whether this instance is on the left branch.</summary>
@@ -61,7 +74,7 @@ public readonly struct Either<TLeft, TRight> : IEquatable<Either<TLeft, TRight>>
     /// // Left(reason) makes IsLeft true - the branch decides which value is present.
     /// ]]></code>
     /// </remarks>
-    public bool IsLeft => _isLeft;
+    public bool IsLeft => _tag == TagLeft;
 
     /// <summary>Gets a value indicating whether this instance is on the right branch.</summary>
     /// <remarks>
@@ -78,7 +91,7 @@ public readonly struct Either<TLeft, TRight> : IEquatable<Either<TLeft, TRight>>
     /// // Left(reason) makes IsRight false - the branch decides which value is present.
     /// ]]></code>
     /// </remarks>
-    public bool IsRight => !_isLeft;
+    public bool IsRight => _tag == TagRight;
 
     /// <summary>
     /// Attempts to read the left value without throwing.
@@ -104,7 +117,7 @@ public readonly struct Either<TLeft, TRight> : IEquatable<Either<TLeft, TRight>>
     public bool TryGetLeft([MaybeNullWhen(false)] out TLeft value)
     {
         value = _left;
-        return _isLeft;
+        return _tag == TagLeft;
     }
 
     /// <summary>
@@ -131,7 +144,7 @@ public readonly struct Either<TLeft, TRight> : IEquatable<Either<TLeft, TRight>>
     public bool TryGetRight([MaybeNullWhen(false)] out TRight value)
     {
         value = _right;
-        return !_isLeft;
+        return _tag == TagRight;
     }
 
     /// <summary>
@@ -161,7 +174,8 @@ public readonly struct Either<TLeft, TRight> : IEquatable<Either<TLeft, TRight>>
     {
         ArgumentNullException.ThrowIfNull(left);
         ArgumentNullException.ThrowIfNull(right);
-        return _isLeft ? left(_left) : right(_right);
+        ThrowIfUninitialized();
+        return _tag == TagLeft ? left(_left) : right(_right);
     }
 
     /// <summary>
@@ -186,7 +200,8 @@ public readonly struct Either<TLeft, TRight> : IEquatable<Either<TLeft, TRight>>
     public Either<TLeftOut, TRight> MapLeft<TLeftOut>(Func<TLeft, TLeftOut> mapper)
     {
         ArgumentNullException.ThrowIfNull(mapper);
-        return _isLeft
+        ThrowIfUninitialized();
+        return _tag == TagLeft
             ? Either.Left<TLeftOut, TRight>(mapper(_left))
             : Either.Right<TLeftOut, TRight>(_right);
     }
@@ -213,9 +228,60 @@ public readonly struct Either<TLeft, TRight> : IEquatable<Either<TLeft, TRight>>
     public Either<TLeft, TRightOut> MapRight<TRightOut>(Func<TRight, TRightOut> mapper)
     {
         ArgumentNullException.ThrowIfNull(mapper);
-        return _isLeft
+        ThrowIfUninitialized();
+        return _tag == TagLeft
             ? Either.Left<TLeft, TRightOut>(_left)
             : Either.Right<TLeft, TRightOut>(mapper(_right));
+    }
+
+    /// <summary>
+    /// Expands the left value with a binder, leaving a right value untouched.
+    /// </summary>
+    /// <typeparam name="TLeftOut">The mapped left type.</typeparam>
+    /// <param name="binder">Maps the left value to another either. Not evaluated on the right branch.</param>
+    /// <returns>The bound left either, or the original right value.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="binder"/> is <see langword="null"/>.</exception>
+    /// <exception cref="InvalidOperationException">This instance is an uninitialized default.</exception>
+    /// <remarks>
+    /// <code><![CDATA[
+    /// var outcome = Either.Left<string, Payment>("the customer asked for a refund");
+    /// var next = outcome.BindLeft(static reason =>
+    ///     Either.Left<string, Payment>($"note: {reason}"));
+    ///
+    /// // Left("note: ...") when the left branch is taken,
+    /// // Right(payment) is returned unchanged - the binder never runs there.
+    /// ]]></code>
+    /// </remarks>
+    public Either<TLeftOut, TRight> BindLeft<TLeftOut>(Func<TLeft, Either<TLeftOut, TRight>> binder)
+    {
+        ArgumentNullException.ThrowIfNull(binder);
+        ThrowIfUninitialized();
+        return _tag == TagLeft ? binder(_left) : Either.Right<TLeftOut, TRight>(_right);
+    }
+
+    /// <summary>
+    /// Expands the right value with a binder, leaving a left value untouched.
+    /// </summary>
+    /// <typeparam name="TRightOut">The mapped right type.</typeparam>
+    /// <param name="binder">Maps the right value to another either. Not evaluated on the left branch.</param>
+    /// <returns>The bound right either, or the original left value.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="binder"/> is <see langword="null"/>.</exception>
+    /// <exception cref="InvalidOperationException">This instance is an uninitialized default.</exception>
+    /// <remarks>
+    /// <code><![CDATA[
+    /// var outcome = Either.Right<string, Payment>(OrderFixtures.Charge(OrderFixtures.Sample));
+    /// var next = outcome.BindRight(static payment =>
+    ///     Either.Right<string, string>(payment.Id));
+    ///
+    /// // Right("pay-ord-1001") when the right branch is taken,
+    /// // Left(reason) is returned unchanged - the binder never runs there.
+    /// ]]></code>
+    /// </remarks>
+    public Either<TLeft, TRightOut> BindRight<TRightOut>(Func<TRight, Either<TLeft, TRightOut>> binder)
+    {
+        ArgumentNullException.ThrowIfNull(binder);
+        ThrowIfUninitialized();
+        return _tag == TagRight ? binder(_right) : Either.Left<TLeft, TRightOut>(_left);
     }
 
     /// <summary>
@@ -235,9 +301,13 @@ public readonly struct Either<TLeft, TRight> : IEquatable<Either<TLeft, TRight>>
     /// // Left(reason) becomes Right(reason) - Swap only exchanges the two positions.
     /// ]]></code>
     /// </remarks>
-    public Either<TRight, TLeft> Swap() => _isLeft
-        ? Either.Right<TRight, TLeft>(_left!)
-        : Either.Left<TRight, TLeft>(_right!);
+    public Either<TRight, TLeft> Swap()
+    {
+        ThrowIfUninitialized();
+        return _tag == TagLeft
+            ? Either.Right<TRight, TLeft>(_left!)
+            : Either.Left<TRight, TLeft>(_right!);
+    }
 
     /// <summary>
     /// Converts the left branch into an error and keeps the right branch as a success.
@@ -266,7 +336,8 @@ public readonly struct Either<TLeft, TRight> : IEquatable<Either<TLeft, TRight>>
     public Result<TRight, RopError> ToResult(Func<TLeft, RopError> errorFactory)
     {
         ArgumentNullException.ThrowIfNull(errorFactory);
-        return _isLeft
+        ThrowIfUninitialized();
+        return _tag == TagLeft
             ? Result.Err<TRight>(Result.RequireError(errorFactory(_left)))
             : Result.Ok<TRight>(_right);
     }
@@ -295,7 +366,8 @@ public readonly struct Either<TLeft, TRight> : IEquatable<Either<TLeft, TRight>>
     public Result<TRight, TErr> ToResult<TErr>(Func<TLeft, TErr> errorFactory)
     {
         ArgumentNullException.ThrowIfNull(errorFactory);
-        return _isLeft
+        ThrowIfUninitialized();
+        return _tag == TagLeft
             ? Result.Err<TRight, TErr>(Result.RequireError(errorFactory(_left)))
             : Result.Ok<TRight, TErr>(_right);
     }
@@ -318,7 +390,11 @@ public readonly struct Either<TLeft, TRight> : IEquatable<Either<TLeft, TRight>>
     /// // None on the left branch - the left value is dropped, not converted.
     /// ]]></code>
     /// </remarks>
-    public Option<TRight> ToOption() => _isLeft ? Option.None<TRight>() : Option.Some(_right);
+    public Option<TRight> ToOption()
+    {
+        ThrowIfUninitialized();
+        return _tag == TagLeft ? Option.None<TRight>() : Option.Some(_right);
+    }
 
     /// <inheritdoc />
     /// <remarks>
@@ -337,14 +413,18 @@ public readonly struct Either<TLeft, TRight> : IEquatable<Either<TLeft, TRight>>
     /// </remarks>
     public bool Equals(Either<TLeft, TRight> other)
     {
-        if (_isLeft != other._isLeft)
+        if (_tag != other._tag)
         {
             return false;
         }
 
-        return _isLeft
-            ? EqualityComparer<TLeft>.Default.Equals(_left, other._left)
-            : EqualityComparer<TRight>.Default.Equals(_right, other._right);
+        return _tag switch
+        {
+            TagUninitialized => true,
+            TagLeft => EqualityComparer<TLeft>.Default.Equals(_left, other._left),
+            TagRight => EqualityComparer<TRight>.Default.Equals(_right, other._right),
+            _ => false,
+        };
     }
 
     /// <inheritdoc />
@@ -378,9 +458,14 @@ public readonly struct Either<TLeft, TRight> : IEquatable<Either<TLeft, TRight>>
     /// // Left(reason) hashes by its reason - equal values land in the same bucket.
     /// ]]></code>
     /// </remarks>
-    public override int GetHashCode() => _isLeft
-        ? HashCode.Combine(true, _left is null ? 0 : EqualityComparer<TLeft>.Default.GetHashCode(_left))
-        : HashCode.Combine(false, _right is null ? 0 : EqualityComparer<TRight>.Default.GetHashCode(_right));
+    public override int GetHashCode() =>
+        _tag switch
+        {
+            TagUninitialized => HashCode.Combine(TagUninitialized),
+            TagLeft => HashCode.Combine(TagLeft, _left is null ? 0 : EqualityComparer<TLeft>.Default.GetHashCode(_left)),
+            TagRight => HashCode.Combine(TagRight, _right is null ? 0 : EqualityComparer<TRight>.Default.GetHashCode(_right)),
+            _ => HashCode.Combine(_tag),
+        };
 
     /// <inheritdoc />
     /// <remarks>
@@ -397,7 +482,13 @@ public readonly struct Either<TLeft, TRight> : IEquatable<Either<TLeft, TRight>>
     /// // Left(reason) on the left branch - the text is meant for logs, not for branching.
     /// ]]></code>
     /// </remarks>
-    public override string ToString() => _isLeft ? $"Left({_left})" : $"Right({_right})";
+    public override string ToString() =>
+        _tag switch
+        {
+            TagLeft => $"Left({_left})",
+            TagRight => $"Right({_right})",
+            _ => "Either(uninitialized)",
+        };
 
     /// <summary>Determines whether two either values are equal.</summary>
     /// <param name="left">The left value.</param>
@@ -488,7 +579,7 @@ public static class Either
             throw new ArgumentNullException(nameof(value), "A left value must not be null.");
         }
 
-        return new Either<TLeft, TRight>(value, default!, isLeft: true);
+        return new Either<TLeft, TRight>(value, default!, Either<TLeft, TRight>.TagLeft);
     }
 
     /// <summary>
@@ -519,6 +610,6 @@ public static class Either
             throw new ArgumentNullException(nameof(value), "A right value must not be null.");
         }
 
-        return new Either<TLeft, TRight>(default!, value, isLeft: false);
+        return new Either<TLeft, TRight>(default!, value, Either<TLeft, TRight>.TagRight);
     }
 }

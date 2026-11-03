@@ -12,6 +12,7 @@
     <EnableSingleFileAnalyzer>true</EnableSingleFileAnalyzer>
     <IsPackable>true</IsPackable>
     <EnablePackageValidation>true</EnablePackageValidation>
+    <PackageValidationBaselineVersion>0.0.1</PackageValidationBaselineVersion>
     <!-- The library has no runtime package dependencies; its only package (ILLink) is SDK-versioned and would
          make the lock file churn on every SDK update. Lock files are committed for the test/benchmark graphs. -->
     <RestorePackagesWithLockFile>false</RestorePackagesWithLockFile>
@@ -20,7 +21,7 @@
 
   <PropertyGroup>
     <PackageId>Sandlada.RopSharp</PackageId>
-    <Version>0.0.1</Version>
+    <Version>0.0.2</Version>
     <Authors>Sandlada</Authors>
     <Company>Sandlada</Company>
     <Product>Sandlada.RopSharp</Product>
@@ -30,7 +31,7 @@
     <PackageReadmeFile>README.md</PackageReadmeFile>
     <PackageRequireLicenseAcceptance>false</PackageRequireLicenseAcceptance>
     <NeutralLanguage>en</NeutralLanguage>
-    <PackageReleaseNotes>0.0.1 is the initial public release: Result&lt;TOk,TErr&gt;, Option&lt;T&gt; and Either&lt;TLeft,TRight&gt; immutable structs with symmetric combinators, applicative validation, parsing helpers, and cancellation-aware async combinators. Zero runtime dependencies, AOT/trim friendly. See docs/adr/0001-core-design-decisions.md and docs/adr/0002-api-gap-remediation.md.</PackageReleaseNotes>
+    <PackageReleaseNotes>See CHANGELOG.md (Unreleased / 0.0.2): uninitialized defaults for Result/Either/ParseFailure, Either BindLeft/BindRight.</PackageReleaseNotes>
     <IncludeSymbols>true</IncludeSymbols>
     <SymbolPackageFormat>snupkg</SymbolPackageFormat>
     <EmbedUntrackedSources>true</EmbedUntrackedSources>

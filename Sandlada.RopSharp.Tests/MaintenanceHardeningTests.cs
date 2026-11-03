@@ -102,12 +102,13 @@ public sealed class MaintenanceHardeningTests
     }
 
     [Test]
-    public async Task Either_GetHashCode_CoversTheDefaultRightValue()
+    public async Task Either_GetHashCode_CoversTheUninitializedValue()
     {
         var value = default(Either<int, string>);
 
         await Assert.That(value.GetHashCode()).IsEqualTo(default(Either<int, string>).GetHashCode());
-        await Assert.That(value.IsRight).IsTrue();
+        await Assert.That(value.IsRight).IsFalse();
+        await Assert.That(value.IsLeft).IsFalse();
     }
 
     [Test]
@@ -697,8 +698,9 @@ public sealed class MaintenanceHardeningTests
         await Assert.That(default(Option<int>).Equals(Option.None<int>())).IsTrue();
         await Assert.That(default(Result<int, RopError>).IsErr).IsTrue();
         await Assert.That(default(Result<int, RopError>).Equals(default)).IsTrue();
-        await Assert.That(default(Either<int, string>).IsRight).IsTrue();
-        await Assert.That(default(ParseFailure).Input).IsNull();
+        await Assert.That(default(Either<int, string>).IsLeft).IsFalse();
+        await Assert.That(default(Either<int, string>).IsRight).IsFalse();
+        await Assert.That(() => default(ParseFailure).Code).Throws<InvalidOperationException>();
     }
 }
 

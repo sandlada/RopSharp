@@ -16,8 +16,9 @@ namespace Sandlada.RopSharp;
 /// quoted, and it renders a missing value as the literal <c>null</c> instead of an empty pair of quotes.
 /// </para>
 /// <para>
-/// The parameterless <see langword="default"/> value is undefined: <see cref="Code"/>, <see cref="Message"/> and
-/// <see cref="TypeName"/> are <see langword="null"/>. Instances are created by the library.
+/// The parameterless <see langword="default"/> value is uninitialized. Reading <see cref="Code"/>,
+/// <see cref="Message"/>, <see cref="Input"/>, <see cref="TypeName"/>, <see cref="Details"/> or calling
+/// <see cref="ToString"/> throws <see cref="InvalidOperationException"/>.
 /// </para>
 /// <code><![CDATA[
 /// var parsed = Result.Parse<decimal, string>("19.50", static failure => failure.Code)
@@ -27,8 +28,17 @@ namespace Sandlada.RopSharp;
 /// // Err(E_PARSE) when it is not - the failure carries the diagnostics of the attempt.
 /// ]]></code>
 /// </remarks>
-public readonly record struct ParseFailure
+public readonly struct ParseFailure : IEquatable<ParseFailure>
 {
+    private const byte TagUninitialized = 0;
+    private const byte TagInitialized = 1;
+
+    private readonly byte _tag;
+    private readonly string _code;
+    private readonly string _message;
+    private readonly string? _input;
+    private readonly string _typeName;
+
     /// <summary>
     /// Initializes a parse failure payload.
     /// </summary>
@@ -43,10 +53,6 @@ public readonly record struct ParseFailure
     /// <paramref name="code"/>, <paramref name="message"/> or <paramref name="typeName"/> is <see langword="null"/>.
     /// </exception>
     /// <remarks>
-    /// <para>
-    /// The library creates these payloads itself. The constructor is public so that a caller with a custom error
-    /// type can build one for its own parsing boundary and keep the same shape.
-    /// </para>
     /// <code><![CDATA[
     /// var failure = new ParseFailure("E_AMOUNT_PARSE", "the amount is not a number", "19,50", "decimal");
     /// var placed = Result.Err<decimal>(RopError.Create(failure.Code, failure.Message));
@@ -61,19 +67,16 @@ public readonly record struct ParseFailure
         ArgumentException.ThrowIfNullOrWhiteSpace(message);
         ArgumentException.ThrowIfNullOrWhiteSpace(typeName);
 
-        Code = code;
-        Message = message;
-        Input = input;
-        TypeName = typeName;
+        _tag = TagInitialized;
+        _code = code;
+        _message = message;
+        _input = input;
+        _typeName = typeName;
     }
 
     /// <summary>Gets the stable, machine-readable error code (for example <c>E_PARSE</c>).</summary>
+    /// <exception cref="InvalidOperationException">This instance is an uninitialized default.</exception>
     /// <remarks>
-    /// <para>
-    /// The code is the part of the payload that may be branched on. It mirrors
-    /// <see cref="RopError.Code"/> so that a caller with its own error type can map a parse failure without
-    /// losing the stable identifier.
-    /// </para>
     /// <code><![CDATA[
     /// var failure = new ParseFailure("E_AMOUNT_PARSE", "the amount is not a number", "19,50", "decimal");
     /// var error = RopError.Create(failure.Code, failure.Message);
@@ -83,14 +86,18 @@ public readonly record struct ParseFailure
     /// // Ok(19.50) is the other track of the same result.
     /// ]]></code>
     /// </remarks>
-    public string Code { get; }
+    public string Code
+    {
+        get
+        {
+            ThrowIfUninitialized();
+            return _code;
+        }
+    }
 
     /// <summary>Gets the human-readable diagnostic message. Display only; branch on <see cref="Code"/>.</summary>
+    /// <exception cref="InvalidOperationException">This instance is an uninitialized default.</exception>
     /// <remarks>
-    /// <para>
-    /// The message explains what went wrong with the input. It mirrors <see cref="RopError.Message"/> and is meant
-    /// for a human reading a log.
-    /// </para>
     /// <code><![CDATA[
     /// var failure = new ParseFailure("E_AMOUNT_PARSE", "the amount is not a number", "19,50", "decimal");
     /// var error = RopError.Create(failure.Code, failure.Message);
@@ -100,13 +107,18 @@ public readonly record struct ParseFailure
     /// // Ok(19.50) is the other track of the same result.
     /// ]]></code>
     /// </remarks>
-    public string Message { get; }
+    public string Message
+    {
+        get
+        {
+            ThrowIfUninitialized();
+            return _message;
+        }
+    }
 
     /// <summary>Gets the raw input that failed to parse, or <see langword="null"/> when the input was missing.</summary>
+    /// <exception cref="InvalidOperationException">This instance is an uninitialized default.</exception>
     /// <remarks>
-    /// <para>
-    /// This value is not escaped or truncated. Prefer <see cref="Details"/> for logs and transport payloads.
-    /// </para>
     /// <code><![CDATA[
     /// var failure = new ParseFailure("E_AMOUNT_PARSE", "the amount is not a number", "19,50", "decimal");
     /// var error = RopError.Create(failure.Code, failure.Message);
@@ -116,14 +128,18 @@ public readonly record struct ParseFailure
     /// // Ok(19.50) is the other track of the same result.
     /// ]]></code>
     /// </remarks>
-    public string? Input { get; }
+    public string? Input
+    {
+        get
+        {
+            ThrowIfUninitialized();
+            return _input;
+        }
+    }
 
     /// <summary>Gets the name of the target type that could not be parsed.</summary>
+    /// <exception cref="InvalidOperationException">This instance is an uninitialized default.</exception>
     /// <remarks>
-    /// <para>
-    /// The type name tells the caller which conversion failed, which matters when one endpoint accepts several
-    /// shapes.
-    /// </para>
     /// <code><![CDATA[
     /// var failure = new ParseFailure("E_AMOUNT_PARSE", "the amount is not a number", "19,50", "decimal");
     /// var error = RopError.Create(failure.Code, failure.Message);
@@ -133,16 +149,20 @@ public readonly record struct ParseFailure
     /// // Ok(19.50) is the other track of the same result.
     /// ]]></code>
     /// </remarks>
-    public string TypeName { get; }
+    public string TypeName
+    {
+        get
+        {
+            ThrowIfUninitialized();
+            return _typeName;
+        }
+    }
 
     /// <summary>
     /// Gets the bounded, escaped <c>input=&lt;quoted&gt;</c> diagnostic, mirroring <see cref="RopError.Details"/>.
     /// </summary>
+    /// <exception cref="InvalidOperationException">This instance is an uninitialized default.</exception>
     /// <remarks>
-    /// <para>
-    /// Unlike <see cref="Input"/>, this value is safe to log or to return to a client: it is quoted, escaped and
-    /// truncated, and it renders a missing input as the literal <c>null</c>.
-    /// </para>
     /// <code><![CDATA[
     /// var failure = new ParseFailure("E_AMOUNT_PARSE", "the amount is not a number", "19,50", "decimal");
     /// var error = RopError.Create(failure.Code, failure.Message, failure.Details);
@@ -152,14 +172,18 @@ public readonly record struct ParseFailure
     /// // Ok(19.50) is the other track of the same result.
     /// ]]></code>
     /// </remarks>
-    public string Details => $"input={DiagnosticText.Quote(Input)}";
+    public string Details
+    {
+        get
+        {
+            ThrowIfUninitialized();
+            return $"input={DiagnosticText.Quote(_input)}";
+        }
+    }
 
     /// <inheritdoc />
+    /// <exception cref="InvalidOperationException">This instance is an uninitialized default.</exception>
     /// <remarks>
-    /// <para>
-    /// The text is a debugging aid, not a wire format. It combines the code, the message and the bounded
-    /// details into a single line.
-    /// </para>
     /// <code><![CDATA[
     /// var failure = new ParseFailure("E_AMOUNT_PARSE", "the amount is not a number", "19,50", "decimal");
     /// var error = RopError.Create(failure.Code, failure.Message, failure.Details);
@@ -169,5 +193,112 @@ public readonly record struct ParseFailure
     /// // Ok(19.50) is the other track of the same result.
     /// ]]></code>
     /// </remarks>
-    public override string ToString() => $"{Code}: {Message} ({Details})";
+    public override string ToString()
+    {
+        ThrowIfUninitialized();
+        return $"{_code}: {_message} ({Details})";
+    }
+
+    /// <inheritdoc />
+    /// <remarks>
+    /// <para>
+    /// Two parse failures are equal when every diagnostic field matches. This is what lets a failure be used as a
+    /// dictionary key or compared inside a test.
+    /// </para>
+    /// <code><![CDATA[
+    /// var first = new ParseFailure("E_AMOUNT_PARSE", "the amount is not a number", "19,50", "decimal");
+    /// var second = new ParseFailure("E_AMOUNT_PARSE", "the amount is not a number", "19,50", "decimal");
+    /// var placed = Result.Err<decimal>(RopError.Create(first.Code, first.Message, first.Details));
+    /// var same = first.Equals(second);
+    ///
+    /// // Err(E_AMOUNT_PARSE) compares equal when every field matches,
+    /// // Ok(19.50) is the other track of the same parse result.
+    /// ]]></code>
+    /// </remarks>
+    public bool Equals(ParseFailure other) =>
+        _tag == other._tag
+        && (_tag == TagUninitialized
+            || (_code == other._code
+                && _message == other._message
+                && _input == other._input
+                && _typeName == other._typeName));
+
+    /// <inheritdoc />
+    /// <remarks>
+    /// <para>
+    /// The boxed overload defers to the strongly typed comparison, so a failure stored in an
+    /// <see cref="object"/> still compares by value.
+    /// </para>
+    /// <code><![CDATA[
+    /// var failure = new ParseFailure("E_AMOUNT_PARSE", "the amount is not a number", "19,50", "decimal");
+    /// var placed = Result.Err<decimal>(RopError.Create(failure.Code, failure.Message, failure.Details));
+    /// var same = failure.Equals((object)failure);
+    ///
+    /// // Err(E_AMOUNT_PARSE) equals its own boxed copy,
+    /// // Ok(19.50) is the other track of the same parse result.
+    /// ]]></code>
+    /// </remarks>
+    public override bool Equals(object? obj) => obj is ParseFailure other && Equals(other);
+
+    /// <inheritdoc />
+    /// <remarks>
+    /// <para>
+    /// The hash code is derived from the diagnostic fields, so equal failures always share a hash code.
+    /// </para>
+    /// <code><![CDATA[
+    /// var failure = new ParseFailure("E_AMOUNT_PARSE", "the amount is not a number", "19,50", "decimal");
+    /// var placed = Result.Err<decimal>(RopError.Create(failure.Code, failure.Message, failure.Details));
+    /// var bucket = failure.GetHashCode() % 16;
+    ///
+    /// // Err(E_AMOUNT_PARSE) hashes by its diagnostic fields,
+    /// // Ok(19.50) is the other track of the same parse result.
+    /// ]]></code>
+    /// </remarks>
+    public override int GetHashCode() =>
+        _tag == TagUninitialized
+            ? HashCode.Combine(TagUninitialized)
+            : HashCode.Combine(TagInitialized, _code, _message, _input, _typeName);
+
+    /// <summary>Determines whether two parse failures are equal.</summary>
+    /// <param name="left">The left value.</param>
+    /// <param name="right">The right value.</param>
+    /// <returns><see langword="true"/> when every diagnostic field matches.</returns>
+    /// <remarks>
+    /// <code><![CDATA[
+    /// var first = new ParseFailure("E_AMOUNT_PARSE", "the amount is not a number", "19,50", "decimal");
+    /// var second = new ParseFailure("E_AMOUNT_PARSE", "the amount is not a number", "19,50", "decimal");
+    /// var placed = Result.Err<decimal>(RopError.Create(first.Code, first.Message, first.Details));
+    /// var same = first == second;
+    ///
+    /// // Err(E_AMOUNT_PARSE) == Err(E_AMOUNT_PARSE) when every field matches,
+    /// // Ok(19.50) is the other track of the same parse result.
+    /// ]]></code>
+    /// </remarks>
+    public static bool operator ==(ParseFailure left, ParseFailure right) => left.Equals(right);
+
+    /// <summary>Determines whether two parse failures differ.</summary>
+    /// <param name="left">The left value.</param>
+    /// <param name="right">The right value.</param>
+    /// <returns><see langword="true"/> when they differ.</returns>
+    /// <remarks>
+    /// <code><![CDATA[
+    /// var first = new ParseFailure("E_AMOUNT_PARSE", "the amount is not a number", "19,50", "decimal");
+    /// var second = new ParseFailure("E_AMOUNT_PARSE", "the amount is not a number", "20,00", "decimal");
+    /// var placed = Result.Err<decimal>(RopError.Create(first.Code, first.Message, first.Details));
+    /// var differs = first != second;
+    ///
+    /// // Err(E_AMOUNT_PARSE) != Err(E_AMOUNT_PARSE) when input differs,
+    /// // Ok(19.50) is the other track of the same parse result.
+    /// ]]></code>
+    /// </remarks>
+    public static bool operator !=(ParseFailure left, ParseFailure right) => !left.Equals(right);
+
+    private void ThrowIfUninitialized()
+    {
+        if (_tag == TagUninitialized)
+        {
+            throw new InvalidOperationException(
+                "The parse failure is an uninitialized default value; construct values with the ParseFailure constructor.");
+        }
+    }
 }

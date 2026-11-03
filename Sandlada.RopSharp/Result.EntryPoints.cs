@@ -64,7 +64,7 @@ public static partial class Result
                 "A success value must not be null. Use Result.FromNullable, Result.Try or Option for missing values.");
         }
 
-        return new Result<TOk, TErr>(value, default!, isOk: true);
+        return new Result<TOk, TErr>(value, default!, Result<TOk, TErr>.TagOk);
     }
 
     /// <summary>
@@ -118,7 +118,7 @@ public static partial class Result
             throw new ArgumentNullException(nameof(error), "An error value must not be null.");
         }
 
-        return new Result<TOk, TErr>(default!, error, isOk: false);
+        return new Result<TOk, TErr>(default!, error, Result<TOk, TErr>.TagErr);
     }
 
     /// <summary>
@@ -658,7 +658,7 @@ public static partial class Result
     }
 
     internal static Result<TOk, TErr> OkUnchecked<TOk, TErr>(TOk value) =>
-        new(value, default!, isOk: true);
+        new(value, default!, Result<TOk, TErr>.TagOk);
 
     private static TErr MaterializeException<TErr>(Func<Exception, TErr> factory, Exception exception) =>
         RequireError(factory(exception));

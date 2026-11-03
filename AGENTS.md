@@ -27,7 +27,8 @@ NuGet ROP / Railway & Result library for C#. Package ID: `Sandlada.RopSharp`, or
 - `Sandlada.RopSharp/PublicAPI.Shipped.txt` and `PublicAPI.Unshipped.txt` are enforced by
   `Microsoft.CodeAnalysis.PublicApiAnalyzers`. Every public API change must update them in the same commit.
 - A breaking change (removal, rename, signature change) must be recorded in `CHANGELOG.md` and, when it changes a
-  decision, in a new ADR. Existing ADR conclusions are never rewritten.
+  decision, in a new ADR or by revising the existing ADR in place (add a `- **Revised:** YYYY-MM-DD` line under the
+  title; do not leave two contradictory ADR copies).
 
 ## Commands
 
