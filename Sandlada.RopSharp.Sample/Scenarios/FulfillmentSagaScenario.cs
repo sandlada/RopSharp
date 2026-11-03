@@ -89,16 +89,16 @@ internal static class FulfillmentSagaScenario
         var validationErrors = new List<RopError>();
 
         // Header and lines fail independently; flatten both groups into one result.
-        var headerResult = ValidateHeader(request);
-        if (!headerResult.TryGetOk(out var header)
-            && headerResult.TryGetErr(out var headerErrors))
+        var headerValidation = ValidateHeader(request);
+        if (!headerValidation.TryGetSuccess(out var header)
+            && headerValidation.TryGetErrors(out var headerErrors))
         {
             validationErrors.AddRange(headerErrors);
         }
 
-        var linesResult = PriceLines(request.Lines);
-        if (!linesResult.TryGetOk(out var lines)
-            && linesResult.TryGetErr(out var lineErrors))
+        var linesValidation = PriceLines(request.Lines);
+        if (!linesValidation.TryGetSuccess(out var lines)
+            && linesValidation.TryGetErrors(out var lineErrors))
         {
             validationErrors.AddRange(lineErrors);
         }
@@ -175,8 +175,8 @@ internal static class FulfillmentSagaScenario
             ? error
             : throw new InvalidOperationException("Expected the error track.");
 
-    private static Result<Header, IReadOnlyList<RopError>> ValidateHeader(FulfillmentRequest request) =>
-        Result.Validate(
+    private static Validation<Header, RopError> ValidateHeader(FulfillmentRequest request) =>
+        Validation.Zip(
             RequireCustomer(request.Customer),
             RequireAddress(request.Address),
             ParseCoupon(request.CouponCode),
@@ -206,11 +206,11 @@ internal static class FulfillmentSagaScenario
                 : Result.Err<decimal>(RopError.Create("E_COUPON_UNKNOWN", $"unknown coupon: {value}")))
             .Transpose();
 
-    private static Result<IReadOnlyList<PricedLine>, IReadOnlyList<RopError>> PriceLines(IReadOnlyList<OrderLine> lines) =>
+    private static Validation<IReadOnlyList<PricedLine>, RopError> PriceLines(IReadOnlyList<OrderLine> lines) =>
         lines.Count == 0
-            ? Result.Err<IReadOnlyList<PricedLine>, IReadOnlyList<RopError>>(
-                [RopError.Create("E_NO_LINES", "at least one order line is required")])
-            : Result.SequenceValidation(lines.Select(PriceLine));
+            ? Validation.Failure<IReadOnlyList<PricedLine>, RopError>(
+                RopError.Create("E_NO_LINES", "at least one order line is required"))
+            : Validation.Sequence(lines.Select(PriceLine));
 
     private static Result<PricedLine, RopError> PriceLine(OrderLine line) =>
         Catalog.TryGetValue(line.Sku, out var entry)

@@ -32,6 +32,6 @@ public class ResultBenchmarks
     public int Match_OnOk() => _ok.Match(static value => value, static _ => -1);
 
     [Benchmark]
-    public Result<int, IReadOnlyList<RopError>> Validate_Two() =>
-        Result.Validate(Result.Ok(1), Result.Ok(2), static (first, second) => first + second);
+    public Validation<int, RopError> Validate_Two() =>
+        Validation.Zip(Result.Ok(1), Result.Ok(2), static (first, second) => first + second);
 }

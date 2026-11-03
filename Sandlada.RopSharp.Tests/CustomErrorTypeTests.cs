@@ -176,9 +176,9 @@ public sealed class CustomErrorTypeTests
         Result<int, AppError> first = Result.Err<int, AppError>(App("E_A"));
         Result<int, AppError> second = Result.Err<int, AppError>(App("E_B"));
 
-        var validated = Result.Validate(first, second, (a, b) => a + b);
+        var validated = Validation.Zip(first, second, (a, b) => a + b);
 
-        await Assert.That(validated.TryGetErr(out var errors)).IsTrue();
+        await Assert.That(validated.TryGetErrors(out var errors)).IsTrue();
         var captured = errors!;
         await Assert.That(captured.Count).IsEqualTo(2);
         await Assert.That(captured[0].Code).IsEqualTo("E_A");
@@ -195,9 +195,9 @@ public sealed class CustomErrorTypeTests
             Result.Err<int, AppError>(App("E_B")),
         ];
 
-        var sequence = Result.SequenceValidation(results);
+        var sequence = Validation.Sequence(results);
 
-        await Assert.That(sequence.TryGetErr(out var errors)).IsTrue();
+        await Assert.That(sequence.TryGetErrors(out var errors)).IsTrue();
         var captured = errors!;
         await Assert.That(captured.Count).IsEqualTo(2);
         await Assert.That(captured[0].Code).IsEqualTo("E_A");
@@ -213,7 +213,7 @@ public sealed class CustomErrorTypeTests
             Result.Err<int, AppError>(App("E_B")),
         ];
 
-        var single = Result.SequenceValidation(results).ToSingleError();
+        var single = Validation.Sequence(results).Collapse(static errors => errors[0]);
 
         await Assert.That(single.ExpectErr().Code).IsEqualTo("E_A");
     }
@@ -227,8 +227,8 @@ public sealed class CustomErrorTypeTests
             Result.Err<int, AppError>(App("E_B")),
         ];
 
-        var single = Result.SequenceValidation(results)
-            .ToSingleError(errors => new AppError("E_MULTIPLE", string.Join(";", errors.Select(error => error.Code))));
+        var single = Validation.Sequence(results)
+            .Collapse(errors => new AppError("E_MULTIPLE", string.Join(";", errors.Select(error => error.Code))));
 
         await Assert.That(single.ExpectErr().Code).IsEqualTo("E_MULTIPLE");
         await Assert.That(single.ExpectErr().Message).IsEqualTo("E_A;E_B");
@@ -746,7 +746,7 @@ public sealed class CustomErrorTypeTests
         Result<int, RopError> conditional = Result.SuccessIf(true, 1, Sample.Error());
         Result<int, RopError> tried = Result.Try(() => 1, _ => Sample.Error());
         var triedAsync = Result.TryAsync(() => Task.FromResult(1), _ => Sample.Error());
-        Result<int, RopError> validated = Result.Validate(ok, ok, (a, b) => a + b).ToSingleError();
+        Result<int, RopError> validated = Validation.Zip(ok, ok, (a, b) => a + b).Collapse(static errors => errors[0]);
         Result<int, RopError> fromEither = Either.Right<string, int>(1).ToResult(_ => Sample.Error());
 
         Result<string?, RopError> nullSuccess = Result.Ok<string, RopError>("x")

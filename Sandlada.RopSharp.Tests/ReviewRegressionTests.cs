@@ -71,16 +71,16 @@ public sealed class ReviewRegressionTests
     [Test]
     public async Task ToValidation_PreservesNullSuccessPayload()
     {
-        var lifted = NullSuccess.ToValidation();
+        var lifted = Validation.From(NullSuccess);
 
-        await Assert.That(lifted.IsOk).IsTrue();
+        await Assert.That(lifted.IsSuccess).IsTrue();
         await Assert.That(lifted.Expect("test")).IsNull();
     }
 
     [Test]
     public async Task ToSingleError_PreservesNullSuccessPayload()
     {
-        var collapsed = NullSuccess.ToValidation().ToSingleError();
+        var collapsed = Validation.From(NullSuccess).Collapse(static errors => errors[0]);
 
         await Assert.That(collapsed.IsOk).IsTrue();
         await Assert.That(collapsed.Expect("test")).IsNull();
@@ -199,13 +199,13 @@ public sealed class ReviewRegressionTests
     [Test]
     public async Task Validate3_WithFailures_CollectsEveryErrorInOrder()
     {
-        var result = Result.Validate(
+        var result = Validation.Zip(
             Result.Ok<int, RopError>(1),
             Result.Err<int>(Sample.Error("E_B", "second")),
             Result.Err<int>(Sample.Error("E_C", "third")),
             static (a, b, c) => a + b + c);
 
-        var errors = result.ExpectErr();
+        var errors = result.ExpectErrors();
 
         await Assert.That(errors.Count).IsEqualTo(2);
         await Assert.That(errors[0].Code).IsEqualTo("E_B");

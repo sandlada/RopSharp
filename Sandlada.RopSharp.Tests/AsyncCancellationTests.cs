@@ -81,7 +81,7 @@ public sealed class AsyncCancellationTests
     {
         var error = Sample.Error("E_ROUND");
 
-        var roundTrip = Result.Err<int>(error).ToValidation().ToSingleError();
+        var roundTrip = Validation.From(Result.Err<int>(error)).Collapse(static errors => errors[0]);
 
         await Assert.That(roundTrip.ExpectErr()).IsSameReferenceAs(error);
     }

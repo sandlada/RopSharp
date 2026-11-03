@@ -58,11 +58,14 @@ comparisons. `RopError.Combine` collapses a non-empty list into `E_MULTIPLE`.
 
 ### D5 — Short-circuit and aggregating models are separate
 
-`BindOk` and the `Combine`/`Zip`/`Sequence`/`Traverse` family short-circuit (first error wins, later functions are
-not invoked). `Validate`/`SequenceValidation` aggregate every error in argument order. Conversion is explicit via
-`ToValidation`/`ToSingleError`. No API silently switches models.
+- **Revised:** 2026-11-03
 
-**Consequence:** callers pick the model by name; no configuration flags, no hidden behaviour.
+`BindOk` and the `Combine`/`Zip`/`Sequence`/`Traverse` family short-circuit (first error wins, later functions are
+not invoked). Accumulating validation lives on `Validation<T, TErr>` (`Zip`, `Sequence`, `Traverse`, and async twins),
+which collects every error in argument or element order. Folding back to a single `Result<T, TErr>` is explicit via
+`Validation.Collapse`; there is no silent switch between models.
+
+**Consequence:** callers pick the model by type and name; no configuration flags, no hidden behaviour.
 
 ### D6 — One behaviour, one name; symmetry over familiarity
 

@@ -163,13 +163,13 @@ public sealed class MaintenanceHardeningTests
     [Test]
     public async Task Validate_WithThreeInputs_ReturnsOkWhenEveryInputSucceeds()
     {
-        var result = Result.Validate(
+        var result = Validation.Zip(
             Result.Ok<int, RopError>(1),
             Result.Ok<int, RopError>(2),
             Result.Ok<int, RopError>(3),
             (a, b, c) => a + b + c);
 
-        await Assert.That(result.IsOk).IsTrue();
+        await Assert.That(result.IsSuccess).IsTrue();
         await Assert.That(result.Expect("test")).IsEqualTo(6);
     }
 
@@ -277,12 +277,12 @@ public sealed class MaintenanceHardeningTests
     [Test]
     public async Task ToSingleError_WithNullProducingCombine_FaultsWithInvalidOperation()
     {
-        Result<int, IReadOnlyList<RopError>> source = Result.Validate(
+        Validation<int, RopError> source = Validation.Zip(
             Result.Err<int>(Sample.Error("E_A")),
             Result.Err<int>(Sample.Error("E_B")),
             (a, b) => a + b);
 
-        var exception = TestSupport.Catch(() => source.ToSingleError<int, RopError>(_ => null!));
+        var exception = TestSupport.Catch(() => source.Collapse(_ => null!));
 
         await Assert.That(exception is InvalidOperationException).IsTrue();
     }
@@ -442,10 +442,10 @@ public sealed class MaintenanceHardeningTests
             Result.Ok<int, RopError>(2),
         ]);
 
-        var result = Result.SequenceValidation(source);
+        var result = Validation.Sequence(source);
 
         await Assert.That(source.Enumerations).IsEqualTo(1);
-        await Assert.That(result.TryGetErr(out var errors)).IsTrue();
+        await Assert.That(result.TryGetErrors(out var errors)).IsTrue();
         await Assert.That(errors!.Count).IsEqualTo(1);
     }
 
@@ -454,12 +454,12 @@ public sealed class MaintenanceHardeningTests
     {
         var source = new SinglePassEnumerable<int>([1, 2, 3]);
 
-        var result = Result.TraverseValidation<int, int, RopError>(
+        var result = Validation.Traverse<int, int, RopError>(
             source,
             value => value == 2 ? Result.Err<int>(Sample.Error("E_EVEN")) : Result.Ok<int, RopError>(value));
 
         await Assert.That(source.Enumerations).IsEqualTo(1);
-        await Assert.That(result.IsErr).IsTrue();
+        await Assert.That(result.IsFailure).IsTrue();
     }
 
     [Test]
@@ -526,10 +526,10 @@ public sealed class MaintenanceHardeningTests
             Task.FromResult(Result.Err<int>(Sample.Error())),
         ]);
 
-        var result = await Result.SequenceValidationAsync<int, RopError>(source);
+        var result = await Validation.SequenceAsync<int, RopError>(source);
 
         await Assert.That(source.Enumerations).IsEqualTo(1);
-        await Assert.That(result.IsErr).IsTrue();
+        await Assert.That(result.IsFailure).IsTrue();
     }
 
     [Test]
@@ -537,14 +537,14 @@ public sealed class MaintenanceHardeningTests
     {
         var source = new SinglePassEnumerable<int>([1, 2, 3]);
 
-        var result = await Result.TraverseValidationAsync<int, int, RopError>(
+        var result = await Validation.TraverseAsync<int, int, RopError>(
             source,
             value => Task.FromResult(value == 2
                 ? Result.Err<int>(Sample.Error("E_EVEN"))
                 : Result.Ok<int, RopError>(value)));
 
         await Assert.That(source.Enumerations).IsEqualTo(1);
-        await Assert.That(result.IsErr).IsTrue();
+        await Assert.That(result.IsFailure).IsTrue();
     }
 
     // ---------------------------------------------------------------- immutability and thread safety
@@ -553,10 +553,10 @@ public sealed class MaintenanceHardeningTests
     public async Task MaterializedCollections_AreReadOnly()
     {
         var values = Result.Sequence([Result.Ok<int, RopError>(1), Result.Ok<int, RopError>(2)]).Expect("test");
-        var errors = Result.Validate(
+        var errors = Validation.Zip(
             Result.Err<int>(Sample.Error("E_A")),
             Result.Err<int>(Sample.Error("E_B")),
-            (a, b) => a + b).ExpectErr();
+            (a, b) => a + b).ExpectErrors();
 
         var valueMutation = TestSupport.Catch(() => ((IList<int>)values).Add(3));
         var errorMutation = TestSupport.Catch(() => ((IList<RopError>)errors).Add(Sample.Error()));
@@ -701,6 +701,29 @@ public sealed class MaintenanceHardeningTests
         await Assert.That(default(Either<int, string>).IsLeft).IsFalse();
         await Assert.That(default(Either<int, string>).IsRight).IsFalse();
         await Assert.That(() => default(ParseFailure).Code).Throws<InvalidOperationException>();
+    }
+
+    [Test]
+    public async Task Validation_PublicSurface_HasNoBindMethods()
+    {
+        var instanceMethods = typeof(Validation<,>)
+            .GetMethods(System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.DeclaredOnly)
+            .Select(static method => method.Name);
+        var staticMethods = typeof(Validation)
+            .GetMethods(System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.DeclaredOnly)
+            .Select(static method => method.Name);
+
+        await Assert.That(instanceMethods.Concat(staticMethods).Where(static name => name.StartsWith("Bind", StringComparison.Ordinal)))
+            .IsEmpty();
+    }
+
+    [Test]
+    public async Task DefaultValidation_TryGetErrorsAndCollapseThrowWithoutCallingMerge()
+    {
+        var validation = default(Validation<int, RopError>);
+
+        await Assert.That(() => validation.TryGetErrors(out _)).Throws<InvalidOperationException>();
+        await Assert.That(() => validation.Collapse(_ => Sample.Error())).Throws<InvalidOperationException>();
     }
 }
 

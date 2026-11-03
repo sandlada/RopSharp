@@ -113,7 +113,7 @@ public sealed class RandomizedLawTests
             var first = RandomResult(random);
             var second = RandomResult(random);
 
-            var result = Result.Validate(first, second, static (a, b) => a + b);
+            var result = Validation.Zip(first, second, static (a, b) => a + b);
 
             var expected = new List<string>();
             if (first.IsErr)
@@ -128,11 +128,11 @@ public sealed class RandomizedLawTests
 
             if (expected.Count == 0)
             {
-                await Assert.That(result.IsOk).IsTrue();
+                await Assert.That(result.IsSuccess).IsTrue();
             }
             else
             {
-                await TestSupport.AssertSequenceAsync(result.ExpectErr(), [.. expected]);
+                await TestSupport.AssertSequenceAsync(result.ExpectErrors(), [.. expected]);
             }
         }
     }

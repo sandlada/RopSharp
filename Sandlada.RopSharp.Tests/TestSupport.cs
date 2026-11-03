@@ -58,6 +58,16 @@ internal static class TestSupport
             : throw new InvalidOperationException($"Expected Err but was {result}.");
 
     internal static TErr ExpectErr<TOk, TErr>(this Result<TOk, TErr> result) => RequireErr(result);
+
+    internal static IReadOnlyList<TErr> ExpectErrors<T, TErr>(this Validation<T, TErr> validation)
+    {
+        if (!validation.TryGetErrors(out var errors))
+        {
+            throw new InvalidOperationException($"Expected validation failure but was {validation}.");
+        }
+
+        return errors;
+    }
 }
 
 internal sealed class CountingSequence<T> : IEnumerable<T>

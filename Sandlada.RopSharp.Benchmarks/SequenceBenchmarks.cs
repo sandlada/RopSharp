@@ -52,12 +52,12 @@ public class SequenceBenchmarks
     public Result<IReadOnlyList<int>, RopError> Sequence_ErrorAtMiddle() => Result.Sequence(_errorAtMiddle);
 
     [Benchmark]
-    public Result<IReadOnlyList<int>, IReadOnlyList<RopError>> SequenceValidation_AllErr() =>
-        Result.SequenceValidation(_allErr);
+    public Validation<IReadOnlyList<int>, RopError> SequenceValidation_AllErr() =>
+        Validation.Sequence(_allErr);
 
     [Benchmark]
-    public Result<IReadOnlyList<int>, IReadOnlyList<RopError>> SequenceValidation_HalfErr() =>
-        Result.SequenceValidation(_errorAtMiddle);
+    public Validation<IReadOnlyList<int>, RopError> SequenceValidation_HalfErr() =>
+        Validation.Sequence(_errorAtMiddle);
 
     [Benchmark]
     public (IReadOnlyList<int> Oks, IReadOnlyList<RopError> Errs) Partition_Half() => Result.Partition(_errorAtMiddle);

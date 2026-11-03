@@ -150,7 +150,13 @@ public sealed class AllocationGuardTests
     [Test]
     public async Task ResultSequenceValidation_AllErrors_StaysWithinBudget()
     {
-        var bytes = AllocationMeter.BytesPerRun(_ => Sink.Consume(Result.SequenceValidation(AllErrors16)), iterations: BoundedIterations);
+        var bytes = AllocationMeter.BytesPerRun(
+            _ =>
+            {
+                var validation = Validation.Sequence(AllErrors16);
+                Sink.Consume(validation.IsFailure);
+            },
+            iterations: BoundedIterations);
         await Assert.That(bytes).IsLessThanOrEqualTo(SequenceValidationAllErrors16PerCallBytes * BoundedIterations);
     }
 

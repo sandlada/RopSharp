@@ -43,5 +43,5 @@ public class CollectionBenchmarks
 
     [Benchmark]
     public Result<IReadOnlyList<int>, RopError> ToSingleError_FromValidation() =>
-        Result.SequenceValidation(_allOk).ToSingleError();
+        Validation.Sequence(_allOk).Collapse(static errors => errors[0]);
 }

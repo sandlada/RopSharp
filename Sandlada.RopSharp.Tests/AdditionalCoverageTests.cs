@@ -99,7 +99,7 @@ public sealed class AdditionalCoverageTests
     {
         var called = false;
 
-        var result = Result.Validate(
+        var result = Validation.Zip(
             Result.Ok(1),
             Result.Err<int>(Sample.Error()),
             Result.Ok(3),
@@ -110,7 +110,7 @@ public sealed class AdditionalCoverageTests
             });
 
         await Assert.That(called).IsFalse();
-        await Assert.That(result.ExpectErr().Count).IsEqualTo(1);
+        await Assert.That(result.ExpectErrors().Count).IsEqualTo(1);
     }
 
     [Test]

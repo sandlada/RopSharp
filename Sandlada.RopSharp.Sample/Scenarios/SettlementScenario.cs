@@ -122,7 +122,7 @@ internal static class SettlementScenario
     /// and the exceeded limit in one aggregated failure.
     /// </summary>
     private static Result<Account, RopError> ValidateAccount(Account account, decimal amount) =>
-        Result.Validate(
+        Validation.Zip(
                 account.Frozen
                     ? Result.Err<bool>(RopError.Create("E_ACCOUNT_FROZEN", "account is frozen"))
                     : Result.Ok(true),
@@ -137,7 +137,7 @@ internal static class SettlementScenario
                         "E_LIMIT_EXCEEDED",
                         $"daily limit {account.DailyLimit:0.00} < {amount:0.00}")),
                 (_, _, _) => account)
-            .ToSingleError(RopError.Combine);
+            .Collapse(RopError.Combine);
 
     private static async Task<Result<SettledPayment, RopError>> ChargeAsync(
         SettlementRow row,

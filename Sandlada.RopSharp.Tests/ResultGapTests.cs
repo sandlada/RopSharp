@@ -190,10 +190,10 @@ public sealed class ResultGapTests
     public async Task MatchFirst_UsesFirstError()
     {
         var first = Sample.Error("E_FIRST");
-        var result = Result.Err<int, IReadOnlyList<RopError>>([first, Sample.Error("E_SECOND")]);
+        var validation = Validation.Failure<int, RopError>([first, Sample.Error("E_SECOND")]);
 
-        var code = result.MatchFirst(_ => "ok", error => error.Code);
-        var ok = Result.Ok<int, IReadOnlyList<RopError>>(7).MatchFirst(value => value.ToString(), _ => "err");
+        var code = validation.MatchFirst(_ => "ok", error => error.Code);
+        var ok = Validation.Success<int, RopError>(7).MatchFirst(value => value.ToString(), _ => "err");
 
         await Assert.That(code).IsEqualTo("E_FIRST");
         await Assert.That(ok).IsEqualTo("7");
@@ -204,14 +204,14 @@ public sealed class ResultGapTests
     {
         var first = Sample.Error("E_FIRST");
         var seen = string.Empty;
-        var result = Result.Err<int, IReadOnlyList<RopError>>([first, Sample.Error("E_SECOND")]);
+        var validation = Validation.Failure<int, RopError>([first, Sample.Error("E_SECOND")]);
 
-        result.SwitchFirst(_ => seen = "ok", error => seen = error.Code);
+        validation.SwitchFirst(_ => seen = "ok", error => seen = error.Code);
 
         await Assert.That(seen).IsEqualTo("E_FIRST");
 
         var successSeen = 0;
-        Result.Ok<int, IReadOnlyList<RopError>>(7).SwitchFirst(value => successSeen = value, _ => { });
+        Validation.Success<int, RopError>(7).SwitchFirst(value => successSeen = value, _ => { });
 
         await Assert.That(successSeen).IsEqualTo(7);
     }
@@ -219,11 +219,9 @@ public sealed class ResultGapTests
     [Test]
     public async Task SwitchFirst_WithEmptyErrorList_Throws()
     {
-        var invalid = Result.Err<int, IReadOnlyList<RopError>>([]);
+        var exception = TestSupport.Catch(() => Validation.Failure<int, RopError>([]));
 
-        var exception = TestSupport.Catch(() => invalid.SwitchFirst(_ => { }, _ => { }));
-
-        await Assert.That(exception is InvalidOperationException).IsTrue();
+        await Assert.That(exception is ArgumentException).IsTrue();
     }
 
     [Test]
@@ -262,12 +260,12 @@ public sealed class ResultGapTests
         var first = Sample.Error("E_FIRST");
         var second = Sample.Error("E_SECOND");
 
-        var result = await Result.ValidateAsync(
+        var result = await Validation.ZipAsync(
             Task.FromResult(Result.Err<int>(first)),
             Task.FromResult(Result.Err<int>(second)),
             (int a, int b) => a + b);
 
-        await TestSupport.AssertSequenceAsync(result.ExpectErr(), first, second);
+        await TestSupport.AssertSequenceAsync(result.ExpectErrors(), first, second);
     }
 
     [Test]
@@ -276,13 +274,13 @@ public sealed class ResultGapTests
         var first = Sample.Error("E_FIRST");
         var third = Sample.Error("E_THIRD");
 
-        var result = await Result.ValidateAsync(
+        var result = await Validation.ZipAsync(
             Task.FromResult(Result.Err<int>(first)),
             Task.FromResult(Result.Ok(2)),
             Task.FromResult(Result.Err<int>(third)),
             (int a, int b, int c) => a + b + c);
 
-        await TestSupport.AssertSequenceAsync(result.ExpectErr(), first, third);
+        await TestSupport.AssertSequenceAsync(result.ExpectErrors(), first, third);
     }
 
     [Test]

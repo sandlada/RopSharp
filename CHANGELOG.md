@@ -10,12 +10,19 @@ Planned for **0.0.2**.
 
 ### Added
 
+- `Validation<T, TErr>` and `Validation` entry points (`Success`, `Failure`, `From`, `Zip`, `Sequence`, `Traverse`, and
+  async twins) for accumulating every error without overloading `Result<T, IReadOnlyList<TErr>>`.
+- `Validation<T, TErr>.Collapse`, `MatchFirst`, `SwitchFirst`, and `ValidationExtensions.Expect`.
 - `Either<TLeft,TRight>.BindLeft` and `BindRight` for chaining another either on the active branch.
 - `Result<TOk,TErr>.Expect(string reason)` and `Option<T>.Expect(string reason)` for boundary exits that must
   include a non-empty reason when unwrapping.
 
 ### Removed
 
+- Aggregating validation on the short-circuit track: `Result.Validate` / `ValidateAsync`, `Result.SequenceValidation`
+  / `SequenceValidationAsync`, `Result.TraverseValidation` / `TraverseValidationAsync`, `ResultValidationExtensions`
+  (`ToValidation`, `ToSingleError`), and `ResultTerminalExtensions.MatchFirst` / `SwitchFirst` for
+  `Result<T, IReadOnlyList<TErr>>` (use `Validation` and `Collapse` / `MatchFirst` / `SwitchFirst` there instead).
 - `Result<TOk,TErr>.OkOrDefault`, `ResultExtensions.OrThrow` / `OkOrThrow` / `ErrOrThrow`, and
   `OptionExtensions.OrThrow` (use `Match`, `TryGet*`, or `Expect` with an explicit reason).
 
@@ -25,6 +32,8 @@ Planned for **0.0.2**.
   reading errors or calling branch combinators throws `InvalidOperationException`. Value-type error payloads no
   longer make `default(Result<,>)` look like a legitimate `Err`.
 - `default(Either<,>)` is no longer observed as `Right`.
+- Accumulating validation is a separate `Validation<T, TErr>` type; `Result<T, IReadOnlyList<TErr>>` is no longer part
+  of the public aggregation surface.
 
 ## [0.0.1] - 2026-10-31
 

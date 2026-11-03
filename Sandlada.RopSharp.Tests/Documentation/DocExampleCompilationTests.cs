@@ -15,7 +15,7 @@ namespace Sandlada.RopSharp.Tests.Documentation;
 /// </remarks>
 public sealed class DocExampleCompilationTests
 {
-    private static readonly string[] TrackMarkers = ["Ok(", "Err(", "Some(", "None", "Left(", "Right("];
+    private static readonly string[] TrackMarkers = ["Ok(", "Err(", "Some(", "None", "Left(", "Right(", "Success(", "Failure("];
 
     [Test]
     public async Task Library_DocumentsAtLeastOneExamplePerPublicApi()

@@ -9,18 +9,17 @@ namespace Sandlada.RopSharp;
 /// <remarks>
 /// <para>
 /// Two combination semantics live here and they are never mixed. <see cref="Combine{T1,T2,TOut,TErr}"/> and
-/// <see cref="Sequence{T,TErr}"/> short-circuit on the first error; <see cref="Validate{T1,T2,TOut,TErr}"/> and
-/// <see cref="SequenceValidation{T,TErr}"/> collect every error.
+/// <see cref="Sequence{T,TErr}"/> short-circuit on the first error. Accumulating validation lives on
+/// <see cref="Validation"/> instead.
 /// </para>
 /// <code><![CDATA[
-/// var validated = Result.Validate(
+/// var placed = Result.Combine(
 ///         Result.Ok<Order, RopError>(OrderFixtures.Sample),
-///         Result.Err<decimal>(RopError.Create("E_AMOUNT", "the amount must be positive")),
-///         static (order, amount) => order.Id)
-///     .ToSingleError(RopError.Combine);
+///         Result.Ok<decimal, RopError>(OrderFixtures.Sample.Total),
+///         static (order, amount) => $"{order.Id}:{amount}");
 ///
-/// // Ok(id) when every check passed,
-/// // Err(E_MULTIPLE) when a check failed - Validate collects, Combine short-circuits.
+/// // Ok("ord-1001:44") when both results are Ok,
+/// // Err(E_CHECKOUT) with the first error - Combine short-circuits.
 /// ]]></code>
 /// </remarks>
 public static partial class Result
@@ -38,7 +37,7 @@ public static partial class Result
     /// <returns><c>Ok(merger(a, b))</c>, or the first <c>Err</c>.</returns>
     /// <remarks>
     /// Monadic (short-circuiting) semantics: the merger is not evaluated when either input failed, and only the
-    /// first error is returned. Use <see cref="Validate{T1,T2,TOut,TErr}"/> when every error must be collected.
+    /// first error is returned. Use <see cref="Validation.Zip{T1,T2,TOut,TErr}"/> when every error must be collected.
     /// <code><![CDATA[
     /// var placed = Result.Combine(
     ///         Result.Ok<Order, RopError>(OrderFixtures.Sample),
@@ -177,108 +176,6 @@ public static partial class Result
         Combine(first, second, third, static (a, b, c) => (a, b, c));
 
     /// <summary>
-    /// Combines two results applicatively, collecting every error.
-    /// </summary>
-    /// <typeparam name="T1">The first success type.</typeparam>
-    /// <typeparam name="T2">The second success type.</typeparam>
-    /// <typeparam name="TOut">The merged success type.</typeparam>
-    /// <typeparam name="TErr">The error type.</typeparam>
-    /// <param name="first">The first result.</param>
-    /// <param name="second">The second result.</param>
-    /// <param name="merger">Combines both success values. Evaluated only when both are <c>Ok</c>.</param>
-    /// <returns><c>Ok(merger(a, b))</c>, or <c>Err</c> with all errors in argument order (never empty).</returns>
-    /// <remarks>
-    /// Applicative (aggregating) semantics: every input is inspected, no short-circuit. Use
-    /// <see cref="Combine{T1,T2,TOut,TErr}"/> when only the first error matters.
-    /// <code><![CDATA[
-    /// var validated = Result.Validate(
-    ///         Result.Ok<Order, RopError>(OrderFixtures.Sample),
-    ///         Result.Err<decimal>(RopError.Create("E_AMOUNT", "the amount must be positive")),
-    ///         static (order, amount) => order.Id);
-    ///
-    /// // Ok("ord-1001") when both checks passed,
-    /// // Err([E_AMOUNT]) with every error - Validate never short-circuits.
-    /// ]]></code>
-    /// </remarks>
-    public static Result<TOut, IReadOnlyList<TErr>> Validate<T1, T2, TOut, TErr>(
-        Result<T1, TErr> first,
-        Result<T2, TErr> second,
-        Func<T1, T2, TOut> merger)
-    {
-        ArgumentNullException.ThrowIfNull(merger);
-
-        List<TErr>? errors = null;
-        if (!first.TryGetOk(out var a))
-        {
-            errors = AddError(errors, first.ErrUnsafe);
-        }
-
-        if (!second.TryGetOk(out var b))
-        {
-            errors = AddError(errors, second.ErrUnsafe);
-        }
-
-        return errors is null
-            ? OkUnchecked<TOut, IReadOnlyList<TErr>>(merger(a!, b!))
-            : Err<TOut, IReadOnlyList<TErr>>(ToReadOnlyList(errors));
-    }
-
-    /// <summary>
-    /// Combines three results applicatively, collecting every error.
-    /// </summary>
-    /// <typeparam name="T1">The first success type.</typeparam>
-    /// <typeparam name="T2">The second success type.</typeparam>
-    /// <typeparam name="T3">The third success type.</typeparam>
-    /// <typeparam name="TOut">The merged success type.</typeparam>
-    /// <typeparam name="TErr">The error type.</typeparam>
-    /// <param name="first">The first result.</param>
-    /// <param name="second">The second result.</param>
-    /// <param name="third">The third result.</param>
-    /// <param name="merger">Combines all success values. Evaluated only when all are <c>Ok</c>.</param>
-    /// <returns><c>Ok(merger(a, b, c))</c>, or <c>Err</c> with all errors in argument order (never empty).</returns>
-    /// <remarks>
-    /// Every input is inspected, so a caller learns about all problems at once instead of one per round trip.
-    /// <code><![CDATA[
-    /// var validated = Result.Validate(
-    ///         Result.Ok<Order, RopError>(OrderFixtures.Sample),
-    ///         Result.Err<decimal>(RopError.Create("E_AMOUNT", "the amount must be positive")),
-    ///         Result.Err<int>(RopError.Create("E_QUANTITY", "the quantity must be positive")),
-    ///         static (order, amount, count) => order.Id);
-    ///
-    /// // Ok("ord-1001") when all three checks passed,
-    /// // Err([E_AMOUNT, E_QUANTITY]) with every error in argument order.
-    /// ]]></code>
-    /// </remarks>
-    public static Result<TOut, IReadOnlyList<TErr>> Validate<T1, T2, T3, TOut, TErr>(
-        Result<T1, TErr> first,
-        Result<T2, TErr> second,
-        Result<T3, TErr> third,
-        Func<T1, T2, T3, TOut> merger)
-    {
-        ArgumentNullException.ThrowIfNull(merger);
-
-        List<TErr>? errors = null;
-        if (!first.TryGetOk(out var a))
-        {
-            errors = AddError(errors, first.ErrUnsafe);
-        }
-
-        if (!second.TryGetOk(out var b))
-        {
-            errors = AddError(errors, second.ErrUnsafe);
-        }
-
-        if (!third.TryGetOk(out var c))
-        {
-            errors = AddError(errors, third.ErrUnsafe);
-        }
-
-        return errors is null
-            ? OkUnchecked<TOut, IReadOnlyList<TErr>>(merger(a!, b!, c!))
-            : Err<TOut, IReadOnlyList<TErr>>(ToReadOnlyList(errors));
-    }
-
-    /// <summary>
     /// Turns a sequence of results into a result of a list, short-circuiting on the first error.
     /// </summary>
     /// <typeparam name="T">The success type.</typeparam>
@@ -312,104 +209,6 @@ public static partial class Result
         }
 
         return Ok<IReadOnlyList<T>, TErr>(ToReadOnlyList(values));
-    }
-
-    /// <summary>
-    /// Turns a sequence of results into a result of a list, collecting every error.
-    /// </summary>
-    /// <typeparam name="T">The success type.</typeparam>
-    /// <typeparam name="TErr">The error type.</typeparam>
-    /// <param name="results">The results to sequence. Enumerated exactly once, immediately.</param>
-    /// <returns><c>Ok</c> with all success values, or <c>Err</c> with all errors (never empty).</returns>
-    /// <remarks>
-    /// The aggregating counterpart of <see cref="Sequence{T,TErr}"/>: every result is inspected and every error is
-    /// collected in element order.
-    /// <code><![CDATA[
-    /// var validated = Result.SequenceValidation(
-    ///     new[]
-    ///     {
-    ///         Result.Ok<string, RopError>("SKU-1"),
-    ///         Result.Err<string, RopError>(RopError.Create("E_LINE", "the line is invalid")),
-    ///     });
-    ///
-    /// // Ok(["SKU-1"]) when every result is Ok,
-    /// // Err([E_LINE]) with every error - SequenceValidation never short-circuits.
-    /// ]]></code>
-    /// </remarks>
-    public static Result<IReadOnlyList<T>, IReadOnlyList<TErr>> SequenceValidation<T, TErr>(
-        IEnumerable<Result<T, TErr>> results)
-    {
-        ArgumentNullException.ThrowIfNull(results);
-
-        var values = CreateList<Result<T, TErr>, T>(results);
-        List<TErr>? errors = null;
-        foreach (var result in results)
-        {
-            if (result.TryGetOk(out var value))
-            {
-                values.Add(value);
-            }
-            else
-            {
-                errors = AddError(errors, result.ErrUnsafe);
-            }
-        }
-
-        return errors is null
-            ? Ok<IReadOnlyList<T>, IReadOnlyList<TErr>>(ToReadOnlyList(values))
-            : Err<IReadOnlyList<T>, IReadOnlyList<TErr>>(ToReadOnlyList(errors));
-    }
-
-    /// <summary>
-    /// Maps each element with <paramref name="mapper"/> and sequences the results, collecting every error.
-    /// </summary>
-    /// <typeparam name="T">The source element type.</typeparam>
-    /// <typeparam name="TOut">The success type.</typeparam>
-    /// <typeparam name="TErr">The error type.</typeparam>
-    /// <param name="source">The source elements. Enumerated exactly once, immediately.</param>
-    /// <param name="mapper">Maps an element to a result.</param>
-    /// <returns>
-    /// <c>Ok</c> with all success values in order, or <c>Err</c> with all errors in element order (never empty).
-    /// An empty source yields <c>Ok([])</c>.
-    /// </returns>
-    /// <exception cref="ArgumentNullException"><paramref name="source"/> or <paramref name="mapper"/> is <see langword="null"/>.</exception>
-    /// <remarks>
-    /// Applicative (aggregating) semantics: the mapper is invoked for every element and no element is skipped after a
-    /// failure. Use <see cref="Traverse{T,TOut,TErr}"/> when only the first error matters.
-    /// <code><![CDATA[
-    /// var validated = Result.TraverseValidation(
-    ///         OrderFixtures.Sample.Lines,
-    ///         static line => Result.Ok(line.Sku));
-    ///
-    /// // Ok(["SKU-1", "SKU-2"]) when every element maps successfully,
-    /// // Err([E_LINE]) with every error - the mapper runs for every element.
-    /// ]]></code>
-    /// </remarks>
-    public static Result<IReadOnlyList<TOut>, IReadOnlyList<TErr>> TraverseValidation<T, TOut, TErr>(
-        IEnumerable<T> source,
-        Func<T, Result<TOut, TErr>> mapper)
-    {
-        ArgumentNullException.ThrowIfNull(source);
-        ArgumentNullException.ThrowIfNull(mapper);
-
-        var values = CreateList<T, TOut>(source);
-        List<TErr>? errors = null;
-        foreach (var element in source)
-        {
-            var result = mapper(element);
-            if (result.TryGetOk(out var value))
-            {
-                values.Add(value);
-            }
-            else
-            {
-                errors = AddError(errors, result.ErrUnsafe);
-            }
-        }
-
-        return errors is null
-            ? Ok<IReadOnlyList<TOut>, IReadOnlyList<TErr>>(ToReadOnlyList(values))
-            : Err<IReadOnlyList<TOut>, IReadOnlyList<TErr>>(ToReadOnlyList(errors));
     }
 
     /// <summary>
@@ -501,17 +300,6 @@ public static partial class Result
 
     internal static List<T> CreateList<TSource, T>(IEnumerable<TSource> source) =>
         source is ICollection<TSource> sized ? new List<T>(sized.Count) : new List<T>();
-
-    private static List<T> AddError<T>(List<T>? errors, T error)
-    {
-        if (errors is null)
-        {
-            errors = new List<T>(capacity: 2);
-        }
-
-        errors.Add(error);
-        return errors;
-    }
 
     internal static IReadOnlyList<T> ToReadOnlyList<T>(List<T> items)
     {

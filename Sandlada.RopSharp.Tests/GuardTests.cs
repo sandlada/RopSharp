@@ -73,9 +73,9 @@ public sealed class GuardTests
     [Test]
     public async Task Aggregators_RejectNullArguments()
     {
-        await AssertArgumentNullAsync(() => Result.Validate(Result.Ok(1), Result.Ok(2), (Func<int, int, int>)null!));
+        await AssertArgumentNullAsync(() => Validation.Zip(Result.Ok(1), Result.Ok(2), (Func<int, int, int>)null!));
         await AssertArgumentNullAsync(() => Result.Sequence<int, RopError>(null!));
-        await AssertArgumentNullAsync(() => Result.SequenceValidation<int, RopError>(null!));
+        await AssertArgumentNullAsync(() => Validation.Sequence<int, RopError>(null!));
         await AssertArgumentNullAsync(() => Result.Traverse<int, int, RopError>(null!, value => Result.Ok(value)));
         await AssertArgumentNullAsync(() => Result.Traverse<int, int, RopError>([1], null!));
         await AssertArgumentNullAsync(() => Result.Partition<int, RopError>(null!));

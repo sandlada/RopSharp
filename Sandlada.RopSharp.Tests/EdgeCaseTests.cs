@@ -7,7 +7,7 @@ public sealed class EdgeCaseTests
     [Test]
     public async Task SequenceValidation_WithEmptySource_ReturnsEmptyOk()
     {
-        var result = Result.SequenceValidation(Array.Empty<Result<int, RopError>>());
+        var result = Validation.Sequence(Array.Empty<Result<int, RopError>>());
 
         await Assert.That(result.Expect("test").Count).IsEqualTo(0);
     }
@@ -15,7 +15,7 @@ public sealed class EdgeCaseTests
     [Test]
     public async Task SequenceValidation_WithAllSuccess_KeepsValues()
     {
-        var result = Result.SequenceValidation(new[] { Result.Ok(1), Result.Ok(2) });
+        var result = Validation.Sequence(new[] { Result.Ok(1), Result.Ok(2) });
 
         await TestSupport.AssertSequenceAsync(result.Expect("test"), 1, 2);
     }
@@ -70,7 +70,7 @@ public sealed class EdgeCaseTests
     {
         var called = false;
 
-        var result = Result.Validate(
+        var result = Validation.Zip(
             Result.Err<int>(Sample.Error()),
             Result.Ok(2),
             (int a, int b) =>
@@ -80,17 +80,15 @@ public sealed class EdgeCaseTests
             });
 
         await Assert.That(called).IsFalse();
-        await Assert.That(result.IsErr).IsTrue();
+        await Assert.That(result.IsFailure).IsTrue();
     }
 
     [Test]
     public async Task ToSingleError_WithStrategy_ThrowsOnEmptyList()
     {
-        var invalid = Result.Err<int, IReadOnlyList<RopError>>([]);
+        var exception = TestSupport.Catch(() => Validation.Failure<int, RopError>([]));
 
-        var exception = TestSupport.Catch(() => invalid.ToSingleError(RopError.Combine));
-
-        await Assert.That(exception is InvalidOperationException).IsTrue();
+        await Assert.That(exception is ArgumentException).IsTrue();
     }
 
     [Test]
@@ -179,7 +177,7 @@ public sealed class EdgeCaseTests
     public async Task EmptyAggregations_NeverReturnNullLists()
     {
         var sequence = Result.Sequence(Array.Empty<Result<int, RopError>>()).Expect("test");
-        var validation = Result.SequenceValidation(Array.Empty<Result<int, RopError>>()).Expect("test");
+        var validation = Validation.Sequence(Array.Empty<Result<int, RopError>>()).Expect("test");
         var (oks, errs) = Result.Partition(Array.Empty<Result<int, RopError>>());
 
         await Assert.That(sequence).IsNotNull();
@@ -192,7 +190,7 @@ public sealed class EdgeCaseTests
     public async Task ExposedAggregationLists_AreReadOnlyViews()
     {
         var sequence = Result.Sequence(new[] { Result.Ok(1), Result.Ok(2) }).Expect("test");
-        var validation = Result.SequenceValidation(new[] { Result.Ok(1), Result.Ok(2) }).Expect("test");
+        var validation = Validation.Sequence(new[] { Result.Ok(1), Result.Ok(2) }).Expect("test");
         var (oks, errs) = Result.Partition(new[] { Result.Ok(1), Result.Err<int>(Sample.Error()) });
 
         foreach (var list in new IReadOnlyList<int>[] { sequence, validation, oks })
