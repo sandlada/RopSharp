@@ -2,6 +2,7 @@
 
 - **Status:** Accepted
 - **Date:** 2026-10-28
+- **Revised:** 2026-11-03. `ResultTask` does not add throttling or a second cancellation model beyond `WithCancellation` and static `Zip`/`Sequence`/`Traverse` tokens.
 - **Supersedes:** none
 - **Related:** [ADR 0001](0001-core-design-decisions.md) (D6, D9),
   [ADR 0002](0002-api-gap-remediation.md) (D18, D23), [ADR 0006](0006-async-boundaries.md),

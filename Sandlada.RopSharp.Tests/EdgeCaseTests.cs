@@ -96,8 +96,9 @@ public sealed class EdgeCaseTests
     {
         using var cts = new CancellationTokenSource();
 
-        var result = await Task.FromResult(Result.Err<int>(Sample.Error("E_X")))
-            .MapErrAsync((error, token) => Task.FromResult(error.WithCode(token == cts.Token ? "E_CT" : "E_NO")), cts.Token);
+        var result = await ResultTask.From(Result.Err<int>(Sample.Error("E_X")))
+            .WithCancellation(cts.Token)
+            .MapErrAsync((error, token) => Task.FromResult(error.WithCode(token == cts.Token ? "E_CT" : "E_NO")));
 
         await Assert.That(result.ExpectErr().Code).IsEqualTo("E_CT");
     }
@@ -108,11 +109,11 @@ public sealed class EdgeCaseTests
         using var cts = new CancellationTokenSource();
         var observed = false;
 
-        await Task.FromResult(Result.Ok(1)).TeeOkAsync((value, token) =>
+        await ResultTask.From(Result.Ok(1)).WithCancellation(cts.Token).TeeOkAsync((value, token) =>
         {
             observed = token == cts.Token;
             return Task.CompletedTask;
-        }, cts.Token);
+        });
 
         await Assert.That(observed).IsTrue();
     }
@@ -123,11 +124,11 @@ public sealed class EdgeCaseTests
         using var cts = new CancellationTokenSource();
         var observed = false;
 
-        await Task.FromResult(Result.Err<int>(Sample.Error())).TeeErrAsync((error, token) =>
+        await ResultTask.From(Result.Err<int>(Sample.Error())).WithCancellation(cts.Token).TeeErrAsync((error, token) =>
         {
             observed = token == cts.Token;
             return Task.CompletedTask;
-        }, cts.Token);
+        });
 
         await Assert.That(observed).IsTrue();
     }
@@ -138,11 +139,11 @@ public sealed class EdgeCaseTests
         using var cts = new CancellationTokenSource();
         var observed = false;
 
-        await Task.FromResult(Option.Some(1)).TeeSomeAsync((value, token) =>
+        await OptionTask.From(Task.FromResult(Option.Some(1))).WithCancellation(cts.Token).TeeSomeAsync((value, token) =>
         {
             observed = token == cts.Token;
             return Task.CompletedTask;
-        }, cts.Token);
+        });
 
         await Assert.That(observed).IsTrue();
     }
@@ -153,11 +154,11 @@ public sealed class EdgeCaseTests
         using var cts = new CancellationTokenSource();
         var observed = false;
 
-        await Task.FromResult(Option.None<int>()).TeeNoneAsync(token =>
+        await OptionTask.From(Task.FromResult(Option.None<int>())).WithCancellation(cts.Token).TeeNoneAsync(token =>
         {
             observed = token == cts.Token;
             return Task.CompletedTask;
-        }, cts.Token);
+        });
 
         await Assert.That(observed).IsTrue();
     }

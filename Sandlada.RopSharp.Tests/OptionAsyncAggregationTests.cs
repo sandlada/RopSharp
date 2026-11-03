@@ -7,9 +7,9 @@ public sealed class OptionAsyncAggregationTests
     [Test]
     public async Task CombineAsync_TwoSome_Combines()
     {
-        var option = await Option.CombineAsync(
-            Task.FromResult(Option.Some(1)),
-            Task.FromResult(Option.Some(2)),
+        var option = await OptionTask.Zip(
+            OptionTask.From(Task.FromResult(Option.Some(1))),
+            OptionTask.From(Task.FromResult(Option.Some(2))),
             static (first, second) => first + second);
 
         await Assert.That(option.Expect("test")).IsEqualTo(3);
@@ -20,9 +20,9 @@ public sealed class OptionAsyncAggregationTests
     {
         var called = false;
 
-        var option = await Option.CombineAsync(
-            Task.FromResult(Option.Some(1)),
-            Task.FromResult(Option.None<int>()),
+        var option = await OptionTask.Zip(
+            OptionTask.From(Task.FromResult(Option.Some(1))),
+            OptionTask.From(Task.FromResult(Option.None<int>())),
             (first, second) =>
             {
                 called = true;
@@ -36,10 +36,10 @@ public sealed class OptionAsyncAggregationTests
     [Test]
     public async Task CombineAsync_ThreeSome_Combines()
     {
-        var option = await Option.CombineAsync(
-            Task.FromResult(Option.Some(1)),
-            Task.FromResult(Option.Some(2)),
-            Task.FromResult(Option.Some(3)),
+        var option = await OptionTask.Zip(
+            OptionTask.From(Task.FromResult(Option.Some(1))),
+            OptionTask.From(Task.FromResult(Option.Some(2))),
+            OptionTask.From(Task.FromResult(Option.Some(3))),
             static (first, second, third) => first + second + third);
 
         await Assert.That(option.Expect("test")).IsEqualTo(6);
@@ -48,10 +48,10 @@ public sealed class OptionAsyncAggregationTests
     [Test]
     public async Task CombineAsync_ThreeWithNone_ReturnsNone()
     {
-        var option = await Option.CombineAsync(
-            Task.FromResult(Option.Some(1)),
-            Task.FromResult(Option.None<int>()),
-            Task.FromResult(Option.Some(3)),
+        var option = await OptionTask.Zip(
+            OptionTask.From(Task.FromResult(Option.Some(1))),
+            OptionTask.From(Task.FromResult(Option.None<int>())),
+            OptionTask.From(Task.FromResult(Option.Some(3))),
             static (first, second, third) => first + second + third);
 
         await Assert.That(option.IsNone).IsTrue();
@@ -64,9 +64,9 @@ public sealed class OptionAsyncAggregationTests
         cts.Cancel();
 
         var exception = await TestSupport.CatchAsync(() =>
-            Option.CombineAsync(
-                Task.FromResult(Option.Some(1)),
-                Task.FromResult(Option.Some(2)),
+            OptionTask.Zip(
+                OptionTask.From(Task.FromResult(Option.Some(1))),
+                OptionTask.From(Task.FromResult(Option.Some(2))),
                 static (first, second) => first + second,
                 cts.Token));
 
@@ -76,7 +76,7 @@ public sealed class OptionAsyncAggregationTests
     [Test]
     public async Task ZipAsync_TwoSome_Pairs()
     {
-        var option = await Option.ZipAsync(Task.FromResult(Option.Some(1)), Task.FromResult(Option.Some("a")));
+        var option = await OptionTask.Zip(OptionTask.From(Task.FromResult(Option.Some(1))), OptionTask.From(Task.FromResult(Option.Some("a"))));
 
         await Assert.That(option.Expect("test")).IsEqualTo((1, "a"));
     }
@@ -84,10 +84,10 @@ public sealed class OptionAsyncAggregationTests
     [Test]
     public async Task ZipAsync_ThreeSome_Pairs()
     {
-        var option = await Option.ZipAsync(
-            Task.FromResult(Option.Some(1)),
-            Task.FromResult(Option.Some("a")),
-            Task.FromResult(Option.Some(true)));
+        var option = await OptionTask.Zip(
+            OptionTask.From(Task.FromResult(Option.Some(1))),
+            OptionTask.From(Task.FromResult(Option.Some("a"))),
+            OptionTask.From(Task.FromResult(Option.Some(true))));
 
         await Assert.That(option.Expect("test")).IsEqualTo((1, "a", true));
     }
@@ -95,7 +95,7 @@ public sealed class OptionAsyncAggregationTests
     [Test]
     public async Task ZipAsync_WithNone_ReturnsNone()
     {
-        var option = await Option.ZipAsync(Task.FromResult(Option.Some(1)), Task.FromResult(Option.None<int>()));
+        var option = await OptionTask.Zip(OptionTask.From(Task.FromResult(Option.Some(1))), OptionTask.From(Task.FromResult(Option.None<int>())));
 
         await Assert.That(option.IsNone).IsTrue();
     }
@@ -103,11 +103,11 @@ public sealed class OptionAsyncAggregationTests
     [Test]
     public async Task SequenceAsync_AllSome_PreservesOrder()
     {
-        var option = await Option.SequenceAsync(
+        var option = await OptionTask.Sequence(
         [
-            Task.FromResult(Option.Some(1)),
-            Task.FromResult(Option.Some(2)),
-            Task.FromResult(Option.Some(3)),
+            OptionTask.From(Task.FromResult(Option.Some(1))),
+            OptionTask.From(Task.FromResult(Option.Some(2))),
+            OptionTask.From(Task.FromResult(Option.Some(3))),
         ]);
 
         await Assert.That(option.IsSome).IsTrue();
@@ -117,7 +117,7 @@ public sealed class OptionAsyncAggregationTests
     [Test]
     public async Task SequenceAsync_Empty_ReturnsSomeEmpty()
     {
-        var option = await Option.SequenceAsync<int>([]);
+        var option = await OptionTask.Sequence<int>([]);
 
         await Assert.That(option.IsSome).IsTrue();
         await Assert.That(option.Expect("test").Count).IsEqualTo(0);
@@ -128,11 +128,11 @@ public sealed class OptionAsyncAggregationTests
     {
         var pending = new TaskCompletionSource<Option<int>>(TaskCreationOptions.RunContinuationsAsynchronously);
 
-        var option = await Option.SequenceAsync(
+        var option = await OptionTask.Sequence(
         [
-            Task.FromResult(Option.Some(1)),
-            Task.FromResult(Option.None<int>()),
-            pending.Task,
+            OptionTask.From(Task.FromResult(Option.Some(1))),
+            OptionTask.From(Task.FromResult(Option.None<int>())),
+            OptionTask.From(pending.Task),
         ]);
 
         await Assert.That(option.IsNone).IsTrue();
@@ -143,7 +143,7 @@ public sealed class OptionAsyncAggregationTests
     public async Task SequenceAsync_WithNullTask_FaultsWithInvalidOperation()
     {
         var exception = await TestSupport.CatchAsync(() =>
-            Option.SequenceAsync(new Task<Option<int>>[] { null! }));
+            OptionTask.Sequence(new OptionTask<int>[] { default }));
 
         await Assert.That(exception is InvalidOperationException).IsTrue();
     }
@@ -155,7 +155,7 @@ public sealed class OptionAsyncAggregationTests
         cts.Cancel();
         var pending = new TaskCompletionSource<Option<int>>(TaskCreationOptions.RunContinuationsAsynchronously);
 
-        var exception = await TestSupport.CatchAsync(() => Option.SequenceAsync([pending.Task], cts.Token));
+        var exception = await TestSupport.CatchAsync(() => OptionTask.Sequence([OptionTask.From(pending.Task)], cts.Token));
 
         await Assert.That(exception is OperationCanceledException).IsTrue();
         pending.SetResult(Option.Some(1));
@@ -164,9 +164,9 @@ public sealed class OptionAsyncAggregationTests
     [Test]
     public async Task TraverseAsync_AllSome_PreservesOrder()
     {
-        var option = await Option.TraverseAsync(
+        var option = await OptionTask.Traverse(
             [1, 2, 3],
-            value => Task.FromResult(Option.Some(value * 10)));
+            (value, _) => Task.FromResult(Option.Some(value * 10)));
 
         await Assert.That(option.IsSome).IsTrue();
         await TestSupport.AssertSequenceAsync(option.Expect("test"), [10, 20, 30]);
@@ -175,9 +175,9 @@ public sealed class OptionAsyncAggregationTests
     [Test]
     public async Task TraverseAsync_Empty_ReturnsSomeEmpty()
     {
-        var option = await Option.TraverseAsync(
+        var option = await OptionTask.Traverse(
             Array.Empty<int>(),
-            value => Task.FromResult(Option.Some(value)));
+            (value, _) => Task.FromResult(Option.Some(value)));
 
         await Assert.That(option.IsSome).IsTrue();
         await Assert.That(option.Expect("test").Count).IsEqualTo(0);
@@ -188,9 +188,9 @@ public sealed class OptionAsyncAggregationTests
     {
         var calls = 0;
 
-        var option = await Option.TraverseAsync(
+        var option = await OptionTask.Traverse(
             [1, 2, 3],
-            value =>
+            (value, _) =>
             {
                 calls++;
                 return Task.FromResult(value == 2 ? Option.None<int>() : Option.Some(value));
@@ -205,7 +205,7 @@ public sealed class OptionAsyncAggregationTests
     {
         using var cts = new CancellationTokenSource();
 
-        var option = await Option.TraverseAsync(
+        var option = await OptionTask.Traverse(
             [1, 2],
             (value, token) => Task.FromResult(token == cts.Token ? Option.Some(value * 2) : Option.None<int>()),
             cts.Token);
@@ -217,7 +217,7 @@ public sealed class OptionAsyncAggregationTests
     [Test]
     public async Task TraverseAsync_WithCancellationAwareMapperAndNone_ReturnsNone()
     {
-        var option = await Option.TraverseAsync(
+        var option = await OptionTask.Traverse(
             [1],
             (value, token) => Task.FromResult(Option.None<int>()));
 
@@ -228,7 +228,7 @@ public sealed class OptionAsyncAggregationTests
     public async Task TraverseAsync_WithCancellationAwareMapperAndNullTask_FaultsWithInvalidOperation()
     {
         var exception = await TestSupport.CatchAsync(() =>
-            Option.TraverseAsync<int, int>([1], (_, _) => null!));
+            OptionTask.Traverse<int, int>([1], (_, _) => null!));
 
         await Assert.That(exception is InvalidOperationException).IsTrue();
     }
@@ -237,7 +237,7 @@ public sealed class OptionAsyncAggregationTests
     public async Task TraverseAsync_WithNullTask_FaultsWithInvalidOperation()
     {
         var exception = await TestSupport.CatchAsync(() =>
-            Option.TraverseAsync<int, int>([1], _ => null!));
+            OptionTask.Traverse<int, int>([1], (_, _) => null!));
 
         await Assert.That(exception is InvalidOperationException).IsTrue();
     }
@@ -250,7 +250,7 @@ public sealed class OptionAsyncAggregationTests
         var pending = new TaskCompletionSource<Option<int>>(TaskCreationOptions.RunContinuationsAsynchronously);
 
         var exception = await TestSupport.CatchAsync(() =>
-            Option.TraverseAsync([1], _ => pending.Task, cts.Token));
+            OptionTask.Traverse([1], (_, _) => pending.Task, cts.Token));
 
         await Assert.That(exception is OperationCanceledException).IsTrue();
         pending.SetResult(Option.Some(1));

@@ -36,25 +36,26 @@ public class AsyncBenchmarks
 
     [Benchmark(Baseline = true)]
     public async Task<Result<int, RopError>> MapOkAsync_Completed() =>
-        await _ok.MapOkAsync(static value => Task.FromResult(value + 1));
+        await ResultTask.From(_ok).MapOkAsync(static (value, _) => Task.FromResult(value + 1));
 
     [Benchmark]
     public async Task<Result<int, RopError>> MapOkAsync_Pending() =>
-        await _ok.MapOkAsync(_ => _pending);
+        await ResultTask.From(_ok).MapOkAsync(static (_, _) => CreatePending());
 
     [Benchmark]
     public async Task<Result<int, RopError>> BindOkAsync_Completed() =>
-        await _ok.BindOkAsync(static value => Task.FromResult(Result.Ok(value + 1)));
+        await ResultTask.From(_ok).BindOkAsync(static (value, _) => Task.FromResult(Result.Ok(value + 1)));
 
     [Benchmark]
     public async Task<Result<int, RopError>> BindOkAsync_Pending() =>
-        await _ok.BindOkAsync(_ => _pending.ContinueWith(static t => Result.Ok(t.Result), TaskContinuationOptions.ExecuteSynchronously));
+        await ResultTask.From(_ok).BindOkAsync(static (_, _) =>
+            CreatePending().ContinueWith(static t => Result.Ok(t.Result), TaskContinuationOptions.ExecuteSynchronously));
 
     [Benchmark]
     public async Task<Result<int, RopError>> MapErrAsync_OnErr() =>
-        await _err.MapErrAsync(static error => Task.FromResult(error.WithCode("E_OTHER")));
+        await ResultTask.From(_err).MapErrAsync(static (error, _) => Task.FromResult(error.WithCode("E_OTHER")));
 
     [Benchmark]
     public async Task<Result<int, RopError>> MapOkAsync_OnErr() =>
-        await _err.MapOkAsync(static value => Task.FromResult(value + 1));
+        await ResultTask.From(_err).MapOkAsync(static (value, _) => Task.FromResult(value + 1));
 }

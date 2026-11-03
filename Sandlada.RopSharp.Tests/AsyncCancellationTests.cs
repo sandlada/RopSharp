@@ -11,7 +11,7 @@ public sealed class AsyncCancellationTests
         cts.Cancel();
         var pending = new TaskCompletionSource<Result<int, RopError>>(TaskCreationOptions.RunContinuationsAsynchronously);
 
-        var exception = await TestSupport.CatchAsync(() => Result.SequenceAsync([pending.Task], cts.Token));
+        var exception = await TestSupport.CatchAsync(() => ResultTask.Sequence([ResultTask.From(pending.Task)], cts.Token));
 
         await Assert.That(exception is OperationCanceledException).IsTrue();
         pending.SetResult(Result.Ok(1));
@@ -25,7 +25,7 @@ public sealed class AsyncCancellationTests
         var pending = new TaskCompletionSource<Result<int, RopError>>(TaskCreationOptions.RunContinuationsAsynchronously);
 
         var exception = await TestSupport.CatchAsync(() =>
-            Result.TraverseAsync([1], _ => pending.Task, cts.Token));
+            ResultTask.Traverse([1], (_, _) => pending.Task, cts.Token));
 
         await Assert.That(exception is OperationCanceledException).IsTrue();
         pending.SetResult(Result.Ok(1));
@@ -35,7 +35,7 @@ public sealed class AsyncCancellationTests
     public async Task SequenceAsync_WithNullTask_FaultsWithInvalidOperation()
     {
         var exception = await TestSupport.CatchAsync(() =>
-            Result.SequenceAsync(new Task<Result<int, RopError>>[] { null! }));
+            ResultTask.Sequence(new ResultTask<int, RopError>[] { default }));
 
         await Assert.That(exception is InvalidOperationException).IsTrue();
     }
@@ -44,7 +44,7 @@ public sealed class AsyncCancellationTests
     public async Task TraverseAsync_WithNullTask_FaultsWithInvalidOperation()
     {
         var exception = await TestSupport.CatchAsync(() =>
-            Result.TraverseAsync<int, int, RopError>([1], _ => null!));
+            ResultTask.Traverse<int, int, RopError>([1], (_, _) => null!));
 
         await Assert.That(exception is InvalidOperationException).IsTrue();
     }
@@ -53,7 +53,7 @@ public sealed class AsyncCancellationTests
     public async Task BindOkAsync_WithNullBinderResult_FaultsWithInvalidOperation()
     {
         var exception = await TestSupport.CatchAsync(() =>
-            Result.Ok(1).BindOkAsync<int, int, RopError>(_ => null!));
+            Result.Ok(1).BindOkAsync<int, int, RopError>((_, _) => null!));
 
         await Assert.That(exception is InvalidOperationException).IsTrue();
     }
@@ -62,7 +62,7 @@ public sealed class AsyncCancellationTests
     public async Task BindErrAsync_WithNullFallbackResult_FaultsWithInvalidOperation()
     {
         var exception = await TestSupport.CatchAsync(() =>
-            Result.Err<int>(Sample.Error()).BindErrAsync<int, RopError>(_ => null!));
+            Result.Err<int>(Sample.Error()).BindErrAsync<int, RopError>((_, _) => null!));
 
         await Assert.That(exception is InvalidOperationException).IsTrue();
     }
@@ -71,7 +71,7 @@ public sealed class AsyncCancellationTests
     public async Task BindNoneAsync_WithNullFallbackResult_FaultsWithInvalidOperation()
     {
         var exception = await TestSupport.CatchAsync(() =>
-            Task.FromResult(Option.None<int>()).BindNoneAsync<int>(() => null!));
+            OptionTask.From(Task.FromResult(Option.None<int>())).BindNone(_ => null!));
 
         await Assert.That(exception is InvalidOperationException).IsTrue();
     }

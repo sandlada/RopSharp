@@ -9,7 +9,7 @@ public sealed class AdditionalCoverageTests
     {
         var called = false;
 
-        var result = await Task.FromResult(Result.Err<int>(Sample.Error("E_X"))).TeeOkAsync(_ =>
+        var result = await ResultTask.From(Result.Err<int>(Sample.Error("E_X"))).TeeOkAsync((_, _) =>
         {
             called = true;
             return Task.CompletedTask;
@@ -24,7 +24,7 @@ public sealed class AdditionalCoverageTests
     {
         var called = false;
 
-        var result = await Task.FromResult(Result.Ok(1)).TeeErrAsync(_ =>
+        var result = await ResultTask.From(Result.Ok(1)).TeeErrAsync((_, _) =>
         {
             called = true;
             return Task.CompletedTask;
@@ -39,7 +39,7 @@ public sealed class AdditionalCoverageTests
     {
         var called = false;
 
-        var option = await Task.FromResult(Option.None<int>()).TeeSomeAsync(_ =>
+        var option = await OptionTask.From(Task.FromResult(Option.None<int>())).TeeSomeAsync((_, _) =>
         {
             called = true;
             return Task.CompletedTask;
@@ -54,7 +54,7 @@ public sealed class AdditionalCoverageTests
     {
         var called = false;
 
-        var option = await Task.FromResult(Option.Some(1)).TeeNoneAsync(() =>
+        var option = await OptionTask.From(Task.FromResult(Option.Some(1))).TeeNoneAsync(_ =>
         {
             called = true;
             return Task.CompletedTask;
@@ -69,12 +69,12 @@ public sealed class AdditionalCoverageTests
     {
         var mapped = new List<int>();
 
-        var result = await Result.TraverseAsync<int, int, RopError>(
+        var result = await ResultTask.Traverse<int, int, RopError>(
         [
             1,
             2,
             3,
-        ], (int value) =>
+        ], (value, _) =>
         {
             mapped.Add(value);
             return Task.FromResult(value == 1 ? Result.Err<int>(Sample.Error("E_FIRST")) : Result.Ok(value));
@@ -178,8 +178,8 @@ public sealed class AdditionalCoverageTests
         using var cts = new CancellationTokenSource();
         cts.Cancel();
 
-        var result = await Task.FromResult(Result.Err<int>(Sample.Error("E_X")))
-            .MapOkAsync((value, _) => Task.FromResult(value + 1), cts.Token);
+        var result = await ResultTask.From(Result.Err<int>(Sample.Error("E_X")))
+            .WithCancellation(cts.Token).MapOkAsync((value, _) => Task.FromResult(value + 1));
 
         await Assert.That(result.ExpectErr().Code).IsEqualTo("E_X");
     }
@@ -190,7 +190,7 @@ public sealed class AdditionalCoverageTests
         var first = new TaskCompletionSource<Result<int, RopError>>(TaskCreationOptions.RunContinuationsAsynchronously);
         var second = new TaskCompletionSource<Result<int, RopError>>(TaskCreationOptions.RunContinuationsAsynchronously);
 
-        var pending = Result.SequenceAsync([first.Task, second.Task]);
+        var pending = ResultTask.Sequence([ResultTask.From(first.Task), ResultTask.From(second.Task)]);
 
         // The second task completes first, but sequencing must still report results in enumeration order.
         second.SetResult(Result.Ok(2));

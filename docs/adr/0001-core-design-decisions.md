@@ -83,13 +83,17 @@ Two overloads that differ only by generic constraints are illegal (CS0111) and u
 
 **Consequence:** the naming is slightly asymmetric, but every call compiles without casts or type arguments.
 
-### D8 — `OverloadResolutionPriority` resolves async mapper ambiguity
+### D8 — Async work uses named computation types, not overload priority
 
-`x => FetchAsync(x)` is convertible to both `Func<T, U>` (with `U = Task<X>`) and `Func<T, Task<U>>`. Priority
-attributes (sync 0, async 1, cancellation-aware async 2) make the intended overload win without requiring callers
-to write casts.
+- **Revised:** 2026-11-03. Replaces the `OverloadResolutionPriority` approach for 0.0.2.
 
-**Consequence:** the async surface stays overload-based instead of growing `...Async` names for mapper shapes.
+Non-blocking pipelines use `ResultTask<TOk, TErr>`, `OptionTask<T>`, and `ValidationTask<T, TErr>`. They are
+awaitable, carry an optional token via `WithCancellation`, and expose sync names (`MapOk`) separately from async
+names (`MapOkAsync` with `Func<TOk, CancellationToken, Task<TOut>>` only). `Task<Result<,>>` / `Task<Option<>>`
+extension matrices and `OverloadResolutionPriority` are removed.
+
+**Consequence:** callers choose sync vs async by method name and enter async work through `*Task.From` at boundaries,
+without ambiguous `x => FetchAsync(x)` overload resolution.
 
 ### D9 — Cancellation is not a domain failure
 

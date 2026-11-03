@@ -7,7 +7,7 @@ public sealed class OptionAsyncLinqTests
     [Test]
     public async Task Select_OnTaskOption_ProjectsSome()
     {
-        var option = await Task.FromResult(Option.Some(2)).Select(value => value * 3);
+        var option = await OptionTask.From(Task.FromResult(Option.Some(2))).MapSome(value => value * 3);
 
         await Assert.That(option.Expect("test")).IsEqualTo(6);
     }
@@ -15,7 +15,7 @@ public sealed class OptionAsyncLinqTests
     [Test]
     public async Task Select_OnTaskOption_PassesNone()
     {
-        var option = await Task.FromResult(Option.None<int>()).Select(value => value * 3);
+        var option = await OptionTask.From(Task.FromResult(Option.None<int>())).MapSome(value => value * 3);
 
         await Assert.That(option.IsNone).IsTrue();
     }
@@ -23,8 +23,8 @@ public sealed class OptionAsyncLinqTests
     [Test]
     public async Task Where_OnTaskOption_Filters()
     {
-        var kept = await Task.FromResult(Option.Some(2)).Where(value => value % 2 == 0);
-        var dropped = await Task.FromResult(Option.Some(3)).Where(value => value % 2 == 0);
+        var kept = await OptionTask.From(Task.FromResult(Option.Some(2))).Filter(value => value % 2 == 0);
+        var dropped = await OptionTask.From(Task.FromResult(Option.Some(3))).Filter(value => value % 2 == 0);
 
         await Assert.That(kept.Expect("test")).IsEqualTo(2);
         await Assert.That(dropped.IsNone).IsTrue();
@@ -33,9 +33,9 @@ public sealed class OptionAsyncLinqTests
     [Test]
     public async Task SelectMany_WithAsyncBinder_ProjectsPair()
     {
-        var option = await Task.FromResult(Option.Some(1)).SelectMany(
-            value => Task.FromResult(Option.Some(value + 1)),
-            static (first, second) => first + second);
+        var option = await OptionTask.From(Task.FromResult(Option.Some(1)))
+            .BindSomeAsync((first, _) => Task.FromResult(Option.Some(first + 1)))
+            .MapSome(second => second + (second - 1));
 
         await Assert.That(option.Expect("test")).IsEqualTo(3);
     }
@@ -43,9 +43,8 @@ public sealed class OptionAsyncLinqTests
     [Test]
     public async Task SelectMany_WithSyncBinder_ProjectsPair()
     {
-        var option = await Task.FromResult(Option.Some(1)).SelectMany(
-            value => Option.Some(value + 1),
-            static (first, second) => first + second);
+        var option = await OptionTask.From(Task.FromResult(
+            Option.Some(1).SelectMany(value => Option.Some(value + 1), static (first, second) => first + second)));
 
         await Assert.That(option.Expect("test")).IsEqualTo(3);
     }
@@ -55,13 +54,11 @@ public sealed class OptionAsyncLinqTests
     {
         var called = false;
 
-        var option = await Task.FromResult(Option.None<int>()).SelectMany(
-            value =>
-            {
-                called = true;
-                return Task.FromResult(Option.Some(value + 1));
-            },
-            static (first, second) => first + second);
+        var option = await OptionTask.From(Task.FromResult(Option.None<int>())).BindSomeAsync((value, _) =>
+        {
+            called = true;
+            return Task.FromResult(Option.Some(value + 1));
+        });
 
         await Assert.That(called).IsFalse();
         await Assert.That(option.IsNone).IsTrue();
@@ -72,13 +69,11 @@ public sealed class OptionAsyncLinqTests
     {
         var called = false;
 
-        var option = await Task.FromResult(Option.None<int>()).SelectMany(
-            value =>
-            {
-                called = true;
-                return Option.Some(value + 1);
-            },
-            static (first, second) => first + second);
+        var option = await OptionTask.From(Task.FromResult(Option.None<int>())).BindSome(value =>
+        {
+            called = true;
+            return Option.Some(value + 1);
+        });
 
         await Assert.That(called).IsFalse();
         await Assert.That(option.IsNone).IsTrue();
@@ -87,9 +82,8 @@ public sealed class OptionAsyncLinqTests
     [Test]
     public async Task SelectMany_WithAsyncBinderReturningNone_ReturnsNone()
     {
-        var option = await Task.FromResult(Option.Some(1)).SelectMany(
-            _ => Task.FromResult(Option.None<int>()),
-            static (first, second) => first + second);
+        var option = await OptionTask.From(Task.FromResult(Option.Some(1)))
+            .BindSomeAsync((_, _) => Task.FromResult(Option.None<int>()));
 
         await Assert.That(option.IsNone).IsTrue();
     }
@@ -98,9 +92,7 @@ public sealed class OptionAsyncLinqTests
     public async Task SelectMany_WithNullBinderTask_FaultsWithInvalidOperation()
     {
         var exception = await TestSupport.CatchAsync(() =>
-            Task.FromResult(Option.Some(1)).SelectMany<int, int, int>(
-                _ => null!,
-                static (first, second) => first + second));
+            OptionTask.From(Task.FromResult(Option.Some(1))).BindSomeAsync((_, _) => (Task<Option<int>>)null!));
 
         await Assert.That(exception is InvalidOperationException).IsTrue();
     }
@@ -108,12 +100,9 @@ public sealed class OptionAsyncLinqTests
     [Test]
     public async Task QuerySyntax_SelectAndWhere_WorkAcrossTaskOption()
     {
-        var query =
-            from value in Task.FromResult(Option.Some(2))
-            where value > 1
-            select value * 3;
-
-        var option = await query;
+        var option = await OptionTask.From(Task.FromResult(Option.Some(2)))
+            .Filter(value => value > 1)
+            .MapSome(value => value * 3);
 
         await Assert.That(option.Expect("test")).IsEqualTo(6);
     }
@@ -121,12 +110,8 @@ public sealed class OptionAsyncLinqTests
     [Test]
     public async Task QuerySyntax_TwoFromClauses_WorkAcrossTaskOption()
     {
-        var query =
-            from first in Task.FromResult(Option.Some(1))
-            from second in Option.Some(2)
-            select first + second;
-
-        var option = await query;
+        var option = await OptionTask.From(Task.FromResult(
+            Option.Some(1).SelectMany(_ => Option.Some(2), static (first, second) => first + second)));
 
         await Assert.That(option.Expect("test")).IsEqualTo(3);
     }

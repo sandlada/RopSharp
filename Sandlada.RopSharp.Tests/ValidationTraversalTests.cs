@@ -83,11 +83,11 @@ public sealed class ValidationTraversalTests
     [Test]
     public async Task SequenceValidationAsync_AllOk_ReturnsValuesInSourceOrder()
     {
-        var result = await Validation.SequenceAsync(new[]
+        var result = await ValidationTask.Sequence(new[]
         {
-            Task.FromResult(Result.Ok(1)),
-            Task.FromResult(Result.Ok(2)),
-            Task.FromResult(Result.Ok(3)),
+            ResultTask.From(Result.Ok(1)),
+            ResultTask.From(Result.Ok(2)),
+            ResultTask.From(Result.Ok(3)),
         });
 
         await TestSupport.AssertSequenceAsync(result.Expect("test"), 1, 2, 3);
@@ -99,11 +99,11 @@ public sealed class ValidationTraversalTests
         var first = Sample.Error("E_FIRST");
         var second = Sample.Error("E_SECOND");
 
-        var result = await Validation.SequenceAsync(new[]
+        var result = await ValidationTask.Sequence(new[]
         {
-            Task.FromResult(Result.Err<int>(first)),
-            Task.FromResult(Result.Ok(2)),
-            Task.FromResult(Result.Err<int>(second)),
+            ResultTask.From(Result.Err<int>(first)),
+            ResultTask.From(Result.Ok(2)),
+            ResultTask.From(Result.Err<int>(second)),
         });
 
         await TestSupport.AssertSequenceAsync(result.ExpectErrors(), first, second);
@@ -116,13 +116,13 @@ public sealed class ValidationTraversalTests
         var second = Sample.Error("E_SECOND");
         var pending = new TaskCompletionSource<Result<int, RopError>>(TaskCreationOptions.RunContinuationsAsynchronously);
 
-        var operation = Validation.SequenceAsync(new[]
+        var operation = ValidationTask.Sequence(new[]
         {
-            Task.FromResult(Result.Err<int>(first)),
-            pending.Task,
+            ResultTask.From(Result.Err<int>(first)),
+            ResultTask.From(pending.Task),
         });
 
-        await Assert.That(operation.IsCompleted).IsFalse();
+        await Assert.That(operation.TaskUnsafe.IsCompleted).IsFalse();
         pending.SetResult(Result.Err<int>(second));
 
         await TestSupport.AssertSequenceAsync((await operation).ExpectErrors(), first, second);
@@ -131,7 +131,7 @@ public sealed class ValidationTraversalTests
     [Test]
     public async Task SequenceValidationAsync_EmptySource_ReturnsOkEmpty()
     {
-        var result = await Validation.SequenceAsync(Array.Empty<Task<Result<int, RopError>>>());
+        var result = await ValidationTask.Sequence(Array.Empty<ResultTask<int, RopError>>());
 
         await Assert.That(result.IsSuccess).IsTrue();
         await Assert.That(result.Expect("test").Count).IsEqualTo(0);
@@ -141,7 +141,7 @@ public sealed class ValidationTraversalTests
     public async Task SequenceValidationAsync_WithNullTask_ThrowsInvalidOperation()
     {
         var exception = await TestSupport.CatchAsync(() =>
-            Validation.SequenceAsync(new Task<Result<int, RopError>>[] { null! }));
+            ValidationTask.Sequence(new ResultTask<int, RopError>[] { default }));
 
         await Assert.That(exception is InvalidOperationException).IsTrue();
     }
@@ -154,7 +154,7 @@ public sealed class ValidationTraversalTests
         var pending = new TaskCompletionSource<Result<int, RopError>>(TaskCreationOptions.RunContinuationsAsynchronously);
 
         var exception = await TestSupport.CatchAsync(() =>
-            Validation.SequenceAsync([pending.Task], cts.Token));
+            ValidationTask.Sequence([ResultTask.From(pending.Task)], cts.Token));
 
         await Assert.That(exception is OperationCanceledException).IsTrue();
         pending.SetResult(Result.Ok(1));
@@ -166,7 +166,7 @@ public sealed class ValidationTraversalTests
         using var cts = new CancellationTokenSource();
         var pending = new TaskCompletionSource<Result<int, RopError>>(TaskCreationOptions.RunContinuationsAsynchronously);
 
-        var operation = Validation.SequenceAsync([pending.Task], cts.Token);
+        var operation = ValidationTask.Sequence([ResultTask.From(pending.Task)], cts.Token);
         cts.Cancel();
 
         var exception = await TestSupport.CatchAsync(() => operation);
@@ -179,9 +179,9 @@ public sealed class ValidationTraversalTests
     public async Task SequenceValidationAsync_WithFaultedTask_PropagatesFault()
     {
         var exception = await TestSupport.CatchAsync(() =>
-            Validation.SequenceAsync(new[]
+            ValidationTask.Sequence(new[]
             {
-                Task.FromException<Result<int, RopError>>(new InvalidOperationException("boom")),
+                ResultTask.From(Task.FromException<Result<int, RopError>>(new InvalidOperationException("boom"))),
             }));
 
         await Assert.That(exception is InvalidOperationException).IsTrue();
@@ -190,9 +190,7 @@ public sealed class ValidationTraversalTests
     [Test]
     public async Task TraverseValidationAsync_AllOk_ReturnsValuesInSourceOrder()
     {
-        var result = await Validation.TraverseAsync(
-            [1, 2, 3],
-            value => Task.FromResult(Result.Ok(value * 10)));
+        var result = await ValidationTask.Traverse([1, 2, 3], (value, _) => Task.FromResult(Result.Ok(value * 10)));
 
         await TestSupport.AssertSequenceAsync(result.Expect("test"), 10, 20, 30);
     }
@@ -204,9 +202,9 @@ public sealed class ValidationTraversalTests
         var second = Sample.Error("E_SECOND");
         var calls = 0;
 
-        var result = await Validation.TraverseAsync(
+        var result = await ValidationTask.Traverse(
             [1, 2, 3],
-            value =>
+            (value, _) =>
             {
                 calls++;
                 return Task.FromResult(
@@ -220,9 +218,8 @@ public sealed class ValidationTraversalTests
     [Test]
     public async Task TraverseValidationAsync_EmptySource_ReturnsOkEmpty()
     {
-        var result = await Validation.TraverseAsync(
-            Array.Empty<int>(),
-            value => Task.FromResult(Result.Ok(value)));
+        var result = await ValidationTask.Traverse(
+            Array.Empty<int>(), (value, _) => Task.FromResult(Result.Ok(value)));
 
         await Assert.That(result.IsSuccess).IsTrue();
         await Assert.That(result.Expect("test").Count).IsEqualTo(0);
@@ -232,7 +229,7 @@ public sealed class ValidationTraversalTests
     public async Task TraverseValidationAsync_WithNullTask_ThrowsInvalidOperation()
     {
         var exception = await TestSupport.CatchAsync(() =>
-            Validation.TraverseAsync<int, int, RopError>([1], _ => null!));
+            ValidationTask.Traverse<int, int, RopError>([1], (_, _) => null!));
 
         await Assert.That(exception is InvalidOperationException).IsTrue();
     }
@@ -241,7 +238,7 @@ public sealed class ValidationTraversalTests
     public async Task TraverseValidationAsync_WithNullSource_ThrowsArgumentNull()
     {
         var exception = await TestSupport.CatchAsync(() =>
-            Validation.TraverseAsync<int, int, RopError>(null!, value => Task.FromResult(Result.Ok(value))));
+            ValidationTask.Traverse<int, int, RopError>(null!, (value, _) => Task.FromResult(Result.Ok(value))));
 
         await Assert.That(exception is ArgumentNullException).IsTrue();
     }
@@ -250,9 +247,9 @@ public sealed class ValidationTraversalTests
     public async Task TraverseValidationAsync_WithNullMapper_ThrowsArgumentNull()
     {
         var exception = await TestSupport.CatchAsync(() =>
-            Validation.TraverseAsync<int, int, RopError>(
+            ValidationTask.Traverse<int, int, RopError>(
                 [1],
-                (Func<int, Task<Result<int, RopError>>>)null!));
+                (Func<int, CancellationToken, Task<Result<int, RopError>>>)null!));
 
         await Assert.That(exception is ArgumentNullException).IsTrue();
     }
@@ -265,9 +262,9 @@ public sealed class ValidationTraversalTests
         var calls = 0;
 
         var exception = await TestSupport.CatchAsync(() =>
-            Validation.TraverseAsync(
+            ValidationTask.Traverse(
                 [1, 2],
-                value =>
+                (value, _) =>
                 {
                     calls++;
                     return Task.FromResult(Result.Ok(value));
@@ -284,7 +281,7 @@ public sealed class ValidationTraversalTests
         using var cts = new CancellationTokenSource();
         var pending = new TaskCompletionSource<Result<int, RopError>>(TaskCreationOptions.RunContinuationsAsynchronously);
 
-        var operation = Validation.TraverseAsync([1], _ => pending.Task, cts.Token);
+        var operation = ValidationTask.Traverse([1], (_, _) => pending.Task, cts.Token);
         cts.Cancel();
 
         var exception = await TestSupport.CatchAsync(() => operation);
@@ -299,7 +296,7 @@ public sealed class ValidationTraversalTests
         using var cts = new CancellationTokenSource();
         var observed = default(CancellationToken);
 
-        var result = await Validation.TraverseAsync(
+        var result = await ValidationTask.Traverse(
             [1, 2],
             (value, token) =>
             {
@@ -316,7 +313,7 @@ public sealed class ValidationTraversalTests
     public async Task TraverseValidationAsync_WithCancellationAwareMapperAndNullTask_ThrowsInvalidOperation()
     {
         var exception = await TestSupport.CatchAsync(() =>
-            Validation.TraverseAsync<int, int, RopError>([1], (_, _) => null!));
+            ValidationTask.Traverse<int, int, RopError>([1], (_, _) => null!));
 
         await Assert.That(exception is InvalidOperationException).IsTrue();
     }

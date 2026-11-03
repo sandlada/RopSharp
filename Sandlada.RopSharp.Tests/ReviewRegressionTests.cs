@@ -25,7 +25,7 @@ public sealed class ReviewRegressionTests
     [Test]
     public async Task MapErrAsync_OnTaskWithSyncMapper_PreservesNullSuccessPayload()
     {
-        var result = await Task.FromResult(NullSuccess).MapErrAsync(static error => error);
+        var result = await ResultTask.From(NullSuccess).MapErrAsync(static (error, _) => Task.FromResult(error));
 
         await Assert.That(result.IsOk).IsTrue();
         await Assert.That(result.Expect("test")).IsNull();
@@ -34,7 +34,7 @@ public sealed class ReviewRegressionTests
     [Test]
     public async Task MapErrAsync_OnTaskWithAsyncMapper_PreservesNullSuccessPayload()
     {
-        var result = await Task.FromResult(NullSuccess).MapErrAsync(static error => Task.FromResult(error));
+        var result = await ResultTask.From(NullSuccess).MapErrAsync(static (error, _) => Task.FromResult(error));
 
         await Assert.That(result.IsOk).IsTrue();
         await Assert.That(result.Expect("test")).IsNull();
@@ -43,7 +43,7 @@ public sealed class ReviewRegressionTests
     [Test]
     public async Task MapErrAsync_OnTaskWithCancellationAwareMapper_PreservesNullSuccessPayload()
     {
-        var result = await Task.FromResult(NullSuccess)
+        var result = await ResultTask.From(NullSuccess)
             .MapErrAsync(static (error, _) => Task.FromResult(error));
 
         await Assert.That(result.IsOk).IsTrue();
@@ -53,7 +53,7 @@ public sealed class ReviewRegressionTests
     [Test]
     public async Task MapErrAsync_OnResultWithAsyncMapper_PreservesNullSuccessPayload()
     {
-        var result = await NullSuccess.MapErrAsync(static error => Task.FromResult(error));
+        var result = await NullSuccess.MapErrAsync(static (error, _) => Task.FromResult(error));
 
         await Assert.That(result.IsOk).IsTrue();
         await Assert.That(result.Expect("test")).IsNull();
@@ -101,7 +101,7 @@ public sealed class ReviewRegressionTests
         await source.CancelAsync();
 
         var exception = await TestSupport.CatchAsync(() =>
-            Result.SequenceAsync([Task.FromResult(Result.Ok(1))], source.Token));
+            ResultTask.Sequence([ResultTask.From(Result.Ok(1))], source.Token));
 
         await Assert.That(exception is OperationCanceledException).IsTrue();
     }
@@ -114,9 +114,9 @@ public sealed class ReviewRegressionTests
         var calls = 0;
 
         var exception = await TestSupport.CatchAsync(() =>
-            Result.TraverseAsync<int, int, RopError>(
+            ResultTask.Traverse<int, int, RopError>(
                 [1, 2],
-                value =>
+                (value, _) =>
                 {
                     calls++;
                     return Task.FromResult(Result.Ok(value));
@@ -134,14 +134,12 @@ public sealed class ReviewRegressionTests
         await source.CancelAsync();
         var calls = 0;
 
-        var exception = await TestSupport.CatchAsync(() =>
-            Task.FromResult(Result.Err<int>(Sample.Error())).MapErrAsync(
-                error =>
+        var exception = await TestSupport.CatchAsync(() => ResultTask.From(Result.Err<int>(Sample.Error())).WithCancellation(source.Token).MapErrAsync(
+                (error, _) =>
                 {
                     calls++;
-                    return error;
-                },
-                source.Token));
+                    return Task.FromResult(error);
+                }));
 
         await Assert.That(exception is OperationCanceledException).IsTrue();
         await Assert.That(calls).IsEqualTo(0);
@@ -155,8 +153,8 @@ public sealed class ReviewRegressionTests
         using var source = new CancellationTokenSource();
         await source.CancelAsync();
 
-        var result = await Task.FromResult(Result.Err<int>(Sample.Error()))
-            .MapOkAsync(static value => value + 1, source.Token);
+        var result = await ResultTask.From(Result.Err<int>(Sample.Error()))
+            .WithCancellation(source.Token).MapOkAsync((value, _) => Task.FromResult(value + 1));
 
         await Assert.That(result.ExpectErr().Code).IsEqualTo("E_TEST");
     }
@@ -167,8 +165,8 @@ public sealed class ReviewRegressionTests
         using var source = new CancellationTokenSource();
         await source.CancelAsync();
 
-        var result = await Task.FromResult(Result.Err<int>(Sample.Error()))
-            .TeeOkAsync(static _ => Task.CompletedTask, source.Token);
+        var result = await ResultTask.From(Result.Err<int>(Sample.Error()))
+            .WithCancellation(source.Token).TeeOkAsync((_, _) => Task.CompletedTask);
 
         await Assert.That(result.ExpectErr().Code).IsEqualTo("E_TEST");
     }

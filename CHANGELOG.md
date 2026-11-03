@@ -10,8 +10,11 @@ Planned for **0.0.2**.
 
 ### Added
 
-- `Validation<T, TErr>` and `Validation` entry points (`Success`, `Failure`, `From`, `Zip`, `Sequence`, `Traverse`, and
-  async twins) for accumulating every error without overloading `Result<T, IReadOnlyList<TErr>>`.
+- `ResultTask<TOk, TErr>`, `OptionTask<T>`, and `ValidationTask<T, TErr>` as the only async computation surfaces
+  (`From`, `WithCancellation`, sync/async combinators, `Zip` / `Sequence` / `Traverse`, and `ResultTask.Partition`).
+- `ResultTaskBridgeExtensions` and `OptionTaskBridgeExtensions` for entering async pipelines from sync values.
+- `Validation<T, TErr>` and `Validation` entry points (`Success`, `Failure`, `From`, `Zip`, `Sequence`, `Traverse`) for
+  accumulating every error without overloading `Result<T, IReadOnlyList<TErr>>`.
 - `Validation<T, TErr>.Collapse`, `MatchFirst`, `SwitchFirst`, and `ValidationExtensions.Expect`.
 - `Either<TLeft,TRight>.BindLeft` and `BindRight` for chaining another either on the active branch.
 - `Result<TOk,TErr>.Expect(string reason)` and `Option<T>.Expect(string reason)` for boundary exits that must
@@ -19,6 +22,10 @@ Planned for **0.0.2**.
 
 ### Removed
 
+- `ResultAsyncExtensions`, `OptionAsyncExtensions`, and all public combinators on `Task<Result<,>>`, `Task<Option<>>`,
+  and `Task<Validation<,>>` (including `CombineAsync`, `ZipAsync`, `SequenceAsync`, `TraverseAsync`, `PartitionAsync`,
+  and validation async helpers on `Result`).
+- Public `OverloadResolutionPriority` attributes on library methods.
 - Aggregating validation on the short-circuit track: `Result.Validate` / `ValidateAsync`, `Result.SequenceValidation`
   / `SequenceValidationAsync`, `Result.TraverseValidation` / `TraverseValidationAsync`, `ResultValidationExtensions`
   (`ToValidation`, `ToSingleError`), and `ResultTerminalExtensions.MatchFirst` / `SwitchFirst` for
@@ -28,6 +35,9 @@ Planned for **0.0.2**.
 
 ### Changed
 
+- `Result.TryAsync`, `Result.SwitchAsync`, and `Result.TrySwitchAsync` return `ResultTask` instead of
+  `Task<Result<,>>`. Async LINQ for results lives on `ResultTask`; async option and validation work use `OptionTask`
+  and `ValidationTask`.
 - `Result<TOk,TErr>`, `Either<TLeft,TRight>` and `ParseFailure` use a three-state tag. `default` is uninitialized;
   reading errors or calling branch combinators throws `InvalidOperationException`. Value-type error payloads no
   longer make `default(Result<,>)` look like a legitimate `Err`.

@@ -111,12 +111,12 @@ public sealed class GuardTests
     [Test]
     public async Task AsyncCombinators_RejectNullDelegates()
     {
-        await AssertArgumentNullAsync(() => Task.FromResult(Ok).MapOkAsync<int, int, RopError>(null!));
-        await AssertArgumentNullAsync(() => Task.FromResult(Ok).BindOkAsync<int, int, RopError>(null!));
-        await AssertArgumentNullAsync(() => Ok.BindOkAsync<int, int, RopError>(null!));
-        await AssertArgumentNullAsync(() => Ok.BindErrAsync<int, RopError>(null!));
-        await AssertArgumentNullAsync(() => Task.FromResult(Option.Some(1)).MapSomeAsync<int, int>(null!));
-        await AssertArgumentNullAsync(() => Task.FromResult(Option.Some(1)).BindSomeAsync<int, int>(null!));
+        await AssertArgumentNullAsync(() => ResultTask.From(Task.FromResult(Ok)).MapOkAsync((Func<int, CancellationToken, Task<int>>)null!));
+        await AssertArgumentNullAsync(() => ResultTask.From(Task.FromResult(Ok)).BindOkAsync((Func<int, CancellationToken, Task<Result<int, RopError>>>)null!));
+        await AssertArgumentNullAsync(() => Ok.BindOkAsync((Func<int, CancellationToken, Task<Result<int, RopError>>>)null!));
+        await AssertArgumentNullAsync(() => Ok.BindErrAsync((Func<RopError, CancellationToken, Task<Result<int, RopError>>>)null!));
+        await AssertArgumentNullAsync(() => OptionTask.From(Task.FromResult(Option.Some(1))).MapSomeAsync((Func<int, CancellationToken, Task<int>>)null!));
+        await AssertArgumentNullAsync(() => OptionTask.From(Task.FromResult(Option.Some(1))).BindSomeAsync((Func<int, CancellationToken, Task<Option<int>>>)null!));
     }
 
     [Test]

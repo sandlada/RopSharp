@@ -290,9 +290,8 @@ public sealed class MaintenanceHardeningTests
     [Test]
     public async Task MapErrAsync_WithNullProducingSynchronousMapper_FaultsWithInvalidOperation()
     {
-        var exception = await TestSupport.CatchAsync(() =>
-            Task.FromResult(Result.Err<int>(Sample.Error()))
-                .MapErrAsync<int, RopError, RopError>(_ => (RopError)null!));
+        var exception = await TestSupport.CatchAsync(() => ResultTask.From(Result.Err<int>(Sample.Error()))
+                .MapErrAsync((_, _) => Task.FromResult<RopError>(null!)));
 
         await Assert.That(exception is InvalidOperationException).IsTrue();
     }
@@ -300,9 +299,8 @@ public sealed class MaintenanceHardeningTests
     [Test]
     public async Task MapErrAsync_WithNullProducingAsynchronousMapper_FaultsWithInvalidOperation()
     {
-        var exception = await TestSupport.CatchAsync(() =>
-            Task.FromResult(Result.Err<int>(Sample.Error()))
-                .MapErrAsync<int, RopError, RopError>(_ => Task.FromResult<RopError>(null!)));
+        var exception = await TestSupport.CatchAsync(() => ResultTask.From(Result.Err<int>(Sample.Error()))
+                .MapErrAsync((_, _) => Task.FromResult<RopError>(null!)));
 
         await Assert.That(exception is InvalidOperationException).IsTrue();
     }
@@ -341,9 +339,10 @@ public sealed class MaintenanceHardeningTests
     [Test]
     public async Task PartitionAsync_WithANullTask_FaultsWithInvalidOperation()
     {
-        Task<Result<int, RopError>>[] tasks = [null!];
+        ResultTask<int, RopError>[] tasks = [default];
 
-        var exception = await TestSupport.CatchAsync(() => Result.PartitionAsync<int, RopError>(tasks));
+        var exception = await TestSupport.CatchAsync(async () =>
+            _ = await ResultTask.Partition<int, RopError>(tasks));
 
         await Assert.That(exception is InvalidOperationException).IsTrue();
     }
@@ -351,15 +350,15 @@ public sealed class MaintenanceHardeningTests
     [Test]
     public async Task PartitionAsync_PreservesOrderAndSplitsBothTracks()
     {
-        Task<Result<int, RopError>>[] tasks =
+        ResultTask<int, RopError>[] tasks =
         [
-            Task.FromResult(Result.Ok<int, RopError>(1)),
-            Task.FromResult(Result.Err<int, RopError>(Sample.Error("E_A"))),
-            Task.FromResult(Result.Ok<int, RopError>(3)),
-            Task.FromResult(Result.Err<int, RopError>(Sample.Error("E_B"))),
+            ResultTask.From(Result.Ok<int, RopError>(1)),
+            ResultTask.From(Result.Err<int, RopError>(Sample.Error("E_A"))),
+            ResultTask.From(Result.Ok<int, RopError>(3)),
+            ResultTask.From(Result.Err<int, RopError>(Sample.Error("E_B"))),
         ];
 
-        var (oks, errs) = await Result.PartitionAsync<int, RopError>(tasks);
+        var (oks, errs) = (await ResultTask.Partition<int, RopError>(tasks)).Expect("test");
 
         await Assert.That(oks.Count).IsEqualTo(2);
         await Assert.That(oks[0]).IsEqualTo(1);
@@ -372,7 +371,7 @@ public sealed class MaintenanceHardeningTests
     [Test]
     public async Task PartitionAsync_WithAnEmptySequence_ReturnsEmptyLists()
     {
-        var (oks, errs) = await Result.PartitionAsync<int, RopError>(Array.Empty<Task<Result<int, RopError>>>());
+        var (oks, errs) = (await ResultTask.Partition<int, RopError>(Array.Empty<ResultTask<int, RopError>>())).Expect("test");
 
         await Assert.That(oks.Count).IsEqualTo(0);
         await Assert.That(errs.Count).IsEqualTo(0);
@@ -504,13 +503,13 @@ public sealed class MaintenanceHardeningTests
     [Test]
     public async Task PartitionAsync_EnumeratesTheSourceExactlyOnce()
     {
-        var source = new SinglePassEnumerable<Task<Result<int, RopError>>>(
+        var source = new SinglePassEnumerable<ResultTask<int, RopError>>(
         [
-            Task.FromResult(Result.Ok<int, RopError>(1)),
-            Task.FromResult(Result.Err<int>(Sample.Error())),
+            ResultTask.From(Result.Ok<int, RopError>(1)),
+            ResultTask.From(Result.Err<int>(Sample.Error())),
         ]);
 
-        var (oks, errs) = await Result.PartitionAsync<int, RopError>(source);
+        var (oks, errs) = (await ResultTask.Partition<int, RopError>(source)).Expect("test");
 
         await Assert.That(source.Enumerations).IsEqualTo(1);
         await Assert.That(oks.Count).IsEqualTo(1);
@@ -520,13 +519,13 @@ public sealed class MaintenanceHardeningTests
     [Test]
     public async Task SequenceValidationAsync_EnumeratesTheSourceExactlyOnce()
     {
-        var source = new SinglePassEnumerable<Task<Result<int, RopError>>>(
+        var source = new SinglePassEnumerable<ResultTask<int, RopError>>(
         [
-            Task.FromResult(Result.Ok<int, RopError>(1)),
-            Task.FromResult(Result.Err<int>(Sample.Error())),
+            ResultTask.From(Result.Ok<int, RopError>(1)),
+            ResultTask.From(Result.Err<int>(Sample.Error())),
         ]);
 
-        var result = await Validation.SequenceAsync<int, RopError>(source);
+        var result = await ValidationTask.Sequence<int, RopError>(source);
 
         await Assert.That(source.Enumerations).IsEqualTo(1);
         await Assert.That(result.IsFailure).IsTrue();
@@ -537,9 +536,9 @@ public sealed class MaintenanceHardeningTests
     {
         var source = new SinglePassEnumerable<int>([1, 2, 3]);
 
-        var result = await Validation.TraverseAsync<int, int, RopError>(
+        var result = await ValidationTask.Traverse<int, int, RopError>(
             source,
-            value => Task.FromResult(value == 2
+            (value, _) => Task.FromResult(value == 2
                 ? Result.Err<int>(Sample.Error("E_EVEN"))
                 : Result.Ok<int, RopError>(value)));
 
@@ -622,9 +621,9 @@ public sealed class MaintenanceHardeningTests
             .Throws<InvalidOperationException>();
         await Assert.That(() => result.ToOption())
             .Throws<InvalidOperationException>();
-        await Assert.That(async () => await Task.FromResult(result).TeeOkAsync(_ => Task.CompletedTask))
+        await Assert.That(async () => await ResultTask.From(result).TeeOkAsync((_, _) => Task.CompletedTask))
             .Throws<InvalidOperationException>();
-        await Assert.That(async () => await Task.FromResult(result).TeeOkAsync((_, _) => Task.CompletedTask))
+        await Assert.That(async () => await ResultTask.From(result).TeeOkAsync((_, _) => Task.CompletedTask))
             .Throws<InvalidOperationException>();
     }
 

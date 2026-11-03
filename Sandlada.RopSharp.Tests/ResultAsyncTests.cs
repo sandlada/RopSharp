@@ -7,7 +7,7 @@ public sealed class ResultAsyncTests
     [Test]
     public async Task AsTask_WrapsResult()
     {
-        var result = await Result.Ok(5).AsTask();
+        var result = await ResultTask.From(Result.Ok(5));
 
         await Assert.That(result.Expect("test")).IsEqualTo(5);
     }
@@ -15,7 +15,7 @@ public sealed class ResultAsyncTests
     [Test]
     public async Task MapOkAsync_WithSyncMapper()
     {
-        var result = await Task.FromResult(Result.Ok(2)).MapOkAsync(value => value * 10);
+        var result = await ResultTask.From(Result.Ok(2)).MapOk(value => value * 10);
 
         await Assert.That(result.Expect("test")).IsEqualTo(20);
     }
@@ -23,7 +23,7 @@ public sealed class ResultAsyncTests
     [Test]
     public async Task MapOkAsync_WithAsyncMapper_PrefersAsyncOverload()
     {
-        var result = await Task.FromResult(Result.Ok(2)).MapOkAsync(value => Task.FromResult(value * 10));
+        var result = await ResultTask.From(Result.Ok(2)).MapOkAsync((value, _) => Task.FromResult(value * 10));
 
         await Assert.That(result.Expect("test")).IsEqualTo(20);
     }
@@ -33,8 +33,8 @@ public sealed class ResultAsyncTests
     {
         using var cts = new CancellationTokenSource();
 
-        var result = await Task.FromResult(Result.Ok(2))
-            .MapOkAsync((value, token) => Task.FromResult(token == cts.Token ? value + 1 : -1), cts.Token);
+        var result = await ResultTask.From(Result.Ok(2))
+            .WithCancellation(cts.Token).MapOkAsync((value, token) => Task.FromResult(token == cts.Token ? value + 1 : -1));
 
         await Assert.That(result.Expect("test")).IsEqualTo(3);
     }
@@ -42,7 +42,7 @@ public sealed class ResultAsyncTests
     [Test]
     public async Task MapOkAsync_FromSyncResult_WithAsyncMapper()
     {
-        var result = await Result.Ok(2).MapOkAsync(value => Task.FromResult(value * 3));
+        var result = await Result.Ok(2).MapOkAsync((value, _) => Task.FromResult(value * 3));
 
         await Assert.That(result.Expect("test")).IsEqualTo(6);
     }
@@ -53,10 +53,10 @@ public sealed class ResultAsyncTests
         var called = false;
         var error = Sample.Error("E_X");
 
-        var result = await Task.FromResult(Result.Err<int>(error)).MapOkAsync(value =>
+        var result = await ResultTask.From(Result.Err<int>(error)).MapOkAsync((value, _) =>
         {
             called = true;
-            return value;
+            return Task.FromResult(value);
         });
 
         await Assert.That(called).IsFalse();
@@ -66,9 +66,9 @@ public sealed class ResultAsyncTests
     [Test]
     public async Task MapErrAsync_MapsErrorOnly()
     {
-        var mapped = await Task.FromResult(Result.Err<int>(Sample.Error("E_X")))
-            .MapErrAsync(error => error.WithCode("E_Y"));
-        var untouched = await Task.FromResult(Result.Ok(1)).MapErrAsync(error => error.WithCode("E_Y"));
+        var mapped = await ResultTask.From(Result.Err<int>(Sample.Error("E_X")))
+            .MapErrAsync((error, _) => Task.FromResult(error.WithCode("E_Y")));
+        var untouched = await ResultTask.From(Result.Ok(1)).MapErrAsync((error, _) => Task.FromResult(error.WithCode("E_Y")));
 
         await Assert.That(mapped.ExpectErr().Code).IsEqualTo("E_Y");
         await Assert.That(untouched.Expect("test")).IsEqualTo(1);
@@ -77,8 +77,8 @@ public sealed class ResultAsyncTests
     [Test]
     public async Task MapErrAsync_WithAsyncMapper()
     {
-        var mapped = await Task.FromResult(Result.Err<int>(Sample.Error("E_X")))
-            .MapErrAsync(error => Task.FromResult(error.WithCode("E_ASYNC")));
+        var mapped = await ResultTask.From(Result.Err<int>(Sample.Error("E_X")))
+            .MapErrAsync((error, _) => Task.FromResult(error.WithCode("E_ASYNC")));
 
         await Assert.That(mapped.ExpectErr().Code).IsEqualTo("E_ASYNC");
     }
@@ -86,9 +86,9 @@ public sealed class ResultAsyncTests
     [Test]
     public async Task BindOkAsync_ChainsTaskResults()
     {
-        var result = await Task.FromResult(Result.Ok(2))
-            .BindOkAsync(value => Task.FromResult(Result.Ok(value * 5)))
-            .BindOkAsync(value => Task.FromResult(Result.Ok(value + 1)));
+        var result = await ResultTask.From(Result.Ok(2))
+            .BindOkAsync((value, _) => Task.FromResult(Result.Ok(value * 5)))
+            .BindOkAsync((value, _) => Task.FromResult(Result.Ok(value + 1)));
 
         await Assert.That(result.Expect("test")).IsEqualTo(11);
     }
@@ -98,8 +98,8 @@ public sealed class ResultAsyncTests
     {
         using var cts = new CancellationTokenSource();
 
-        var result = await Task.FromResult(Result.Ok(2))
-            .BindOkAsync((value, token) => Task.FromResult(Result.Ok(value + (token == cts.Token ? 1 : 0))), cts.Token);
+        var result = await ResultTask.From(Result.Ok(2)).WithCancellation(cts.Token)
+            .BindOkAsync((value, token) => Task.FromResult(Result.Ok(value + (token == cts.Token ? 1 : 0))));
 
         await Assert.That(result.Expect("test")).IsEqualTo(3);
     }
@@ -107,7 +107,7 @@ public sealed class ResultAsyncTests
     [Test]
     public async Task BindOkAsync_FromSyncResult()
     {
-        var result = await Result.Ok(2).BindOkAsync(value => Task.FromResult(Result.Ok(value * 4)));
+        var result = await Result.Ok(2).BindOkAsync((value, _) => Task.FromResult(Result.Ok(value * 4)));
 
         await Assert.That(result.Expect("test")).IsEqualTo(8);
     }
@@ -115,8 +115,8 @@ public sealed class ResultAsyncTests
     [Test]
     public async Task BindErrAsync_Recovers()
     {
-        var result = await Task.FromResult(Result.Err<int>(Sample.Error()))
-            .BindErrAsync(_ => Task.FromResult(Result.Ok(7)));
+        var result = await ResultTask.From(Result.Err<int>(Sample.Error()))
+            .BindErrAsync((_, _) => Task.FromResult(Result.Ok(7)));
 
         await Assert.That(result.Expect("test")).IsEqualTo(7);
     }
@@ -126,8 +126,9 @@ public sealed class ResultAsyncTests
     {
         using var cts = new CancellationTokenSource();
 
-        var result = await Task.FromResult(Result.Err<int>(Sample.Error()))
-            .BindErrAsync((error, token) => Task.FromResult(Result.Ok(token == cts.Token ? 1 : 0)), cts.Token);
+        var result = await ResultTask.From(Result.Err<int>(Sample.Error()))
+            .WithCancellation(cts.Token)
+            .BindErrAsync((error, token) => Task.FromResult(Result.Ok(token == cts.Token ? 1 : 0)));
 
         await Assert.That(result.Expect("test")).IsEqualTo(1);
     }
@@ -135,7 +136,7 @@ public sealed class ResultAsyncTests
     [Test]
     public async Task BindErrAsync_FromSyncResult()
     {
-        var result = await Result.Err<int>(Sample.Error()).BindErrAsync(_ => Task.FromResult(Result.Ok(9)));
+        var result = await Result.Err<int>(Sample.Error()).BindErrAsync((_, _) => Task.FromResult(Result.Ok(9)));
 
         await Assert.That(result.Expect("test")).IsEqualTo(9);
     }
@@ -145,7 +146,7 @@ public sealed class ResultAsyncTests
     {
         var observed = 0;
 
-        var result = await Task.FromResult(Result.Ok(3)).TeeOkAsync(value =>
+        var result = await ResultTask.From(Result.Ok(3)).TeeOkAsync((value, _) =>
         {
             observed = value;
             return Task.CompletedTask;
@@ -160,7 +161,7 @@ public sealed class ResultAsyncTests
     {
         var observed = string.Empty;
 
-        var result = await Task.FromResult(Result.Err<int>(Sample.Error("E_X"))).TeeErrAsync(error =>
+        var result = await ResultTask.From(Result.Err<int>(Sample.Error("E_X"))).TeeErrAsync((error, _) =>
         {
             observed = error.Code;
             return Task.CompletedTask;
@@ -178,13 +179,12 @@ public sealed class ResultAsyncTests
         var pending = new TaskCompletionSource<Result<int, RopError>>(TaskCreationOptions.RunContinuationsAsynchronously);
         var called = false;
 
-        var task = pending.Task.MapOkAsync(
-            value =>
+        var task = ResultTask.From(pending.Task).WithCancellation(cts.Token).MapOkAsync(
+            (value, _) =>
             {
                 called = true;
-                return value;
-            },
-            cts.Token);
+                return Task.FromResult(value);
+            });
 
         var exception = await TestSupport.CatchAsync(() => task);
 
@@ -199,7 +199,7 @@ public sealed class ResultAsyncTests
         using var cts = new CancellationTokenSource();
         cts.Cancel();
 
-        var task = Task.FromResult(Result.Ok(1)).MapOkAsync(value => value + 1, cts.Token);
+        var task = ResultTask.From(Result.Ok(1)).WithCancellation(cts.Token).MapOkAsync((value, _) => Task.FromResult(value + 1));
 
         var exception = await TestSupport.CatchAsync(() => task);
 
@@ -212,8 +212,8 @@ public sealed class ResultAsyncTests
         using var cts = new CancellationTokenSource();
         cts.Cancel();
 
-        var result = await Task.FromResult(Result.Err<int>(Sample.Error("E_X")))
-            .MapOkAsync(value => value + 1, cts.Token);
+        var result = await ResultTask.From(Result.Err<int>(Sample.Error("E_X")))
+            .WithCancellation(cts.Token).MapOkAsync((value, _) => Task.FromResult(value + 1));
 
         await Assert.That(result.ExpectErr().Code).IsEqualTo("E_X");
     }
@@ -223,11 +223,11 @@ public sealed class ResultAsyncTests
     {
         var tasks = new[]
         {
-            Task.FromResult(Result.Ok(1)),
-            Task.FromResult(Result.Ok(2)),
+            ResultTask.From(Result.Ok(1)),
+            ResultTask.From(Result.Ok(2)),
         };
 
-        var result = await Result.SequenceAsync(tasks);
+        var result = await ResultTask.Sequence(tasks);
 
         await TestSupport.AssertSequenceAsync(result.Expect("test"), 1, 2);
     }
@@ -235,7 +235,7 @@ public sealed class ResultAsyncTests
     [Test]
     public async Task SequenceAsync_WithEmptySource_ReturnsEmptyOk()
     {
-        var result = await Result.SequenceAsync(Array.Empty<Task<Result<int, RopError>>>());
+        var result = await ResultTask.Sequence(Array.Empty<ResultTask<int, RopError>>());
 
         await Assert.That(result.Expect("test").Count).IsEqualTo(0);
     }
@@ -246,23 +246,23 @@ public sealed class ResultAsyncTests
         var error = Sample.Error("E_X");
         var laterRequested = false;
 
-        var result = await Result.SequenceAsync(Source());
+        var result = await ResultTask.Sequence(Source());
 
         await Assert.That(result.ExpectErr()).IsSameReferenceAs(error);
         await Assert.That(laterRequested).IsFalse();
 
-        IEnumerable<Task<Result<int, RopError>>> Source()
+        IEnumerable<ResultTask<int, RopError>> Source()
         {
-            yield return Task.FromResult(Result.Err<int>(error));
+            yield return ResultTask.From(Result.Err<int>(error));
             laterRequested = true;
-            yield return Task.FromResult(Result.Ok(2));
+            yield return ResultTask.From(Result.Ok(2));
         }
     }
 
     [Test]
     public async Task TraverseAsync_MapsAndSequences()
     {
-        var result = await Result.TraverseAsync([1, 2, 3], value => Task.FromResult(Result.Ok(value * 2)));
+        var result = await ResultTask.Traverse([1, 2, 3], (value, _) => Task.FromResult(Result.Ok(value * 2)));
 
         await TestSupport.AssertSequenceAsync(result.Expect("test"), 2, 4, 6);
     }

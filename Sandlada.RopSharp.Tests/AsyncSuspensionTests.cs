@@ -21,13 +21,13 @@ public sealed class AsyncSuspensionTests
         var source = PendingResult();
         var mapperCalled = false;
 
-        var pending = source.Task.MapOkAsync(value =>
+        var pending = ResultTask.From(source.Task).MapOkAsync((value, _) =>
         {
             mapperCalled = true;
-            return value + 1;
+            return Task.FromResult(value + 1);
         });
 
-        await Assert.That(pending.IsCompleted).IsFalse();
+        await Assert.That(pending.TaskUnsafe.IsCompleted).IsFalse();
         await Assert.That(mapperCalled).IsFalse();
 
         source.SetResult(Result.Ok(1));
@@ -42,9 +42,9 @@ public sealed class AsyncSuspensionTests
     {
         var mapper = new TaskCompletionSource<int>(TaskCreationOptions.RunContinuationsAsynchronously);
 
-        var pending = Result.Ok(1).AsTask().MapOkAsync(_ => mapper.Task);
+        var pending = Result.Ok(1).MapOkAsync((_, _) => mapper.Task);
 
-        await Assert.That(pending.IsCompleted).IsFalse();
+        await Assert.That(pending.TaskUnsafe.IsCompleted).IsFalse();
         mapper.SetResult(5);
         var result = await pending;
 
@@ -56,9 +56,9 @@ public sealed class AsyncSuspensionTests
     {
         var binder = new TaskCompletionSource<Result<int, RopError>>(TaskCreationOptions.RunContinuationsAsynchronously);
 
-        var pending = Task.FromResult(Result.Ok(1)).BindOkAsync(_ => binder.Task);
+        var pending = ResultTask.From(Result.Ok(1)).BindOkAsync((_, _) => binder.Task);
 
-        await Assert.That(pending.IsCompleted).IsFalse();
+        await Assert.That(pending.TaskUnsafe.IsCompleted).IsFalse();
         binder.SetResult(Result.Ok(9));
         var result = await pending;
 
@@ -70,9 +70,9 @@ public sealed class AsyncSuspensionTests
     {
         var binder = new TaskCompletionSource<Result<int, RopError>>(TaskCreationOptions.RunContinuationsAsynchronously);
 
-        var pending = Result.Ok(1).BindOkAsync((_, _) => binder.Task, CancellationToken.None);
+        var pending = Result.Ok(1).BindOkAsync((_, _) => binder.Task);
 
-        await Assert.That(pending.IsCompleted).IsFalse();
+        await Assert.That(pending.TaskUnsafe.IsCompleted).IsFalse();
         binder.SetResult(Result.Ok(7));
         var result = await pending;
 
@@ -84,9 +84,9 @@ public sealed class AsyncSuspensionTests
     {
         var source = PendingResult();
 
-        var pending = source.Task.MapErrAsync(error => error.WithCode("E_LATE"));
+        var pending = ResultTask.From(source.Task).MapErrAsync((error, _) => Task.FromResult(error.WithCode("E_LATE")));
 
-        await Assert.That(pending.IsCompleted).IsFalse();
+        await Assert.That(pending.TaskUnsafe.IsCompleted).IsFalse();
         source.SetResult(Result.Err<int>(Sample.Error("E_X")));
         var result = await pending;
 
@@ -98,9 +98,9 @@ public sealed class AsyncSuspensionTests
     {
         var fallback = new TaskCompletionSource<Result<int, RopError>>(TaskCreationOptions.RunContinuationsAsynchronously);
 
-        var pending = Task.FromResult(Result.Err<int>(Sample.Error())).BindErrAsync(_ => fallback.Task);
+        var pending = ResultTask.From(Result.Err<int>(Sample.Error())).BindErrAsync((_, _) => fallback.Task);
 
-        await Assert.That(pending.IsCompleted).IsFalse();
+        await Assert.That(pending.TaskUnsafe.IsCompleted).IsFalse();
         fallback.SetResult(Result.Ok(11));
         var result = await pending;
 
@@ -113,13 +113,13 @@ public sealed class AsyncSuspensionTests
         var source = PendingResult();
         var observed = 0;
 
-        var pending = source.Task.TeeOkAsync(value =>
+        var pending = ResultTask.From(source.Task).TeeOkAsync((value, _) =>
         {
             observed = value;
             return Task.CompletedTask;
         });
 
-        await Assert.That(pending.IsCompleted).IsFalse();
+        await Assert.That(pending.TaskUnsafe.IsCompleted).IsFalse();
         await Assert.That(observed).IsEqualTo(0);
 
         source.SetResult(Result.Ok(3));
@@ -133,9 +133,9 @@ public sealed class AsyncSuspensionTests
     {
         var source = PendingOption();
 
-        var pending = source.Task.MapSomeAsync(value => value * 2);
+        var pending = OptionTask.From(source.Task).MapSomeAsync((value, _) => Task.FromResult(value * 2));
 
-        await Assert.That(pending.IsCompleted).IsFalse();
+        await Assert.That(pending.TaskUnsafe.IsCompleted).IsFalse();
         source.SetResult(Option.Some(4));
         var option = await pending;
 
@@ -147,9 +147,9 @@ public sealed class AsyncSuspensionTests
     {
         var binder = new TaskCompletionSource<Option<int>>(TaskCreationOptions.RunContinuationsAsynchronously);
 
-        var pending = Task.FromResult(Option.Some(1)).BindSomeAsync(_ => binder.Task);
+        var pending = OptionTask.From(Task.FromResult(Option.Some(1))).BindSomeAsync((_, _) => binder.Task);
 
-        await Assert.That(pending.IsCompleted).IsFalse();
+        await Assert.That(pending.TaskUnsafe.IsCompleted).IsFalse();
         binder.SetResult(Option.Some(6));
         var option = await pending;
 
@@ -161,9 +161,9 @@ public sealed class AsyncSuspensionTests
     {
         var fallback = new TaskCompletionSource<Option<int>>(TaskCreationOptions.RunContinuationsAsynchronously);
 
-        var pending = Task.FromResult(Option.None<int>()).BindNoneAsync(_ => fallback.Task);
+        var pending = OptionTask.From(Task.FromResult(Option.None<int>())).BindNone(_ => fallback.Task);
 
-        await Assert.That(pending.IsCompleted).IsFalse();
+        await Assert.That(pending.TaskUnsafe.IsCompleted).IsFalse();
         fallback.SetResult(Option.Some(3));
         var option = await pending;
 
@@ -175,9 +175,9 @@ public sealed class AsyncSuspensionTests
     {
         var source = PendingOption();
 
-        var pending = source.Task.FilterAsync(value => value > 0);
+        var pending = OptionTask.From(source.Task).Filter(value => value > 0);
 
-        await Assert.That(pending.IsCompleted).IsFalse();
+        await Assert.That(pending.TaskUnsafe.IsCompleted).IsFalse();
         source.SetResult(Option.Some(1));
         var option = await pending;
 
@@ -190,13 +190,13 @@ public sealed class AsyncSuspensionTests
         var source = PendingOption();
         var observed = false;
 
-        var pending = source.Task.TeeNoneAsync(() =>
+        var pending = OptionTask.From(source.Task).TeeNoneAsync(_ =>
         {
             observed = true;
             return Task.CompletedTask;
         });
 
-        await Assert.That(pending.IsCompleted).IsFalse();
+        await Assert.That(pending.TaskUnsafe.IsCompleted).IsFalse();
         await Assert.That(observed).IsFalse();
 
         source.SetResult(Option.None<int>());
@@ -212,7 +212,7 @@ public sealed class AsyncSuspensionTests
 
         var pending = Result.TryAsync(() => source.Task, _ => Sample.Error());
 
-        await Assert.That(pending.IsCompleted).IsFalse();
+        await Assert.That(pending.TaskUnsafe.IsCompleted).IsFalse();
         source.SetResult(42);
         var result = await pending;
 
@@ -224,9 +224,9 @@ public sealed class AsyncSuspensionTests
     {
         var source = PendingResult();
 
-        var pending = Result.TraverseAsync([1], _ => source.Task);
+        var pending = ResultTask.Traverse([1], (_, _) => source.Task);
 
-        await Assert.That(pending.IsCompleted).IsFalse();
+        await Assert.That(pending.TaskUnsafe.IsCompleted).IsFalse();
         source.SetResult(Result.Ok(5));
         var result = await pending;
 

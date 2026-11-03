@@ -277,25 +277,22 @@ task and return every error in source order. A faulted task surfaces as an excep
 several tasks fault the first fault wins while the rest are still observed.
 
 ```csharp
-Result<IReadOnlyList<OrderLine>, IReadOnlyList<RopError>> validated =
-    await Result.TraverseValidationAsync(order.Lines, (line, token) => ValidateLineAsync(line, token), ct);
+Validation<IReadOnlyList<OrderLine>, RopError> validated =
+    Validation.Traverse(order.Lines, ValidateLine);
 
-// Same aggregation without async work
-Result<IReadOnlyList<OrderLine>, IReadOnlyList<RopError>> sync =
-    Result.TraverseValidation(order.Lines, ValidateLine);
+var asyncValidated = await ValidationTask.Traverse(
+    order.Lines,
+    (line, _) => ValidateLineAsync(line));
 ```
 
-`Option` mirrors that surface for map/bind/tee/filter, aggregation and LINQ. A synchronous `Option<T>` can be
-lifted directly with the async
-`MapSomeAsync` / `BindSomeAsync` / `BindNoneAsync` / `TeeSomeAsync` / `TeeNoneAsync` / `FilterAsync`
-overloads; `Option.CombineAsync` / `ZipAsync` await every input, while `Option.SequenceAsync` / `TraverseAsync`
-await in order and stop at the first `None`. `Task<Option<T>>` supports query syntax through
-`Select` / `SelectMany` / `Where`:
+`Option` mirrors the synchronous surface; async option work uses `OptionTask<T>` (`From`, `WithCancellation`,
+`MapSomeAsync`, aggregation, and LINQ on the computation type):
 
 ```csharp
-Option<string> city = await GetAddressAsync(customer.Id, ct)
-    .MapSomeAsync(address => address.City, ct)
-    .FilterAsync(value => value.Length > 0, ct);
+Option<string> city = await OptionTask.From(GetAddressAsync(customer.Id))
+    .WithCancellation(ct)
+    .MapSomeAsync((address, _) => Task.FromResult(address.City))
+    .FilterAsync((value, _) => Task.FromResult(value.Length > 0));
 ```
 
 ## Boundaries
@@ -435,18 +432,26 @@ Result.SequenceValidationAsync(tasks, ct) / Result.TraverseValidationAsync(sourc
 Select / SelectMany
 ```
 
-### Result (async)
+### Result (async — `ResultTask<TOk, TErr>`)
 
 ```text
-AsTask
-MapOkAsync  (sync mapper | async mapper | CT-aware async mapper)   on Task<Result<,>> and Result<,>
-MapErrAsync (sync mapper | async mapper | CT-aware async mapper)   on Task<Result<,>> and Result<,>
-BindOkAsync (async binder | CT-aware binder)                       on Task<Result<,>> and Result<,>
-BindErrAsync(async fallback | CT-aware fallback)                   on Task<Result<,>> and Result<,>
-TeeOkAsync / TeeErrAsync (async action | CT-aware action)
-CombineAsync (2, 3) / ValidateAsync (2, 3) / ZipAsync (2, 3) / PartitionAsync
-SequenceValidationAsync / TraverseValidationAsync (async | CT-aware mapper)
-Select / SelectMany on Task<Result<,>> (async LINQ)
+ResultTask.From(Result | Task<Result>)
+WithCancellation
+MapOk / MapOkAsync(TOk, CancellationToken, Task<TOut>)
+BindOk / BindOkAsync
+MapErr / MapErrAsync / BindErr / BindErrAsync / TeeOk / TeeErr (+ async)
+ResultTask.Zip / Sequence / Traverse / Partition
+Select / SelectMany on ResultTask (async LINQ)
+Result.TryAsync / SwitchAsync / TrySwitchAsync → ResultTask
+```
+
+### Option (async — `OptionTask<T>`)
+
+```text
+OptionTask.From(Option | Task<Option>) / WithCancellation
+MapSome / MapSomeAsync / BindSome / BindSomeAsync / BindNone / Filter (+ async)
+OptionTask.Zip / Sequence / Traverse
+Select / SelectMany / Where on OptionTask
 ```
 
 ### Option
@@ -454,8 +459,7 @@ Select / SelectMany on Task<Result<,>> (async LINQ)
 ```text
 Option.Some / Option.None / Option.FromNullable / Option.FromNullableValue / Option.When
 Option.Combine (2, 3) / Option.Zip (2, 3) / Option.Sequence / Option.Traverse / Option.Values
-Option.CombineAsync (2, 3) / Option.ZipAsync (2, 3)
-Option.SequenceAsync / Option.TraverseAsync (async | CT-aware mapper)
+OptionTask.Zip / Sequence / Traverse (see Option async above)
 MapSome / TeeSome / TeeNone / Filter / MapSomeValue
 BindSome / BindSomeNullable / BindSomeNullableValue / BindNone / BindNoneValue
 Flatten / Match / Expect(reason)

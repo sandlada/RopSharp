@@ -240,8 +240,7 @@ internal static class FulfillmentSagaScenario
 
                 return Task.FromResult(Result.Err<decimal, RopError>(
                     error.WithDetails($"no fallback for country={country}")));
-            },
-            cancellationToken);
+            });
     }
 
     private static async Task<decimal> LiveTaxRateAsync(string country, CancellationToken cancellationToken)
@@ -284,7 +283,7 @@ internal static class FulfillmentSagaScenario
         var first = await ChargeAsync(order.Total, request.PaymentToken, attempt: 1, cancellationToken);
 
         // Only transport timeouts are retried; a decline is final and must not be attempted twice.
-        return await first.BindErrAsync(
+        return await ResultTask.From(first).BindErrAsync(
             (error, token) =>
             {
                 if (error.Code != "E_GATEWAY_TIMEOUT")
@@ -294,8 +293,7 @@ internal static class FulfillmentSagaScenario
 
                 Console.WriteLine("   payment: gateway timeout, retrying once");
                 return ChargeAsync(order.Total, request.PaymentToken, attempt: 2, token);
-            },
-            cancellationToken);
+            });
     }
 
     private static async Task<Result<PaymentAuthorization, RopError>> ChargeAsync(
@@ -337,16 +335,16 @@ internal static class FulfillmentSagaScenario
             : Result.Ok(new Shipment($"TRK-{request.OrderId}", "ground"));
     }
 
-    private static Task<Result<Unit, RopError>> ReleaseAsync(
+    private static ResultTask<Unit, RopError> ReleaseAsync(
         InventoryReservation reservation,
         CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
         Console.WriteLine($"   compensate: release {reservation.OrderId} at {reservation.Warehouse}");
-        return Task.FromResult(Result.Ok<Unit, RopError>(Unit.Value));
+        return ResultTask.From(Result.Ok<Unit, RopError>(Unit.Value));
     }
 
-    private static Task<Result<Unit, RopError>> VoidAsync(
+    private static ResultTask<Unit, RopError> VoidAsync(
         PaymentAuthorization authorization,
         CancellationToken cancellationToken)
     {
@@ -355,13 +353,13 @@ internal static class FulfillmentSagaScenario
         if (authorization.CancellationWillFail)
         {
             Console.WriteLine($"   compensate: void {authorization.Reference} FAILED");
-            return Task.FromResult(Result.Err<Unit>(RopError.Create(
+            return ResultTask.From(Result.Err<Unit>(RopError.Create(
                 "E_VOID_FAILED",
                 $"issuer refused to void {authorization.Reference}")));
         }
 
         Console.WriteLine($"   compensate: void {authorization.Reference}");
-        return Task.FromResult(Result.Ok<Unit, RopError>(Unit.Value));
+        return ResultTask.From(Result.Ok<Unit, RopError>(Unit.Value));
     }
 
     private static string Describe(SagaFailure failure) =>
@@ -385,11 +383,11 @@ internal static class FulfillmentSagaScenario
 /// </summary>
 internal sealed class CompensationStack
 {
-    private readonly List<Func<CancellationToken, Task<Result<Unit, RopError>>>> _steps = [];
+    private readonly List<Func<CancellationToken, ResultTask<Unit, RopError>>> _steps = [];
 
     public int Count => _steps.Count;
 
-    public void Defer(Func<CancellationToken, Task<Result<Unit, RopError>>> step) => _steps.Add(step);
+    public void Defer(Func<CancellationToken, ResultTask<Unit, RopError>> step) => _steps.Add(step);
 
     public async Task<IReadOnlyList<RopError>> RunAllAsync()
     {

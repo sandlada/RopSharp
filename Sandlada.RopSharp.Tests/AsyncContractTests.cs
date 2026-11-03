@@ -14,8 +14,8 @@ public sealed class AsyncContractTests
     {
         using var cts = new CancellationTokenSource();
 
-        var result = await Result.Ok(2)
-            .MapOkAsync((value, token) => Task.FromResult(value + (token == cts.Token ? 1 : 0)), cts.Token);
+        var result = await ResultTask.From(Result.Ok(2)).WithCancellation(cts.Token)
+            .MapOkAsync((value, token) => Task.FromResult(value + (token == cts.Token ? 1 : 0)));
 
         await Assert.That(result.Expect("test")).IsEqualTo(3);
     }
@@ -36,9 +36,9 @@ public sealed class AsyncContractTests
     {
         var mapper = new TaskCompletionSource<int>(TaskCreationOptions.RunContinuationsAsynchronously);
 
-        var pending = Result.Ok(1).MapOkAsync((_, _) => mapper.Task, CancellationToken.None);
+        var pending = Result.Ok(1).MapOkAsync((_, _) => mapper.Task);
 
-        await Assert.That(pending.IsCompleted).IsFalse();
+        await Assert.That(pending.TaskUnsafe.IsCompleted).IsFalse();
         mapper.SetResult(4);
 
         await Assert.That((await pending).Expect("test")).IsEqualTo(4);
@@ -48,7 +48,7 @@ public sealed class AsyncContractTests
     public async Task MapErrAsync_OnSyncResult_WithAsyncMapper_MapsError()
     {
         var result = await Result.Err<int>(Sample.Error("E_X"))
-            .MapErrAsync(error => Task.FromResult(error.WithCode("E_ASYNC")));
+            .MapErrAsync((error, _) => Task.FromResult(error.WithCode("E_ASYNC")));
 
         await Assert.That(result.ExpectErr().Code).IsEqualTo("E_ASYNC");
     }
@@ -58,7 +58,7 @@ public sealed class AsyncContractTests
     {
         var called = false;
 
-        var result = await Result.Ok(1).MapErrAsync(error =>
+        var result = await Result.Ok(1).MapErrAsync((error, _) =>
         {
             called = true;
             return Task.FromResult(error);
@@ -73,8 +73,9 @@ public sealed class AsyncContractTests
     {
         using var cts = new CancellationTokenSource();
 
-        var result = await Result.Err<int>(Sample.Error("E_X"))
-            .MapErrAsync((error, token) => Task.FromResult(error.WithCode(token == cts.Token ? "E_CT" : "E_NO")), cts.Token);
+        var result = await ResultTask.From(Result.Err<int>(Sample.Error("E_X")))
+            .WithCancellation(cts.Token)
+            .MapErrAsync((error, token) => Task.FromResult(error.WithCode(token == cts.Token ? "E_CT" : "E_NO")));
 
         await Assert.That(result.ExpectErr().Code).IsEqualTo("E_CT");
     }
@@ -92,9 +93,9 @@ public sealed class AsyncContractTests
     {
         var mapper = new TaskCompletionSource<RopError>(TaskCreationOptions.RunContinuationsAsynchronously);
 
-        var pending = Result.Err<int>(Sample.Error("E_X")).MapErrAsync((_, _) => mapper.Task, CancellationToken.None);
+        var pending = Result.Err<int>(Sample.Error("E_X")).MapErrAsync((_, _) => mapper.Task);
 
-        await Assert.That(pending.IsCompleted).IsFalse();
+        await Assert.That(pending.TaskUnsafe.IsCompleted).IsFalse();
         mapper.SetResult(Sample.Error("E_LATE"));
 
         await Assert.That((await pending).ExpectErr().Code).IsEqualTo("E_LATE");
@@ -103,31 +104,27 @@ public sealed class AsyncContractTests
     [Test]
     public async Task AsyncCallbacks_ReturningNullTask_FaultWithInvalidOperation()
     {
-        var mapperTaskReceiver = await TestSupport.CatchAsync(() =>
-            Task.FromResult(Result.Ok(1)).MapOkAsync(value => (Task<int>)null!));
-        var mapperTaskReceiverCt = await TestSupport.CatchAsync(() =>
-            Task.FromResult(Result.Ok(1)).MapOkAsync((value, _) => (Task<int>)null!));
+        var mapperTaskReceiver = await TestSupport.CatchAsync(() => ResultTask.From(Result.Ok(1)).MapOkAsync((value, _) => (Task<int>)null!));
+        var mapperTaskReceiverCt = await TestSupport.CatchAsync(() => ResultTask.From(Result.Ok(1)).MapOkAsync((value, _) => (Task<int>)null!));
         var mapperResultReceiver = await TestSupport.CatchAsync(() =>
-            Result.Ok(1).MapOkAsync(value => (Task<int>)null!));
+            Result.Ok(1).MapOkAsync((value, _) => (Task<int>)null!));
         var mapperResultReceiverCt = await TestSupport.CatchAsync(() =>
             Result.Ok(1).MapOkAsync((value, _) => (Task<int>)null!));
 
         var errMapperResult = await TestSupport.CatchAsync(() =>
-            Result.Err<int>(Sample.Error()).MapErrAsync(error => (Task<RopError>)null!));
-        var errMapperCt = await TestSupport.CatchAsync(() =>
-            Task.FromResult(Result.Err<int>(Sample.Error())).MapErrAsync((error, _) => (Task<RopError>)null!));
+            Result.Err<int>(Sample.Error()).MapErrAsync((error, _) => (Task<RopError>)null!));
+        var errMapperCt = await TestSupport.CatchAsync(() => ResultTask.From(Result.Err<int>(Sample.Error())).MapErrAsync((error, _) => (Task<RopError>)null!));
 
         var optionMapper = await TestSupport.CatchAsync(() =>
-            Task.FromResult(Option.Some(1)).MapSomeAsync(value => (Task<int>)null!));
+            OptionTask.From(Task.FromResult(Option.Some(1))).MapSomeAsync((value, _) => (Task<int>)null!));
         var optionPredicate = await TestSupport.CatchAsync(() =>
-            Task.FromResult(Option.Some(1)).FilterAsync(value => (Task<bool>)null!));
+            OptionTask.From(Task.FromResult(Option.Some(1))).FilterAsync((value, _) => (Task<bool>)null!));
 
-        var teeOk = await TestSupport.CatchAsync(() =>
-            Task.FromResult(Result.Ok(1)).TeeOkAsync(value => (Task)null!));
+        var teeOk = await TestSupport.CatchAsync(() => ResultTask.From(Result.Ok(1)).TeeOkAsync((value, _) => (Task)null!));
         var teeSome = await TestSupport.CatchAsync(() =>
-            Task.FromResult(Option.Some(1)).TeeSomeAsync(value => (Task)null!));
+            OptionTask.From(Task.FromResult(Option.Some(1))).TeeSomeAsync((value, _) => (Task)null!));
         var teeNone = await TestSupport.CatchAsync(() =>
-            Task.FromResult(Option.None<int>()).TeeNoneAsync(() => null!));
+            OptionTask.From(Task.FromResult(Option.None<int>())).TeeNoneAsync(_ => null!));
 
         foreach (var exception in new[]
                  {

@@ -106,7 +106,9 @@ internal static class SettlementScenario
                 .RequireSome(() => RopError.Create("E_ACCOUNT_UNKNOWN", $"no such account: {row.Account}"))
                 .BindOk(account => ValidateAccount(account, amount)
                     .MapOk(_ => (Account: account, Amount: amount))))
-            .BindOkAsync((pair, token) => ChargeAsync(row, pair.Account, pair.Amount, token), cancellationToken);
+            .ToResultTask()
+            .WithCancellation(cancellationToken)
+            .BindOkAsync((pair, token) => ChargeAsync(row, pair.Account, pair.Amount, token));
     }
 
     private static Result<decimal, RopError> ParseAmount(string raw) =>
@@ -148,7 +150,7 @@ internal static class SettlementScenario
         var first = await ChargeAttemptAsync(row, amount, attempt: 1, cancellationToken);
 
         // Transient channel failures are retried once; every other failure is terminal.
-        return await first.BindErrAsync(
+        return await ResultTask.From(first).BindErrAsync(
             (error, token) =>
             {
                 if (error.Code != "E_CHANNEL_BUSY")
@@ -158,8 +160,7 @@ internal static class SettlementScenario
 
                 Console.WriteLine($"   retry {row.Id}: {error.Code}");
                 return ChargeAttemptAsync(row, amount, attempt: 2, token);
-            },
-            cancellationToken);
+            });
     }
 
     private static async Task<Result<SettledPayment, RopError>> ChargeAttemptAsync(

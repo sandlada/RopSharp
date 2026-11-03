@@ -2,6 +2,7 @@
 
 - **Status:** Accepted
 - **Date:** 2026-10-28
+- **Revised:** 2026-11-03. Async option work uses `OptionTask<T>` instead of `Task<Option<T>>` extension matrices.
 - **Supersedes:** none
 - **Related:** [ADR 0001](0001-core-design-decisions.md), [ADR 0002](0002-api-gap-remediation.md)
 

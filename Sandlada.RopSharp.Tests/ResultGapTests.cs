@@ -155,19 +155,17 @@ public sealed class ResultGapTests
     public async Task SwitchAsync_RunsSelectedActionAndHonorsCancellation()
     {
         var seen = 0;
-        await Task.FromResult(Result.Ok(42)).SwitchAsync(
-            value =>
-            {
-                seen = value;
-                return Task.CompletedTask;
-            },
-            _ => Task.CompletedTask);
+        await ResultTask.From(Result.Ok(42)).SwitchAsync((value, _) =>
+        {
+            seen = value;
+            return Task.CompletedTask;
+        },
+            (_, _) => Task.CompletedTask);
 
         var error = Sample.Error("E_SWITCH");
         var errorSeen = string.Empty;
-        await Task.FromResult(Result.Err<int>(error)).SwitchAsync(
-            _ => Task.CompletedTask,
-            err =>
+        await ResultTask.From(Result.Err<int>(error)).SwitchAsync((_, _) => Task.CompletedTask,
+            (err, _) =>
             {
                 errorSeen = err.Code;
                 return Task.CompletedTask;
@@ -178,10 +176,8 @@ public sealed class ResultGapTests
 
         using var cts = new CancellationTokenSource();
         cts.Cancel();
-        var exception = await TestSupport.CatchAsync(() => Task.FromResult(Result.Ok(42)).SwitchAsync(
-            _ => Task.CompletedTask,
-            _ => Task.CompletedTask,
-            cts.Token));
+        var exception = await TestSupport.CatchAsync(() => ResultTask.From(Result.Ok(42)).WithCancellation(cts.Token).SwitchAsync((_, _) => Task.CompletedTask,
+            (_, _) => Task.CompletedTask));
 
         await Assert.That(exception is OperationCanceledException).IsTrue();
     }
@@ -227,15 +223,15 @@ public sealed class ResultGapTests
     [Test]
     public async Task CombineAsync_MergesSuccessAndReturnsFirstError()
     {
-        var ok = await Result.CombineAsync(
-            Task.FromResult(Result.Ok(2)),
-            Task.FromResult(Result.Ok(3)),
+        var ok = await ResultTask.Zip(
+            ResultTask.From(Result.Ok(2)),
+            ResultTask.From(Result.Ok(3)),
             (int a, int b) => a * b);
 
         var first = Sample.Error("E_FIRST");
-        var err = await Result.CombineAsync(
-            Task.FromResult(Result.Err<int>(first)),
-            Task.FromResult(Result.Err<int>(Sample.Error("E_SECOND"))),
+        var err = await ResultTask.Zip(
+            ResultTask.From(Result.Err<int>(first)),
+            ResultTask.From(Result.Err<int>(Sample.Error("E_SECOND"))),
             (int a, int b) => a + b);
 
         await Assert.That(ok.Expect("test")).IsEqualTo(6);
@@ -245,10 +241,10 @@ public sealed class ResultGapTests
     [Test]
     public async Task CombineAsync3_MergesSuccess()
     {
-        var result = await Result.CombineAsync(
-            Task.FromResult(Result.Ok(1)),
-            Task.FromResult(Result.Ok(2)),
-            Task.FromResult(Result.Ok(3)),
+        var result = await ResultTask.Zip(
+            ResultTask.From(Result.Ok(1)),
+            ResultTask.From(Result.Ok(2)),
+            ResultTask.From(Result.Ok(3)),
             (int a, int b, int c) => a + b + c);
 
         await Assert.That(result.Expect("test")).IsEqualTo(6);
@@ -260,9 +256,9 @@ public sealed class ResultGapTests
         var first = Sample.Error("E_FIRST");
         var second = Sample.Error("E_SECOND");
 
-        var result = await Validation.ZipAsync(
-            Task.FromResult(Result.Err<int>(first)),
-            Task.FromResult(Result.Err<int>(second)),
+        var result = await ValidationTask.Zip(
+            ResultTask.From(Result.Err<int>(first)),
+            ResultTask.From(Result.Err<int>(second)),
             (int a, int b) => a + b);
 
         await TestSupport.AssertSequenceAsync(result.ExpectErrors(), first, second);
@@ -274,10 +270,10 @@ public sealed class ResultGapTests
         var first = Sample.Error("E_FIRST");
         var third = Sample.Error("E_THIRD");
 
-        var result = await Validation.ZipAsync(
-            Task.FromResult(Result.Err<int>(first)),
-            Task.FromResult(Result.Ok(2)),
-            Task.FromResult(Result.Err<int>(third)),
+        var result = await ValidationTask.Zip(
+            ResultTask.From(Result.Err<int>(first)),
+            ResultTask.From(Result.Ok(2)),
+            ResultTask.From(Result.Err<int>(third)),
             (int a, int b, int c) => a + b + c);
 
         await TestSupport.AssertSequenceAsync(result.ExpectErrors(), first, third);
@@ -286,11 +282,11 @@ public sealed class ResultGapTests
     [Test]
     public async Task ZipAsync_PairsValues()
     {
-        var pair = await Result.ZipAsync(Task.FromResult(Result.Ok(1)), Task.FromResult(Result.Ok("a")));
-        var triple = await Result.ZipAsync(
-            Task.FromResult(Result.Ok(1)),
-            Task.FromResult(Result.Ok("a")),
-            Task.FromResult(Result.Ok(true)));
+        var pair = await ResultTask.Zip(ResultTask.From(Result.Ok(1)), ResultTask.From(Result.Ok("a")));
+        var triple = await ResultTask.Zip(
+            ResultTask.From(Result.Ok(1)),
+            ResultTask.From(Result.Ok("a")),
+            ResultTask.From(Result.Ok(true)));
 
         await Assert.That(pair.Expect("test")).IsEqualTo((1, "a"));
         await Assert.That(triple.Expect("test")).IsEqualTo((1, "a", true));
@@ -300,12 +296,12 @@ public sealed class ResultGapTests
     public async Task PartitionAsync_SplitsResults()
     {
         var error = Sample.Error();
-        var (oks, errs) = await Result.PartitionAsync(new[]
+        var (oks, errs) = (await ResultTask.Partition(new[]
         {
-            Task.FromResult(Result.Ok(1)),
-            Task.FromResult(Result.Err<int>(error)),
-            Task.FromResult(Result.Ok(2)),
-        });
+            ResultTask.From(Result.Ok(1)),
+            ResultTask.From(Result.Err<int>(error)),
+            ResultTask.From(Result.Ok(2)),
+        })).Expect("test");
 
         await TestSupport.AssertSequenceAsync(oks, 1, 2);
         await Assert.That(errs.Count).IsEqualTo(1);
@@ -318,9 +314,9 @@ public sealed class ResultGapTests
         using var cts = new CancellationTokenSource();
         cts.Cancel();
 
-        var exception = await TestSupport.CatchAsync(() => Result.CombineAsync(
-            Task.FromResult(Result.Ok(1)),
-            Task.FromResult(Result.Ok(2)),
+        var exception = await TestSupport.CatchAsync(() => ResultTask.Zip(
+            ResultTask.From(Result.Ok(1)),
+            ResultTask.From(Result.Ok(2)),
             (int a, int b) => a + b,
             cts.Token));
 
@@ -330,9 +326,9 @@ public sealed class ResultGapTests
     [Test]
     public async Task AsyncLinq_Select_ProjectsSuccessAndPreservesError()
     {
-        var ok = await Task.FromResult(Result.Ok(2)).Select(value => value * 2);
+        var ok = await ResultTask.From(Result.Ok(2)).Select(value => value * 2);
         var error = Sample.Error();
-        var err = await Task.FromResult(Result.Err<int>(error)).Select(value => value * 2);
+        var err = await ResultTask.From(Result.Err<int>(error)).Select(value => value * 2);
 
         await Assert.That(ok.Expect("test")).IsEqualTo(4);
         await Assert.That(err.ExpectErr()).IsSameReferenceAs(error);
@@ -342,12 +338,12 @@ public sealed class ResultGapTests
     public async Task AsyncLinq_SelectAndSelectMany_WorkInQuerySyntax()
     {
         var result =
-            from a in Task.FromResult(Result.Ok(2))
-            from b in Task.FromResult(Result.Ok(3))
+            from a in ResultTask.From(Result.Ok(2))
+            from b in Result.Ok(3)
             select a * b;
 
         var syncBinder =
-            from a in Task.FromResult(Result.Ok(2))
+            from a in ResultTask.From(Result.Ok(2))
             from b in Result.Ok(3)
             select a + b;
 
@@ -360,11 +356,11 @@ public sealed class ResultGapTests
     {
         var error = Sample.Error();
         var asyncBinder =
-            from a in Task.FromResult(Result.Err<int>(error))
-            from b in Task.FromResult(Result.Ok(3))
+            from a in ResultTask.From(Result.Err<int>(error))
+            from b in Result.Ok(3)
             select a + b;
         var syncBinder =
-            from a in Task.FromResult(Result.Err<int>(error))
+            from a in ResultTask.From(Result.Err<int>(error))
             from b in Result.Ok(3)
             select a + b;
 

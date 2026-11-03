@@ -39,6 +39,45 @@ internal static class TestSupport
         }
     }
 
+    internal static async Task<Exception?> CatchAsync<TOk, TErr>(Func<ResultTask<TOk, TErr>> action)
+    {
+        try
+        {
+            await action();
+            return null;
+        }
+        catch (Exception exception)
+        {
+            return exception;
+        }
+    }
+
+    internal static async Task<Exception?> CatchAsync<T>(Func<OptionTask<T>> action)
+    {
+        try
+        {
+            await action();
+            return null;
+        }
+        catch (Exception exception)
+        {
+            return exception;
+        }
+    }
+
+    internal static async Task<Exception?> CatchAsync<T, TErr>(Func<ValidationTask<T, TErr>> action)
+    {
+        try
+        {
+            await action();
+            return null;
+        }
+        catch (Exception exception)
+        {
+            return exception;
+        }
+    }
+
     internal static Exception? Catch(Action action)
     {
         try

@@ -7,7 +7,7 @@ public sealed class OptionAsyncTests
     [Test]
     public async Task AsTask_WrapsOption()
     {
-        var option = await Option.Some(5).AsTask();
+        var option = await OptionTask.From(Option.Some(5));
 
         await Assert.That(option.Expect("test")).IsEqualTo(5);
     }
@@ -15,7 +15,7 @@ public sealed class OptionAsyncTests
     [Test]
     public async Task MapSomeAsync_WithSyncMapper()
     {
-        var option = await Task.FromResult(Option.Some(2)).MapSomeAsync(value => value * 10);
+        var option = await OptionTask.From(Task.FromResult(Option.Some(2))).MapSome(value => value * 10);
 
         await Assert.That(option.Expect("test")).IsEqualTo(20);
     }
@@ -23,7 +23,7 @@ public sealed class OptionAsyncTests
     [Test]
     public async Task MapSomeAsync_WithAsyncMapper()
     {
-        var option = await Task.FromResult(Option.Some(2)).MapSomeAsync(value => Task.FromResult(value * 10));
+        var option = await OptionTask.From(Task.FromResult(Option.Some(2))).MapSomeAsync((value, _) => Task.FromResult(value * 10));
 
         await Assert.That(option.Expect("test")).IsEqualTo(20);
     }
@@ -33,8 +33,8 @@ public sealed class OptionAsyncTests
     {
         using var cts = new CancellationTokenSource();
 
-        var option = await Task.FromResult(Option.Some(2))
-            .MapSomeAsync((value, token) => Task.FromResult(token == cts.Token ? value + 1 : -1), cts.Token);
+        var option = await OptionTask.From(Task.FromResult(Option.Some(2)))
+            .WithCancellation(cts.Token).MapSomeAsync((value, token) => Task.FromResult(token == cts.Token ? value + 1 : -1));
 
         await Assert.That(option.Expect("test")).IsEqualTo(3);
     }
@@ -44,10 +44,10 @@ public sealed class OptionAsyncTests
     {
         var called = false;
 
-        var option = await Task.FromResult(Option.None<int>()).MapSomeAsync(value =>
+        var option = await OptionTask.From(Task.FromResult(Option.None<int>())).MapSomeAsync((value, _) =>
         {
             called = true;
-            return value;
+            return Task.FromResult(value);
         });
 
         await Assert.That(called).IsFalse();
@@ -57,9 +57,9 @@ public sealed class OptionAsyncTests
     [Test]
     public async Task BindSomeAsync_ChainsTaskOptions()
     {
-        var option = await Task.FromResult(Option.Some(2))
-            .BindSomeAsync(value => Task.FromResult(Option.Some(value * 3)))
-            .BindSomeAsync(value => Task.FromResult(Option.Some(value + 1)));
+        var option = await OptionTask.From(Task.FromResult(Option.Some(2)))
+            .BindSomeAsync((value, _) => Task.FromResult(Option.Some(value * 3)))
+            .BindSomeAsync((value, _) => Task.FromResult(Option.Some(value + 1)));
 
         await Assert.That(option.Expect("test")).IsEqualTo(7);
     }
@@ -69,8 +69,9 @@ public sealed class OptionAsyncTests
     {
         using var cts = new CancellationTokenSource();
 
-        var option = await Task.FromResult(Option.Some(2))
-            .BindSomeAsync((value, token) => Task.FromResult(Option.Some(token == cts.Token ? value + 1 : 0)), cts.Token);
+        var option = await OptionTask.From(Task.FromResult(Option.Some(2)))
+            .WithCancellation(cts.Token)
+            .BindSomeAsync((value, token) => Task.FromResult(Option.Some(token == cts.Token ? value + 1 : 0)));
 
         await Assert.That(option.Expect("test")).IsEqualTo(3);
     }
@@ -78,7 +79,7 @@ public sealed class OptionAsyncTests
     [Test]
     public async Task BindSomeAsync_FromSyncOption()
     {
-        var option = await Option.Some(2).BindSomeAsync(value => Task.FromResult(Option.Some(value * 4)));
+        var option = await OptionTask.From(Option.Some(2)).BindSomeAsync((value, _) => Task.FromResult(Option.Some(value * 4)));
 
         await Assert.That(option.Expect("test")).IsEqualTo(8);
     }
@@ -86,7 +87,7 @@ public sealed class OptionAsyncTests
     [Test]
     public async Task BindNoneAsync_Recovers()
     {
-        var option = await Task.FromResult(Option.None<int>()).BindNoneAsync(() => Task.FromResult(Option.Some(7)));
+        var option = await OptionTask.From(Task.FromResult(Option.None<int>())).BindNone(_ => Task.FromResult(Option.Some(7)));
 
         await Assert.That(option.Expect("test")).IsEqualTo(7);
     }
@@ -96,8 +97,8 @@ public sealed class OptionAsyncTests
     {
         using var cts = new CancellationTokenSource();
 
-        var option = await Task.FromResult(Option.None<int>())
-            .BindNoneAsync(token => Task.FromResult(Option.Some(token == cts.Token ? 1 : 0)), cts.Token);
+        var option = await OptionTask.From(Task.FromResult(Option.None<int>()))
+            .WithCancellation(cts.Token).BindNone(token => Task.FromResult(Option.Some(token == cts.Token ? 1 : 0)));
 
         await Assert.That(option.Expect("test")).IsEqualTo(1);
     }
@@ -107,7 +108,7 @@ public sealed class OptionAsyncTests
     {
         var called = false;
 
-        var option = await Task.FromResult(Option.Some(1)).BindNoneAsync(() =>
+        var option = await OptionTask.From(Task.FromResult(Option.Some(1))).BindNone(_ =>
         {
             called = true;
             return Task.FromResult(Option.Some(9));
@@ -122,7 +123,7 @@ public sealed class OptionAsyncTests
     {
         var observed = 0;
 
-        var option = await Task.FromResult(Option.Some(3)).TeeSomeAsync(value =>
+        var option = await OptionTask.From(Task.FromResult(Option.Some(3))).TeeSomeAsync((value, _) =>
         {
             observed = value;
             return Task.CompletedTask;
@@ -137,7 +138,7 @@ public sealed class OptionAsyncTests
     {
         var observed = false;
 
-        var option = await Task.FromResult(Option.None<int>()).TeeNoneAsync(() =>
+        var option = await OptionTask.From(Task.FromResult(Option.None<int>())).TeeNoneAsync(_ =>
         {
             observed = true;
             return Task.CompletedTask;
@@ -150,8 +151,8 @@ public sealed class OptionAsyncTests
     [Test]
     public async Task FilterAsync_WithSyncPredicate()
     {
-        var kept = await Task.FromResult(Option.Some(2)).FilterAsync(value => value % 2 == 0);
-        var dropped = await Task.FromResult(Option.Some(3)).FilterAsync(value => value % 2 == 0);
+        var kept = await OptionTask.From(Task.FromResult(Option.Some(2))).Filter(value => value % 2 == 0);
+        var dropped = await OptionTask.From(Task.FromResult(Option.Some(3))).Filter(value => value % 2 == 0);
 
         await Assert.That(kept.Expect("test")).IsEqualTo(2);
         await Assert.That(dropped.IsNone).IsTrue();
@@ -160,8 +161,8 @@ public sealed class OptionAsyncTests
     [Test]
     public async Task FilterAsync_WithAsyncPredicate()
     {
-        var kept = await Task.FromResult(Option.Some(2)).FilterAsync(value => Task.FromResult(value % 2 == 0));
-        var dropped = await Task.FromResult(Option.Some(3)).FilterAsync(value => Task.FromResult(value % 2 == 0));
+        var kept = await OptionTask.From(Task.FromResult(Option.Some(2))).FilterAsync((value, _) => Task.FromResult(value % 2 == 0));
+        var dropped = await OptionTask.From(Task.FromResult(Option.Some(3))).FilterAsync((value, _) => Task.FromResult(value % 2 == 0));
 
         await Assert.That(kept.Expect("test")).IsEqualTo(2);
         await Assert.That(dropped.IsNone).IsTrue();
@@ -175,13 +176,11 @@ public sealed class OptionAsyncTests
         var pending = new TaskCompletionSource<Option<int>>(TaskCreationOptions.RunContinuationsAsynchronously);
         var called = false;
 
-        var task = pending.Task.MapSomeAsync(
-            value =>
-            {
-                called = true;
-                return value;
-            },
-            cts.Token);
+        var task = OptionTask.From(pending.Task).WithCancellation(cts.Token).MapSomeAsync((value, _) =>
+        {
+            called = true;
+            return Task.FromResult(value);
+        });
 
         var exception = await TestSupport.CatchAsync(() => task);
 
@@ -196,7 +195,7 @@ public sealed class OptionAsyncTests
         using var cts = new CancellationTokenSource();
         cts.Cancel();
 
-        var task = Task.FromResult(Option.Some(1)).MapSomeAsync(value => value + 1, cts.Token);
+        var task = OptionTask.From(Task.FromResult(Option.Some(1))).WithCancellation(cts.Token).MapSomeAsync((value, _) => Task.FromResult(value + 1));
 
         var exception = await TestSupport.CatchAsync(() => task);
 
@@ -209,7 +208,7 @@ public sealed class OptionAsyncTests
         using var cts = new CancellationTokenSource();
         cts.Cancel();
 
-        var option = await Task.FromResult(Option.None<int>()).MapSomeAsync(value => value + 1, cts.Token);
+        var option = await OptionTask.From(Task.FromResult(Option.None<int>())).WithCancellation(cts.Token).MapSomeAsync((value, _) => Task.FromResult(value + 1));
 
         await Assert.That(option.IsNone).IsTrue();
     }

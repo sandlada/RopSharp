@@ -2,7 +2,7 @@
 
 - **Status:** Accepted
 - **Date:** 2026-10-28
-- **Revised:** 2026-11-03
+- **Revised:** 2026-11-03. Non-blocking accumulation uses `ValidationTask<T, TErr>` instead of `Task<Validation<,>>` helpers.
 - **Supersedes:** none
 - **Related:** [ADR 0001](0001-core-design-decisions.md), [ADR 0002](0002-api-gap-remediation.md),
   [ADR 0003](0003-option-async-parity.md)

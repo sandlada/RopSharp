@@ -11,10 +11,10 @@ internal static class NewApiScenario
     public static async Task RunAsync()
     {
         var parsed = Result.Parse<int>("41");
-        var weighted = await Result.CombineAsync(
-            Task.FromResult(parsed),
-            Task.FromResult(Result.Ok(2)),
-            (value, factor) => value * factor);
+        var weighted = await ResultTask.Zip<int, int, int, RopError>(
+            ResultTask.From(parsed),
+            ResultTask.From(Result.Ok<int, RopError>(2)),
+            static (value, factor) => value * factor);
 
         weighted
             .FailIf(

@@ -69,7 +69,12 @@ internal static class CarrierQuoteScenario
             .Select(carrier => BidAsync(carrier, request, retry: false, cancellationToken))
             .ToArray();
 
-        var firstPass = await Task.WhenAll(pending);
+        var firstPass = new Result<CarrierBid, RopError>[pending.Length];
+        for (var index = 0; index < pending.Length; index++)
+        {
+            firstPass[index] = await pending[index];
+        }
+
         var outcomes = request.Carriers
             .Select((carrier, index) => (Carrier: carrier, Outcome: firstPass[index]))
             .ToList();
@@ -150,7 +155,7 @@ internal static class CarrierQuoteScenario
         return Result.Ok(bid.Price).MapOk(price => price * (1m - discount));
     }
 
-    private static Task<Result<CarrierBid, RopError>> BidAsync(
+    private static ResultTask<CarrierBid, RopError> BidAsync(
         string carrier,
         QuoteRequest request,
         bool retry,
@@ -159,7 +164,7 @@ internal static class CarrierQuoteScenario
         // A carrier that does not serve the lane is a domain rejection, not a transport failure.
         if (carrier == "budget")
         {
-            return Task.FromResult(Result.Err<CarrierBid>(RopError.Create(
+            return ResultTask.From(Result.Err<CarrierBid>(RopError.Create(
                 "E_NO_ROUTE",
                 "budget carrier does not serve this lane")));
         }

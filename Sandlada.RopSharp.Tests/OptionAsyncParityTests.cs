@@ -7,7 +7,7 @@ public sealed class OptionAsyncParityTests
     [Test]
     public async Task MapSomeAsync_FromSyncOption_WithAsyncMapper()
     {
-        var option = await Option.Some(2).MapSomeAsync(value => Task.FromResult(value * 10));
+        var option = await OptionTask.From(Option.Some(2)).MapSomeAsync((value, _) => Task.FromResult(value * 10));
 
         await Assert.That(option.Expect("test")).IsEqualTo(20);
     }
@@ -17,8 +17,8 @@ public sealed class OptionAsyncParityTests
     {
         using var cts = new CancellationTokenSource();
 
-        var option = await Option.Some(2)
-            .MapSomeAsync((value, token) => Task.FromResult(token == cts.Token ? value + 1 : -1), cts.Token);
+        var option = await OptionTask.From(Option.Some(2))
+            .WithCancellation(cts.Token).MapSomeAsync((value, token) => Task.FromResult(token == cts.Token ? value + 1 : -1));
 
         await Assert.That(option.Expect("test")).IsEqualTo(3);
     }
@@ -28,7 +28,7 @@ public sealed class OptionAsyncParityTests
     {
         var called = false;
 
-        var option = await Option.None<int>().MapSomeAsync(value =>
+        var option = await OptionTask.From(Option.None<int>()).MapSomeAsync((value, _) =>
         {
             called = true;
             return Task.FromResult(value);
@@ -46,13 +46,12 @@ public sealed class OptionAsyncParityTests
         var called = false;
 
         var exception = await TestSupport.CatchAsync(() =>
-            Option.Some(1).MapSomeAsync(
-                value =>
+            OptionTask.From(Option.Some(1)).WithCancellation(cts.Token).MapSomeAsync(
+                (value, _) =>
                 {
                     called = true;
                     return Task.FromResult(value);
-                },
-                cts.Token));
+                }));
 
         await Assert.That(exception is OperationCanceledException).IsTrue();
         await Assert.That(called).IsFalse();
@@ -64,7 +63,7 @@ public sealed class OptionAsyncParityTests
         using var cts = new CancellationTokenSource();
         cts.Cancel();
 
-        var option = await Option.None<int>().MapSomeAsync(value => Task.FromResult(value + 1), cts.Token);
+        var option = await OptionTask.From(Option.None<int>()).MapSomeAsync((value, _) => Task.FromResult(value + 1));
 
         await Assert.That(option.IsNone).IsTrue();
     }
@@ -74,7 +73,7 @@ public sealed class OptionAsyncParityTests
     {
         var called = false;
 
-        var option = await Option.None<int>().MapSomeAsync((value, token) =>
+        var option = await OptionTask.From(Option.None<int>()).MapSomeAsync((value, token) =>
         {
             called = true;
             return Task.FromResult(value);
@@ -89,8 +88,9 @@ public sealed class OptionAsyncParityTests
     {
         using var cts = new CancellationTokenSource();
 
-        var option = await Option.Some(2)
-            .BindSomeAsync((value, token) => Task.FromResult(Option.Some(token == cts.Token ? value + 1 : 0)), cts.Token);
+        var option = await OptionTask.From(Option.Some(2))
+            .WithCancellation(cts.Token)
+            .BindSomeAsync((value, token) => Task.FromResult(Option.Some(token == cts.Token ? value + 1 : 0)));
 
         await Assert.That(option.Expect("test")).IsEqualTo(3);
     }
@@ -100,7 +100,7 @@ public sealed class OptionAsyncParityTests
     {
         var called = false;
 
-        var option = await Option.None<int>().BindSomeAsync((value, token) =>
+        var option = await OptionTask.From(Option.None<int>()).BindSomeAsync((value, token) =>
         {
             called = true;
             return Task.FromResult(Option.Some(value));
@@ -113,7 +113,7 @@ public sealed class OptionAsyncParityTests
     [Test]
     public async Task BindNoneAsync_FromSyncOption_Recovers()
     {
-        var option = await Option.None<int>().BindNoneAsync(() => Task.FromResult(Option.Some(7)));
+        var option = await OptionTask.From(Option.None<int>()).BindNone(_ => Task.FromResult(Option.Some(7)));
 
         await Assert.That(option.Expect("test")).IsEqualTo(7);
     }
@@ -123,7 +123,7 @@ public sealed class OptionAsyncParityTests
     {
         var called = false;
 
-        var option = await Option.Some(1).BindNoneAsync(() =>
+        var option = await OptionTask.From(Option.Some(1)).BindNone(_ =>
         {
             called = true;
             return Task.FromResult(Option.Some(9));
@@ -138,8 +138,8 @@ public sealed class OptionAsyncParityTests
     {
         using var cts = new CancellationTokenSource();
 
-        var option = await Option.None<int>()
-            .BindNoneAsync(token => Task.FromResult(Option.Some(token == cts.Token ? 1 : 0)), cts.Token);
+        var option = await OptionTask.From(Option.None<int>())
+            .WithCancellation(cts.Token).BindNone(token => Task.FromResult(Option.Some(token == cts.Token ? 1 : 0)));
 
         await Assert.That(option.Expect("test")).IsEqualTo(1);
     }
@@ -149,7 +149,7 @@ public sealed class OptionAsyncParityTests
     {
         var called = false;
 
-        var option = await Option.Some(5).BindNoneAsync(token =>
+        var option = await OptionTask.From(Option.Some(5)).BindNone(token =>
         {
             called = true;
             return Task.FromResult(Option.Some(9));
@@ -164,7 +164,7 @@ public sealed class OptionAsyncParityTests
     {
         var observed = 0;
 
-        var option = await Option.Some(3).TeeSomeAsync(value =>
+        var option = await OptionTask.From(Option.Some(3)).TeeSomeAsync((value, _) =>
         {
             observed = value;
             return Task.CompletedTask;
@@ -179,7 +179,7 @@ public sealed class OptionAsyncParityTests
     {
         var called = false;
 
-        var option = await Option.None<int>().TeeSomeAsync(value =>
+        var option = await OptionTask.From(Option.None<int>()).TeeSomeAsync((value, _) =>
         {
             called = true;
             return Task.CompletedTask;
@@ -195,13 +195,12 @@ public sealed class OptionAsyncParityTests
         using var cts = new CancellationTokenSource();
         var observed = 0;
 
-        var option = await Option.Some(4).TeeSomeAsync(
+        var option = await OptionTask.From(Option.Some(4)).WithCancellation(cts.Token).TeeSomeAsync(
             (value, token) =>
             {
                 observed = token == cts.Token ? value : -1;
                 return Task.CompletedTask;
-            },
-            cts.Token);
+            });
 
         await Assert.That(observed).IsEqualTo(4);
         await Assert.That(option.Expect("test")).IsEqualTo(4);
@@ -212,7 +211,7 @@ public sealed class OptionAsyncParityTests
     {
         var called = false;
 
-        var option = await Option.None<int>().TeeSomeAsync((value, token) =>
+        var option = await OptionTask.From(Option.None<int>()).TeeSomeAsync((value, token) =>
         {
             called = true;
             return Task.CompletedTask;
@@ -227,7 +226,7 @@ public sealed class OptionAsyncParityTests
     {
         var observed = false;
 
-        var option = await Option.None<int>().TeeNoneAsync(() =>
+        var option = await OptionTask.From(Option.None<int>()).TeeNoneAsync(_ =>
         {
             observed = true;
             return Task.CompletedTask;
@@ -242,7 +241,7 @@ public sealed class OptionAsyncParityTests
     {
         var called = false;
 
-        var option = await Option.Some(1).TeeNoneAsync(() =>
+        var option = await OptionTask.From(Option.Some(1)).TeeNoneAsync(_ =>
         {
             called = true;
             return Task.CompletedTask;
@@ -258,13 +257,12 @@ public sealed class OptionAsyncParityTests
         using var cts = new CancellationTokenSource();
         var observed = false;
 
-        var option = await Option.None<int>().TeeNoneAsync(
+        var option = await OptionTask.From(Option.None<int>()).WithCancellation(cts.Token).TeeNoneAsync(
             token =>
             {
                 observed = token == cts.Token;
                 return Task.CompletedTask;
-            },
-            cts.Token);
+            });
 
         await Assert.That(observed).IsTrue();
         await Assert.That(option.IsNone).IsTrue();
@@ -275,7 +273,7 @@ public sealed class OptionAsyncParityTests
     {
         var called = false;
 
-        var option = await Option.Some(1).TeeNoneAsync(token =>
+        var option = await OptionTask.From(Option.Some(1)).TeeNoneAsync(token =>
         {
             called = true;
             return Task.CompletedTask;
@@ -288,8 +286,8 @@ public sealed class OptionAsyncParityTests
     [Test]
     public async Task FilterAsync_FromSyncOption_WithAsyncPredicate()
     {
-        var kept = await Option.Some(2).FilterAsync(value => Task.FromResult(value % 2 == 0));
-        var dropped = await Option.Some(3).FilterAsync(value => Task.FromResult(value % 2 == 0));
+        var kept = await OptionTask.From(Option.Some(2)).FilterAsync((value, _) => Task.FromResult(value % 2 == 0));
+        var dropped = await OptionTask.From(Option.Some(3)).FilterAsync((value, _) => Task.FromResult(value % 2 == 0));
 
         await Assert.That(kept.Expect("test")).IsEqualTo(2);
         await Assert.That(dropped.IsNone).IsTrue();
@@ -300,8 +298,9 @@ public sealed class OptionAsyncParityTests
     {
         using var cts = new CancellationTokenSource();
 
-        var kept = await Option.Some(2)
-            .FilterAsync((value, token) => Task.FromResult(token == cts.Token && value % 2 == 0), cts.Token);
+        var kept = await OptionTask.From(Option.Some(2))
+            .WithCancellation(cts.Token)
+            .FilterAsync((value, token) => Task.FromResult(token == cts.Token && value % 2 == 0));
 
         await Assert.That(kept.Expect("test")).IsEqualTo(2);
     }
@@ -311,7 +310,7 @@ public sealed class OptionAsyncParityTests
     {
         var called = false;
 
-        var option = await Option.None<int>().FilterAsync((value, token) =>
+        var option = await OptionTask.From(Option.None<int>()).FilterAsync((value, token) =>
         {
             called = true;
             return Task.FromResult(true);
@@ -326,7 +325,7 @@ public sealed class OptionAsyncParityTests
     {
         var called = false;
 
-        var option = await Option.None<int>().FilterAsync(value =>
+        var option = await OptionTask.From(Option.None<int>()).FilterAsync((value, _) =>
         {
             called = true;
             return Task.FromResult(value > 0);
@@ -341,8 +340,9 @@ public sealed class OptionAsyncParityTests
     {
         using var cts = new CancellationTokenSource();
 
-        var kept = await Task.FromResult(Option.Some(2))
-            .FilterAsync((value, token) => Task.FromResult(token == cts.Token && value % 2 == 0), cts.Token);
+        var kept = await OptionTask.From(Task.FromResult(Option.Some(2)))
+            .WithCancellation(cts.Token)
+            .FilterAsync((value, token) => Task.FromResult(token == cts.Token && value % 2 == 0));
 
         await Assert.That(kept.Expect("test")).IsEqualTo(2);
     }
@@ -352,7 +352,7 @@ public sealed class OptionAsyncParityTests
     {
         var called = false;
 
-        var option = await Task.FromResult(Option.None<int>()).FilterAsync((value, token) =>
+        var option = await OptionTask.From(Task.FromResult(Option.None<int>())).FilterAsync((value, token) =>
         {
             called = true;
             return Task.FromResult(true);
@@ -366,7 +366,7 @@ public sealed class OptionAsyncParityTests
     public async Task MapSomeAsync_FromSyncOption_WithNullMapperTask_FaultsWithInvalidOperation()
     {
         var exception = await TestSupport.CatchAsync(() =>
-            Option.Some(1).MapSomeAsync<int, int>(_ => null!));
+            OptionTask.From(Option.Some(1)).MapSomeAsync((_, _) => (Task<int>)null!));
 
         await Assert.That(exception is InvalidOperationException).IsTrue();
     }
@@ -375,7 +375,7 @@ public sealed class OptionAsyncParityTests
     public async Task BindNoneAsync_FromSyncOption_WithNullFallbackTask_FaultsWithInvalidOperation()
     {
         var exception = await TestSupport.CatchAsync(() =>
-            Option.None<int>().BindNoneAsync(() => null!));
+            OptionTask.From(Option.None<int>()).BindNone(_ => null!));
 
         await Assert.That(exception is InvalidOperationException).IsTrue();
     }
@@ -384,7 +384,7 @@ public sealed class OptionAsyncParityTests
     public async Task TeeSomeAsync_FromSyncOption_WithNullActionTask_FaultsWithInvalidOperation()
     {
         var exception = await TestSupport.CatchAsync(() =>
-            Option.Some(1).TeeSomeAsync(_ => null!));
+            OptionTask.From(Option.Some(1)).TeeSomeAsync((_, _) => (Task)null!));
 
         await Assert.That(exception is InvalidOperationException).IsTrue();
     }
@@ -392,8 +392,8 @@ public sealed class OptionAsyncParityTests
     [Test]
     public async Task FilterAsync_FromSyncOption_WithNullPredicateTask_FaultsWithInvalidOperation()
     {
-        var exception = await TestSupport.CatchAsync(() =>
-            Option.Some(1).FilterAsync(_ => null!));
+        var exception = await TestSupport.CatchAsync(async () =>
+            await OptionTask.From(Option.Some(1)).FilterAsync((_, _) => null!));
 
         await Assert.That(exception is InvalidOperationException).IsTrue();
     }
