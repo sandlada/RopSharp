@@ -74,8 +74,8 @@ public sealed class EitherTests
         var left = Either.Left<string, int>("bad").ToResult(_ => error);
         var right = Either.Right<string, int>(42).ToResult(_ => error);
 
-        await Assert.That(left.ErrOrThrow()).IsSameReferenceAs(error);
-        await Assert.That(right.OrThrow()).IsEqualTo(42);
+        await Assert.That(left.ExpectErr()).IsSameReferenceAs(error);
+        await Assert.That(right.Expect("test")).IsEqualTo(42);
     }
 
     [Test]

@@ -83,7 +83,7 @@ public sealed class AsyncCancellationTests
 
         var roundTrip = Result.Err<int>(error).ToValidation().ToSingleError();
 
-        await Assert.That(roundTrip.ErrOrThrow()).IsSameReferenceAs(error);
+        await Assert.That(roundTrip.ExpectErr()).IsSameReferenceAs(error);
     }
 
     [Test]

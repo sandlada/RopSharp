@@ -118,7 +118,7 @@ public sealed class MaintenanceHardeningTests
         var same = Result.Ok<int, RopError>(1).MapOk<int, string?, RopError>(_ => null);
 
         await Assert.That(withNull.GetHashCode()).IsEqualTo(same.GetHashCode());
-        await Assert.That(withNull.OrThrow()).IsNull();
+        await Assert.That(withNull.Expect("test")).IsNull();
     }
 
     // ---------------------------------------------------------------- conditional / ensure branches
@@ -136,7 +136,7 @@ public sealed class MaintenanceHardeningTests
         });
 
         await Assert.That(called).IsFalse();
-        await Assert.That(result.ErrOrThrow().Code).IsEqualTo("E_TEST");
+        await Assert.That(result.ExpectErr().Code).IsEqualTo("E_TEST");
     }
 
     [Test]
@@ -145,8 +145,8 @@ public sealed class MaintenanceHardeningTests
         var result = Result.Ok<int, RopError>(5)
             .FailIf(value => value > 0, value => RopError.Create("E_REJECT", $"rejected {value}"));
 
-        await Assert.That(result.ErrOrThrow().Code).IsEqualTo("E_REJECT");
-        await Assert.That(result.ErrOrThrow().Message).IsEqualTo("rejected 5");
+        await Assert.That(result.ExpectErr().Code).IsEqualTo("E_REJECT");
+        await Assert.That(result.ExpectErr().Message).IsEqualTo("rejected 5");
     }
 
     [Test]
@@ -157,7 +157,7 @@ public sealed class MaintenanceHardeningTests
 
         var result = source.RequireNotNull(() => App("E_NULL", "required"));
 
-        await Assert.That(result.OrThrow()).IsEqualTo("x");
+        await Assert.That(result.Expect("test")).IsEqualTo("x");
     }
 
     [Test]
@@ -170,7 +170,7 @@ public sealed class MaintenanceHardeningTests
             (a, b, c) => a + b + c);
 
         await Assert.That(result.IsOk).IsTrue();
-        await Assert.That(result.OrThrow()).IsEqualTo(6);
+        await Assert.That(result.Expect("test")).IsEqualTo(6);
     }
 
     [Test]
@@ -185,7 +185,7 @@ public sealed class MaintenanceHardeningTests
         });
 
         await Assert.That(called).IsFalse();
-        await Assert.That(result.OrThrow()).IsEqualTo(1);
+        await Assert.That(result.Expect("test")).IsEqualTo(1);
     }
 
     [Test]
@@ -193,7 +193,7 @@ public sealed class MaintenanceHardeningTests
     {
         var result = Result.SuccessIf(false, 1, () => Sample.Error("E_CONDITION"));
 
-        await Assert.That(result.ErrOrThrow().Code).IsEqualTo("E_CONDITION");
+        await Assert.That(result.ExpectErr().Code).IsEqualTo("E_CONDITION");
     }
 
     [Test]
@@ -201,7 +201,7 @@ public sealed class MaintenanceHardeningTests
     {
         var result = Result.FailureIf(true, 1, () => Sample.Error("E_REJECT"));
 
-        await Assert.That(result.ErrOrThrow().Code).IsEqualTo("E_REJECT");
+        await Assert.That(result.ExpectErr().Code).IsEqualTo("E_REJECT");
     }
 
     [Test]
@@ -209,7 +209,7 @@ public sealed class MaintenanceHardeningTests
     {
         var result = Result.SuccessIf(false, 1, () => App("E_CONDITION", "not allowed"));
 
-        await Assert.That(result.ErrOrThrow().Code).IsEqualTo("E_CONDITION");
+        await Assert.That(result.ExpectErr().Code).IsEqualTo("E_CONDITION");
     }
 
     [Test]
@@ -224,7 +224,7 @@ public sealed class MaintenanceHardeningTests
         });
 
         await Assert.That(called).IsFalse();
-        await Assert.That(result.OrThrow()).IsEqualTo(1);
+        await Assert.That(result.Expect("test")).IsEqualTo(1);
     }
 
     // ---------------------------------------------------------------- factory hardening
@@ -324,7 +324,7 @@ public sealed class MaintenanceHardeningTests
             "anything",
             failure => new AppError(failure.Code, failure.Message));
 
-        await Assert.That(result.ErrOrThrow().Code).IsEqualTo("E_PARSE");
+        await Assert.That(result.ExpectErr().Code).IsEqualTo("E_PARSE");
     }
 
     [Test]
@@ -332,8 +332,8 @@ public sealed class MaintenanceHardeningTests
     {
         var result = Result.Parse<NullParsable>("anything");
 
-        await Assert.That(result.ErrOrThrow().Code).IsEqualTo("E_PARSE");
-        await Assert.That(result.ErrOrThrow().Details).IsEqualTo("input=\"anything\"");
+        await Assert.That(result.ExpectErr().Code).IsEqualTo("E_PARSE");
+        await Assert.That(result.ExpectErr().Details).IsEqualTo("input=\"anything\"");
     }
 
     // ---------------------------------------------------------------- async partitioning
@@ -419,7 +419,7 @@ public sealed class MaintenanceHardeningTests
         var result = Result.Sequence(source);
 
         await Assert.That(source.Enumerations).IsEqualTo(1);
-        await Assert.That(result.OrThrow().Count).IsEqualTo(2);
+        await Assert.That(result.Expect("test").Count).IsEqualTo(2);
     }
 
     [Test]
@@ -430,7 +430,7 @@ public sealed class MaintenanceHardeningTests
         var result = Result.Traverse<int, int, RopError>(source, value => Result.Ok<int, RopError>(value * 2));
 
         await Assert.That(source.Enumerations).IsEqualTo(1);
-        await Assert.That(result.OrThrow().Count).IsEqualTo(3);
+        await Assert.That(result.Expect("test").Count).IsEqualTo(3);
     }
 
     [Test]
@@ -552,11 +552,11 @@ public sealed class MaintenanceHardeningTests
     [Test]
     public async Task MaterializedCollections_AreReadOnly()
     {
-        var values = Result.Sequence([Result.Ok<int, RopError>(1), Result.Ok<int, RopError>(2)]).OrThrow();
+        var values = Result.Sequence([Result.Ok<int, RopError>(1), Result.Ok<int, RopError>(2)]).Expect("test");
         var errors = Result.Validate(
             Result.Err<int>(Sample.Error("E_A")),
             Result.Err<int>(Sample.Error("E_B")),
-            (a, b) => a + b).ErrOrThrow();
+            (a, b) => a + b).ExpectErr();
 
         var valueMutation = TestSupport.Catch(() => ((IList<int>)values).Add(3));
         var errorMutation = TestSupport.Catch(() => ((IList<RopError>)errors).Add(Sample.Error()));
@@ -575,7 +575,7 @@ public sealed class MaintenanceHardeningTests
         {
             var mapped = shared.MapOk(value => value + offset);
             var combined = RopError.Combine([error, error]);
-            return mapped.OrThrow() == 42 + offset
+            return mapped.Expect("test") == 42 + offset
                 && combined.InnerErrors.Count == 2
                 && combined.Details == "E_SHARED";
         })));
@@ -602,9 +602,9 @@ public sealed class MaintenanceHardeningTests
             .Throws<InvalidOperationException>();
         await Assert.That(() => result.TeeErr(_ => { }))
             .Throws<InvalidOperationException>();
-        await Assert.That(() => result.ErrOrThrow())
+        await Assert.That(() => result.ExpectErr())
             .Throws<InvalidOperationException>();
-        await Assert.That(() => result.OrThrow())
+        await Assert.That(() => result.Expect("test"))
             .Throws<InvalidOperationException>();
         await Assert.That(() => result.TryGetErr(out _))
             .Throws<InvalidOperationException>();
@@ -637,7 +637,7 @@ public sealed class MaintenanceHardeningTests
 
         await Assert.That(failed.TryGetErr(out var actual)).IsTrue();
         await Assert.That(ReferenceEquals(actual, error)).IsTrue();
-        await Assert.That(failed.ErrOrThrow().Code).IsEqualTo("E_VALID");
+        await Assert.That(failed.ExpectErr().Code).IsEqualTo("E_VALID");
         await Assert.That(failed.Match(ok: value => value, err: e => e.Code == "E_VALID" ? 1 : 0))
             .IsEqualTo(1);
         await Assert.That(succeeded.TryGetErr(out _)).IsFalse();
@@ -651,7 +651,7 @@ public sealed class MaintenanceHardeningTests
 
         await Assert.That(result.TryGetErr(out var error)).IsTrue();
         await Assert.That(error.Status).IsEqualTo(0);
-        await Assert.That(result.ErrOrThrow().Status).IsEqualTo(0);
+        await Assert.That(result.ExpectErr().Status).IsEqualTo(0);
         await Assert.That(result.Match(ok: value => value, err: e => e.Status)).IsEqualTo(0);
     }
 
@@ -661,7 +661,7 @@ public sealed class MaintenanceHardeningTests
         var result = default(Result<int, int?>);
 
         await Assert.That(() => result.TryGetErr(out _)).Throws<InvalidOperationException>();
-        await Assert.That(() => result.ErrOrThrow()).Throws<InvalidOperationException>();
+        await Assert.That(() => result.ExpectErr()).Throws<InvalidOperationException>();
 
         var valid = Result.Err<int, int?>(5);
         await Assert.That(valid.TryGetErr(out var error)).IsTrue();
@@ -684,7 +684,7 @@ public sealed class MaintenanceHardeningTests
         var result = default(Result<int, AppError>);
 
         await Assert.That(() => result.TryGetErr(out _)).Throws<InvalidOperationException>();
-        await Assert.That(() => result.ErrOrThrow()).Throws<InvalidOperationException>();
+        await Assert.That(() => result.ExpectErr()).Throws<InvalidOperationException>();
         await Assert.That(() => result.Match(ok: value => value.ToString(), err: error => error.Code))
             .Throws<InvalidOperationException>();
     }

@@ -9,7 +9,7 @@ public sealed class OptionAsyncLinqTests
     {
         var option = await Task.FromResult(Option.Some(2)).Select(value => value * 3);
 
-        await Assert.That(option.OrThrow()).IsEqualTo(6);
+        await Assert.That(option.Expect("test")).IsEqualTo(6);
     }
 
     [Test]
@@ -26,7 +26,7 @@ public sealed class OptionAsyncLinqTests
         var kept = await Task.FromResult(Option.Some(2)).Where(value => value % 2 == 0);
         var dropped = await Task.FromResult(Option.Some(3)).Where(value => value % 2 == 0);
 
-        await Assert.That(kept.OrThrow()).IsEqualTo(2);
+        await Assert.That(kept.Expect("test")).IsEqualTo(2);
         await Assert.That(dropped.IsNone).IsTrue();
     }
 
@@ -37,7 +37,7 @@ public sealed class OptionAsyncLinqTests
             value => Task.FromResult(Option.Some(value + 1)),
             static (first, second) => first + second);
 
-        await Assert.That(option.OrThrow()).IsEqualTo(3);
+        await Assert.That(option.Expect("test")).IsEqualTo(3);
     }
 
     [Test]
@@ -47,7 +47,7 @@ public sealed class OptionAsyncLinqTests
             value => Option.Some(value + 1),
             static (first, second) => first + second);
 
-        await Assert.That(option.OrThrow()).IsEqualTo(3);
+        await Assert.That(option.Expect("test")).IsEqualTo(3);
     }
 
     [Test]
@@ -115,7 +115,7 @@ public sealed class OptionAsyncLinqTests
 
         var option = await query;
 
-        await Assert.That(option.OrThrow()).IsEqualTo(6);
+        await Assert.That(option.Expect("test")).IsEqualTo(6);
     }
 
     [Test]
@@ -128,6 +128,6 @@ public sealed class OptionAsyncLinqTests
 
         var option = await query;
 
-        await Assert.That(option.OrThrow()).IsEqualTo(3);
+        await Assert.That(option.Expect("test")).IsEqualTo(3);
     }
 }

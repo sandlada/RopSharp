@@ -9,7 +9,7 @@ public sealed class OptionAsyncTests
     {
         var option = await Option.Some(5).AsTask();
 
-        await Assert.That(option.OrThrow()).IsEqualTo(5);
+        await Assert.That(option.Expect("test")).IsEqualTo(5);
     }
 
     [Test]
@@ -17,7 +17,7 @@ public sealed class OptionAsyncTests
     {
         var option = await Task.FromResult(Option.Some(2)).MapSomeAsync(value => value * 10);
 
-        await Assert.That(option.OrThrow()).IsEqualTo(20);
+        await Assert.That(option.Expect("test")).IsEqualTo(20);
     }
 
     [Test]
@@ -25,7 +25,7 @@ public sealed class OptionAsyncTests
     {
         var option = await Task.FromResult(Option.Some(2)).MapSomeAsync(value => Task.FromResult(value * 10));
 
-        await Assert.That(option.OrThrow()).IsEqualTo(20);
+        await Assert.That(option.Expect("test")).IsEqualTo(20);
     }
 
     [Test]
@@ -36,7 +36,7 @@ public sealed class OptionAsyncTests
         var option = await Task.FromResult(Option.Some(2))
             .MapSomeAsync((value, token) => Task.FromResult(token == cts.Token ? value + 1 : -1), cts.Token);
 
-        await Assert.That(option.OrThrow()).IsEqualTo(3);
+        await Assert.That(option.Expect("test")).IsEqualTo(3);
     }
 
     [Test]
@@ -61,7 +61,7 @@ public sealed class OptionAsyncTests
             .BindSomeAsync(value => Task.FromResult(Option.Some(value * 3)))
             .BindSomeAsync(value => Task.FromResult(Option.Some(value + 1)));
 
-        await Assert.That(option.OrThrow()).IsEqualTo(7);
+        await Assert.That(option.Expect("test")).IsEqualTo(7);
     }
 
     [Test]
@@ -72,7 +72,7 @@ public sealed class OptionAsyncTests
         var option = await Task.FromResult(Option.Some(2))
             .BindSomeAsync((value, token) => Task.FromResult(Option.Some(token == cts.Token ? value + 1 : 0)), cts.Token);
 
-        await Assert.That(option.OrThrow()).IsEqualTo(3);
+        await Assert.That(option.Expect("test")).IsEqualTo(3);
     }
 
     [Test]
@@ -80,7 +80,7 @@ public sealed class OptionAsyncTests
     {
         var option = await Option.Some(2).BindSomeAsync(value => Task.FromResult(Option.Some(value * 4)));
 
-        await Assert.That(option.OrThrow()).IsEqualTo(8);
+        await Assert.That(option.Expect("test")).IsEqualTo(8);
     }
 
     [Test]
@@ -88,7 +88,7 @@ public sealed class OptionAsyncTests
     {
         var option = await Task.FromResult(Option.None<int>()).BindNoneAsync(() => Task.FromResult(Option.Some(7)));
 
-        await Assert.That(option.OrThrow()).IsEqualTo(7);
+        await Assert.That(option.Expect("test")).IsEqualTo(7);
     }
 
     [Test]
@@ -99,7 +99,7 @@ public sealed class OptionAsyncTests
         var option = await Task.FromResult(Option.None<int>())
             .BindNoneAsync(token => Task.FromResult(Option.Some(token == cts.Token ? 1 : 0)), cts.Token);
 
-        await Assert.That(option.OrThrow()).IsEqualTo(1);
+        await Assert.That(option.Expect("test")).IsEqualTo(1);
     }
 
     [Test]
@@ -114,7 +114,7 @@ public sealed class OptionAsyncTests
         });
 
         await Assert.That(called).IsFalse();
-        await Assert.That(option.OrThrow()).IsEqualTo(1);
+        await Assert.That(option.Expect("test")).IsEqualTo(1);
     }
 
     [Test]
@@ -129,7 +129,7 @@ public sealed class OptionAsyncTests
         });
 
         await Assert.That(observed).IsEqualTo(3);
-        await Assert.That(option.OrThrow()).IsEqualTo(3);
+        await Assert.That(option.Expect("test")).IsEqualTo(3);
     }
 
     [Test]
@@ -153,7 +153,7 @@ public sealed class OptionAsyncTests
         var kept = await Task.FromResult(Option.Some(2)).FilterAsync(value => value % 2 == 0);
         var dropped = await Task.FromResult(Option.Some(3)).FilterAsync(value => value % 2 == 0);
 
-        await Assert.That(kept.OrThrow()).IsEqualTo(2);
+        await Assert.That(kept.Expect("test")).IsEqualTo(2);
         await Assert.That(dropped.IsNone).IsTrue();
     }
 
@@ -163,7 +163,7 @@ public sealed class OptionAsyncTests
         var kept = await Task.FromResult(Option.Some(2)).FilterAsync(value => Task.FromResult(value % 2 == 0));
         var dropped = await Task.FromResult(Option.Some(3)).FilterAsync(value => Task.FromResult(value % 2 == 0));
 
-        await Assert.That(kept.OrThrow()).IsEqualTo(2);
+        await Assert.That(kept.Expect("test")).IsEqualTo(2);
         await Assert.That(dropped.IsNone).IsTrue();
     }
 

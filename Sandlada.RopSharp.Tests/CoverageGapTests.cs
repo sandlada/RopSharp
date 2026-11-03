@@ -17,7 +17,7 @@ public sealed class CoverageGapTests
         var result = await Result.Ok(2)
             .BindOkAsync((value, token) => Task.FromResult(Result.Ok(value + (token == cts.Token ? 1 : 0))), cts.Token);
 
-        await Assert.That(result.OrThrow()).IsEqualTo(3);
+        await Assert.That(result.Expect("test")).IsEqualTo(3);
     }
 
     [Test]
@@ -33,7 +33,7 @@ public sealed class CoverageGapTests
         }, CancellationToken.None);
 
         await Assert.That(called).IsFalse();
-        await Assert.That(result.ErrOrThrow()).IsSameReferenceAs(error);
+        await Assert.That(result.ExpectErr()).IsSameReferenceAs(error);
     }
 
     [Test]
@@ -61,7 +61,7 @@ public sealed class CoverageGapTests
         var result = await Result.Err<int>(Sample.Error())
             .BindErrAsync((_, token) => Task.FromResult(Result.Ok(token == cts.Token ? 1 : 0)), cts.Token);
 
-        await Assert.That(result.OrThrow()).IsEqualTo(1);
+        await Assert.That(result.Expect("test")).IsEqualTo(1);
     }
 
     [Test]
@@ -70,7 +70,7 @@ public sealed class CoverageGapTests
         var result = await Result.Ok(1)
             .BindErrAsync((_, _) => Task.FromResult(Result.Ok(2)), CancellationToken.None);
 
-        await Assert.That(result.OrThrow()).IsEqualTo(1);
+        await Assert.That(result.Expect("test")).IsEqualTo(1);
     }
 
     [Test]
@@ -78,7 +78,7 @@ public sealed class CoverageGapTests
     {
         var query = Result.Ok(2).SelectMany(value => Result.Ok(value * 3));
 
-        await Assert.That(query.OrThrow()).IsEqualTo(6);
+        await Assert.That(query.Expect("test")).IsEqualTo(6);
     }
 
     [Test]
@@ -87,8 +87,8 @@ public sealed class CoverageGapTests
         var projected = Option.Some(2).Select(value => value + 1);
         var bound = Option.Some(2).SelectMany(value => Option.Some(value * 3));
 
-        await Assert.That(projected.OrThrow()).IsEqualTo(3);
-        await Assert.That(bound.OrThrow()).IsEqualTo(6);
+        await Assert.That(projected.Expect("test")).IsEqualTo(3);
+        await Assert.That(bound.Expect("test")).IsEqualTo(6);
     }
 
     [Test]
@@ -163,8 +163,8 @@ public sealed class CoverageGapTests
         });
 
         await Assert.That(called).IsFalse();
-        await Assert.That(asyncResult.OrThrow()).IsEqualTo(1);
-        await Assert.That(ctResult.OrThrow()).IsEqualTo(1);
+        await Assert.That(asyncResult.Expect("test")).IsEqualTo(1);
+        await Assert.That(ctResult.Expect("test")).IsEqualTo(1);
     }
 
     [Test]
@@ -231,7 +231,7 @@ public sealed class CoverageGapTests
     {
         var result = await Result.TraverseAsync(Array.Empty<int>(), value => Task.FromResult(Result.Ok(value)));
 
-        await Assert.That(result.OrThrow().Count).IsEqualTo(0);
+        await Assert.That(result.Expect("test").Count).IsEqualTo(0);
     }
 
     [Test]
@@ -276,7 +276,7 @@ public sealed class CoverageGapTests
         });
 
         await Assert.That(called).IsFalse();
-        await Assert.That(result.ErrOrThrow()).IsSameReferenceAs(error);
+        await Assert.That(result.ExpectErr()).IsSameReferenceAs(error);
     }
 
     [Test]
@@ -292,7 +292,7 @@ public sealed class CoverageGapTests
         });
 
         await Assert.That(called).IsFalse();
-        await Assert.That(result.ErrOrThrow()).IsSameReferenceAs(error);
+        await Assert.That(result.ExpectErr()).IsSameReferenceAs(error);
     }
 
     [Test]
@@ -300,7 +300,7 @@ public sealed class CoverageGapTests
     {
         var result = await Result.Ok(1).BindErrAsync(_ => Task.FromResult(Result.Ok(9)));
 
-        await Assert.That(result.OrThrow()).IsEqualTo(1);
+        await Assert.That(result.Expect("test")).IsEqualTo(1);
     }
 
     [Test]
@@ -329,10 +329,10 @@ public sealed class CoverageGapTests
         var ctNone = await Task.FromResult(Option.None<int>()).BindNoneAsync(_ => Task.FromResult(Option.Some(7)));
         var ctSome = await Task.FromResult(Option.Some(1)).BindNoneAsync(_ => Task.FromResult(Option.Some(9)));
 
-        await Assert.That(noArgNone.OrThrow()).IsEqualTo(5);
-        await Assert.That(noArgSome.OrThrow()).IsEqualTo(1);
-        await Assert.That(ctNone.OrThrow()).IsEqualTo(7);
-        await Assert.That(ctSome.OrThrow()).IsEqualTo(1);
+        await Assert.That(noArgNone.Expect("test")).IsEqualTo(5);
+        await Assert.That(noArgSome.Expect("test")).IsEqualTo(1);
+        await Assert.That(ctNone.Expect("test")).IsEqualTo(7);
+        await Assert.That(ctSome.Expect("test")).IsEqualTo(1);
     }
 
     [Test]
@@ -354,9 +354,9 @@ public sealed class CoverageGapTests
             .MapOkAsync((value, _) => Task.FromResult(value + 1));
         var resultReceiver = await Result.Err<int>(error).MapOkAsync(value => Task.FromResult(value + 1));
 
-        await Assert.That(taskReceiver.ErrOrThrow()).IsSameReferenceAs(error);
-        await Assert.That(taskReceiverCt.ErrOrThrow()).IsSameReferenceAs(error);
-        await Assert.That(resultReceiver.ErrOrThrow()).IsSameReferenceAs(error);
+        await Assert.That(taskReceiver.ExpectErr()).IsSameReferenceAs(error);
+        await Assert.That(taskReceiverCt.ExpectErr()).IsSameReferenceAs(error);
+        await Assert.That(resultReceiver.ExpectErr()).IsSameReferenceAs(error);
     }
 
     [Test]
@@ -367,7 +367,7 @@ public sealed class CoverageGapTests
         var taskReceiver = await Task.FromResult(Result.Err<int>(error))
             .BindOkAsync((value, _) => Task.FromResult(Result.Ok(value)));
 
-        await Assert.That(taskReceiver.ErrOrThrow()).IsSameReferenceAs(error);
+        await Assert.That(taskReceiver.ExpectErr()).IsSameReferenceAs(error);
     }
 
     [Test]
@@ -385,8 +385,8 @@ public sealed class CoverageGapTests
         var taskReceiver = await Task.FromResult(Result.Ok(1)).BindErrAsync(_ => Task.FromResult(Result.Ok(2)));
         var taskReceiverCt = await Task.FromResult(Result.Ok(1)).BindErrAsync((_, _) => Task.FromResult(Result.Ok(3)));
 
-        await Assert.That(taskReceiver.OrThrow()).IsEqualTo(1);
-        await Assert.That(taskReceiverCt.OrThrow()).IsEqualTo(1);
+        await Assert.That(taskReceiver.Expect("test")).IsEqualTo(1);
+        await Assert.That(taskReceiverCt.Expect("test")).IsEqualTo(1);
     }
 
     [Test]
@@ -437,7 +437,7 @@ public sealed class CoverageGapTests
             });
 
         await Assert.That(mergerCalled).IsFalse();
-        await Assert.That(result.ErrOrThrow()).IsSameReferenceAs(error);
+        await Assert.That(result.ExpectErr()).IsSameReferenceAs(error);
     }
 
     [Test]
@@ -470,6 +470,6 @@ public sealed class CoverageGapTests
         var transposed = Option.Some(inner).Transpose();
 
         await Assert.That(transposed.IsOk).IsTrue();
-        await Assert.That(transposed.OrThrow().IsNone).IsTrue();
+        await Assert.That(transposed.Expect("test").IsNone).IsTrue();
     }
 }

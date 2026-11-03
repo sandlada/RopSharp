@@ -11,6 +11,13 @@ Planned for **0.0.2**.
 ### Added
 
 - `Either<TLeft,TRight>.BindLeft` and `BindRight` for chaining another either on the active branch.
+- `Result<TOk,TErr>.Expect(string reason)` and `Option<T>.Expect(string reason)` for boundary exits that must
+  include a non-empty reason when unwrapping.
+
+### Removed
+
+- `Result<TOk,TErr>.OkOrDefault`, `ResultExtensions.OrThrow` / `OkOrThrow` / `ErrOrThrow`, and
+  `OptionExtensions.OrThrow` (use `Match`, `TryGet*`, or `Expect` with an explicit reason).
 
 ### Changed
 

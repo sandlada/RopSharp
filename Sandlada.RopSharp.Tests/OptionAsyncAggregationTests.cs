@@ -12,7 +12,7 @@ public sealed class OptionAsyncAggregationTests
             Task.FromResult(Option.Some(2)),
             static (first, second) => first + second);
 
-        await Assert.That(option.OrThrow()).IsEqualTo(3);
+        await Assert.That(option.Expect("test")).IsEqualTo(3);
     }
 
     [Test]
@@ -42,7 +42,7 @@ public sealed class OptionAsyncAggregationTests
             Task.FromResult(Option.Some(3)),
             static (first, second, third) => first + second + third);
 
-        await Assert.That(option.OrThrow()).IsEqualTo(6);
+        await Assert.That(option.Expect("test")).IsEqualTo(6);
     }
 
     [Test]
@@ -78,7 +78,7 @@ public sealed class OptionAsyncAggregationTests
     {
         var option = await Option.ZipAsync(Task.FromResult(Option.Some(1)), Task.FromResult(Option.Some("a")));
 
-        await Assert.That(option.OrThrow()).IsEqualTo((1, "a"));
+        await Assert.That(option.Expect("test")).IsEqualTo((1, "a"));
     }
 
     [Test]
@@ -89,7 +89,7 @@ public sealed class OptionAsyncAggregationTests
             Task.FromResult(Option.Some("a")),
             Task.FromResult(Option.Some(true)));
 
-        await Assert.That(option.OrThrow()).IsEqualTo((1, "a", true));
+        await Assert.That(option.Expect("test")).IsEqualTo((1, "a", true));
     }
 
     [Test]
@@ -111,7 +111,7 @@ public sealed class OptionAsyncAggregationTests
         ]);
 
         await Assert.That(option.IsSome).IsTrue();
-        await TestSupport.AssertSequenceAsync(option.OrThrow(), [1, 2, 3]);
+        await TestSupport.AssertSequenceAsync(option.Expect("test"), [1, 2, 3]);
     }
 
     [Test]
@@ -120,7 +120,7 @@ public sealed class OptionAsyncAggregationTests
         var option = await Option.SequenceAsync<int>([]);
 
         await Assert.That(option.IsSome).IsTrue();
-        await Assert.That(option.OrThrow().Count).IsEqualTo(0);
+        await Assert.That(option.Expect("test").Count).IsEqualTo(0);
     }
 
     [Test]
@@ -169,7 +169,7 @@ public sealed class OptionAsyncAggregationTests
             value => Task.FromResult(Option.Some(value * 10)));
 
         await Assert.That(option.IsSome).IsTrue();
-        await TestSupport.AssertSequenceAsync(option.OrThrow(), [10, 20, 30]);
+        await TestSupport.AssertSequenceAsync(option.Expect("test"), [10, 20, 30]);
     }
 
     [Test]
@@ -180,7 +180,7 @@ public sealed class OptionAsyncAggregationTests
             value => Task.FromResult(Option.Some(value)));
 
         await Assert.That(option.IsSome).IsTrue();
-        await Assert.That(option.OrThrow().Count).IsEqualTo(0);
+        await Assert.That(option.Expect("test").Count).IsEqualTo(0);
     }
 
     [Test]
@@ -211,7 +211,7 @@ public sealed class OptionAsyncAggregationTests
             cts.Token);
 
         await Assert.That(option.IsSome).IsTrue();
-        await TestSupport.AssertSequenceAsync(option.OrThrow(), [2, 4]);
+        await TestSupport.AssertSequenceAsync(option.Expect("test"), [2, 4]);
     }
 
     [Test]

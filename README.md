@@ -97,7 +97,7 @@ int fallback = result.BindErrValue(0);
 int lazy     = result.BindErrValue(() => ComputeDefault());
 ```
 
-`OrThrow()`, `OkOrThrow()` and `ErrOrThrow()` exist for tests and boundaries only.
+`Expect(string reason)` on `Result` and `Option` is for tests and boundaries only; the reason is required when unwrapping.
 
 ## Option quick start
 
@@ -405,12 +405,12 @@ Three larger topics are deliberately caller-owned (ADR 0010):
 ```text
 Result.Ok<T>(value)                              Result.Err<T>(error)
 Result.Ok<TOk,TErr>(value)                       Result.Err<TOk,TErr>(error)
-TryGetOk / TryGetErr / OkOrDefault / IsOk / IsErr
+TryGetOk / TryGetErr / IsOk / IsErr
 MapOk / MapErr / TeeOk / TeeErr
 Ensure(predicate, error) / Ensure(predicate, errorFactory)
 MapOkValue / RequireNotNull
 BindOk / BindErr / BindErrValue(value|factory)
-Match(ok, err) / OrThrow / OkOrThrow / ErrOrThrow
+Match(ok, err) / Expect(reason)
 ```
 
 ### Result (aggregation and boundaries)
@@ -458,7 +458,7 @@ Option.CombineAsync (2, 3) / Option.ZipAsync (2, 3)
 Option.SequenceAsync / Option.TraverseAsync (async | CT-aware mapper)
 MapSome / TeeSome / TeeNone / Filter / MapSomeValue
 BindSome / BindSomeNullable / BindSomeNullableValue / BindNone / BindNoneValue
-Flatten / Match / OrThrow
+Flatten / Match / Expect(reason)
 RequireSome(error|factory) / ToOption / ToEither(value|factory) / ToNullable / ToNullableValue / Transpose
 AsTask / MapSomeAsync (sync on Task; async | CT-aware on Option and Task)
 BindSomeAsync (async | CT-aware) / BindNoneAsync (async | CT-aware)
@@ -499,7 +499,7 @@ Parse<T,TErr>(value, Func<ParseFailure,TErr>, code = "E_PARSE")
 ## Anti-patterns
 
 - `try/catch` around a combinator chain — lift the boundary with `Result.Try` instead.
-- Using `OrThrow` in production — exit with `Match`, `BindErrValue` or `TryGet*`.
+- Using `Expect` without a meaningful reason in production — exit with `Match`, `BindErrValue` or `TryGet*`.
 - Using `null` to mean failure — use `Err`.
 - Using `Option` for domain failure that carries a code/message — use `Result`.
 - Wrapping a collection in `Option` — an empty collection is already empty.

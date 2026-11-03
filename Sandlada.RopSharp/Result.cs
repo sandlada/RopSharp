@@ -154,27 +154,6 @@ public readonly struct Result<TOk, TErr> : IEquatable<Result<TOk, TErr>>
         return _tag == TagErr;
     }
 
-    /// <summary>
-    /// Returns the success value when present, or the default of <typeparamref name="TOk"/> when on the failure track.
-    /// </summary>
-    /// <returns>The success value, or <see langword="default"/>.</returns>
-    /// <remarks>
-    /// <para>
-    /// Prefer <see cref="ResultExtensions.Match{TOk,TErr,T}(Result{TOk,TErr},Func{TOk,T},Func{TErr,T})"/> for
-    /// production exits. This member is the cheap escape hatch for a value that has a sensible default, such as
-    /// a zero amount in a report.
-    /// </para>
-    /// <code><![CDATA[
-    /// var charged = Result.Try(() => OrderFixtures.Charge(OrderFixtures.Sample), "E_CHARGE");
-    /// var amount = charged.MapOk(static payment => payment.Amount).OkOrDefault();
-    ///
-    /// // Ok(44.00) yields 44.00,
-    /// // Err(E_CHARGE) yields 0m - the error is discarded, so use it only where a default is acceptable.
-    /// ]]></code>
-    /// </remarks>
-    [return: MaybeNull]
-    public TOk OkOrDefault() => _ok;
-
     internal TOk OkUnsafe => _ok;
 
     internal bool IsInitialized => _tag != TagUninitialized;

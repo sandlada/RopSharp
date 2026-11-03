@@ -19,7 +19,7 @@ public sealed class ReviewRegressionTests
         var result = NullSuccess.MapErr(static error => error.WithCode("E_OTHER"));
 
         await Assert.That(result.IsOk).IsTrue();
-        await Assert.That(result.OkOrThrow()).IsNull();
+        await Assert.That(result.Expect("test")).IsNull();
     }
 
     [Test]
@@ -28,7 +28,7 @@ public sealed class ReviewRegressionTests
         var result = await Task.FromResult(NullSuccess).MapErrAsync(static error => error);
 
         await Assert.That(result.IsOk).IsTrue();
-        await Assert.That(result.OkOrThrow()).IsNull();
+        await Assert.That(result.Expect("test")).IsNull();
     }
 
     [Test]
@@ -37,7 +37,7 @@ public sealed class ReviewRegressionTests
         var result = await Task.FromResult(NullSuccess).MapErrAsync(static error => Task.FromResult(error));
 
         await Assert.That(result.IsOk).IsTrue();
-        await Assert.That(result.OkOrThrow()).IsNull();
+        await Assert.That(result.Expect("test")).IsNull();
     }
 
     [Test]
@@ -47,7 +47,7 @@ public sealed class ReviewRegressionTests
             .MapErrAsync(static (error, _) => Task.FromResult(error));
 
         await Assert.That(result.IsOk).IsTrue();
-        await Assert.That(result.OkOrThrow()).IsNull();
+        await Assert.That(result.Expect("test")).IsNull();
     }
 
     [Test]
@@ -56,7 +56,7 @@ public sealed class ReviewRegressionTests
         var result = await NullSuccess.MapErrAsync(static error => Task.FromResult(error));
 
         await Assert.That(result.IsOk).IsTrue();
-        await Assert.That(result.OkOrThrow()).IsNull();
+        await Assert.That(result.Expect("test")).IsNull();
     }
 
     [Test]
@@ -65,7 +65,7 @@ public sealed class ReviewRegressionTests
         var result = await NullSuccess.MapErrAsync(static (error, _) => Task.FromResult(error));
 
         await Assert.That(result.IsOk).IsTrue();
-        await Assert.That(result.OkOrThrow()).IsNull();
+        await Assert.That(result.Expect("test")).IsNull();
     }
 
     [Test]
@@ -74,7 +74,7 @@ public sealed class ReviewRegressionTests
         var lifted = NullSuccess.ToValidation();
 
         await Assert.That(lifted.IsOk).IsTrue();
-        await Assert.That(lifted.OkOrThrow()).IsNull();
+        await Assert.That(lifted.Expect("test")).IsNull();
     }
 
     [Test]
@@ -83,7 +83,7 @@ public sealed class ReviewRegressionTests
         var collapsed = NullSuccess.ToValidation().ToSingleError();
 
         await Assert.That(collapsed.IsOk).IsTrue();
-        await Assert.That(collapsed.OkOrThrow()).IsNull();
+        await Assert.That(collapsed.Expect("test")).IsNull();
     }
 
     [Test]
@@ -158,7 +158,7 @@ public sealed class ReviewRegressionTests
         var result = await Task.FromResult(Result.Err<int>(Sample.Error()))
             .MapOkAsync(static value => value + 1, source.Token);
 
-        await Assert.That(result.ErrOrThrow().Code).IsEqualTo("E_TEST");
+        await Assert.That(result.ExpectErr().Code).IsEqualTo("E_TEST");
     }
 
     [Test]
@@ -170,7 +170,7 @@ public sealed class ReviewRegressionTests
         var result = await Task.FromResult(Result.Err<int>(Sample.Error()))
             .TeeOkAsync(static _ => Task.CompletedTask, source.Token);
 
-        await Assert.That(result.ErrOrThrow().Code).IsEqualTo("E_TEST");
+        await Assert.That(result.ExpectErr().Code).IsEqualTo("E_TEST");
     }
 
     [Test]
@@ -205,7 +205,7 @@ public sealed class ReviewRegressionTests
             Result.Err<int>(Sample.Error("E_C", "third")),
             static (a, b, c) => a + b + c);
 
-        var errors = result.ErrOrThrow();
+        var errors = result.ExpectErr();
 
         await Assert.That(errors.Count).IsEqualTo(2);
         await Assert.That(errors[0].Code).IsEqualTo("E_B");

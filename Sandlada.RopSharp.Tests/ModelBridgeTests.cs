@@ -43,8 +43,8 @@ public sealed class ModelBridgeTests
         var failed = Result.Err<int>(error).ToEither().ToResult(identity => identity);
         var succeeded = Result.Ok(7).ToEither().ToResult(identity => identity);
 
-        await Assert.That(failed.ErrOrThrow()).IsSameReferenceAs(error);
-        await Assert.That(succeeded.OrThrow()).IsEqualTo(7);
+        await Assert.That(failed.ExpectErr()).IsSameReferenceAs(error);
+        await Assert.That(succeeded.Expect("test")).IsEqualTo(7);
     }
 
     [Test]
@@ -123,7 +123,7 @@ public sealed class ModelBridgeTests
         var option = Either.Right<string, int>(42).ToOption();
 
         await Assert.That(option.IsSome).IsTrue();
-        await Assert.That(option.OrThrow()).IsEqualTo(42);
+        await Assert.That(option.Expect("test")).IsEqualTo(42);
     }
 
     [Test]

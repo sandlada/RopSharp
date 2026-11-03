@@ -303,22 +303,36 @@ public static class OptionExtensions
     }
 
     /// <summary>
-    /// Returns the contained value or throws when the option is empty.
+    /// Returns the contained value when the option is <c>Some</c>.
     /// </summary>
     /// <typeparam name="T">The value type.</typeparam>
     /// <param name="option">The source option.</param>
+    /// <param name="reason">
+    /// A non-empty explanation of why unwrapping is justified at this boundary. Included in the exception when the
+    /// option is <c>None</c>.
+    /// </param>
     /// <returns>The contained value.</returns>
+    /// <exception cref="ArgumentException"><paramref name="reason"/> is null, empty, or whitespace.</exception>
     /// <exception cref="InvalidOperationException">The option is <c>None</c>.</exception>
-    /// <remarks>Intended for tests and boundaries only.
+    /// <remarks>
+    /// <para>
+    /// This is a boundary exit. Production code should prefer <see cref="Match{T,TResult}"/> or the bind/map
+    /// combinators.
+    /// </para>
     /// <code><![CDATA[
     /// var address = Option.FromNullable(OrderFixtures.Sample.Customer.Address);
-    /// var shipping = address.OrThrow();
+    /// var shipping = address.Expect("checkout requires a saved address");
     ///
     /// // Some(address) yields the address,
-    /// // None throws - OrThrow is for tests and boundaries only.
+    /// // None throws and the message includes the reason.
     /// ]]></code>
     /// </remarks>
-    public static T OrThrow<T>(this Option<T> option) => option.TryGetValue(out var value)
-        ? value
-        : throw new InvalidOperationException("Expected Some but was None.");
+    public static T Expect<T>(this Option<T> option, string reason)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(reason);
+
+        return option.TryGetValue(out var value)
+            ? value
+            : throw new InvalidOperationException($"{reason}: {option}");
+    }
 }

@@ -70,7 +70,7 @@ public sealed class OptionCoreTests
 
         var option = Option.FromNullable(value);
 
-        await Assert.That(option.OrThrow()).IsEqualTo("x");
+        await Assert.That(option.Expect("test")).IsEqualTo("x");
     }
 
     [Test]
@@ -90,7 +90,7 @@ public sealed class OptionCoreTests
 
         var option = Option.FromNullableValue(value);
 
-        await Assert.That(option.OrThrow()).IsEqualTo(5);
+        await Assert.That(option.Expect("test")).IsEqualTo(5);
     }
 
     [Test]
@@ -113,7 +113,7 @@ public sealed class OptionCoreTests
     {
         var option = Option.When(true, () => 7);
 
-        await Assert.That(option.OrThrow()).IsEqualTo(7);
+        await Assert.That(option.Expect("test")).IsEqualTo(7);
     }
 
     [Test]
@@ -153,11 +153,11 @@ public sealed class OptionCoreTests
     }
 
     [Test]
-    public async Task OrThrow_ReturnsValueOrThrows()
+    public async Task Expect_ReturnsValueOrThrows()
     {
-        await Assert.That(Option.Some(3).OrThrow()).IsEqualTo(3);
+        await Assert.That(Option.Some(3).Expect("test")).IsEqualTo(3);
 
-        var exception = TestSupport.Catch(() => Option.None<int>().OrThrow());
+        var exception = TestSupport.Catch(() => Option.None<int>().Expect("test"));
 
         await Assert.That(exception is InvalidOperationException).IsTrue();
     }
@@ -168,7 +168,7 @@ public sealed class OptionCoreTests
         var some = Option.Some(1).BindNoneValue(9);
         var none = Option.None<int>().BindNoneValue(9);
 
-        await Assert.That(some.OrThrow()).IsEqualTo(1);
-        await Assert.That(none.OrThrow()).IsEqualTo(9);
+        await Assert.That(some.Expect("test")).IsEqualTo(1);
+        await Assert.That(none.Expect("test")).IsEqualTo(9);
     }
 }

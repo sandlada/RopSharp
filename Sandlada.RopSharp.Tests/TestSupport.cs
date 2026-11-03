@@ -51,6 +51,13 @@ internal static class TestSupport
             return exception;
         }
     }
+
+    internal static TErr RequireErr<TOk, TErr>(Result<TOk, TErr> result) =>
+        result.TryGetErr(out var error)
+            ? error
+            : throw new InvalidOperationException($"Expected Err but was {result}.");
+
+    internal static TErr ExpectErr<TOk, TErr>(this Result<TOk, TErr> result) => RequireErr(result);
 }
 
 internal sealed class CountingSequence<T> : IEnumerable<T>

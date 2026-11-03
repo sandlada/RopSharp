@@ -34,7 +34,7 @@ public sealed class AsyncSuspensionTests
         var result = await pending;
 
         await Assert.That(mapperCalled).IsTrue();
-        await Assert.That(result.OrThrow()).IsEqualTo(2);
+        await Assert.That(result.Expect("test")).IsEqualTo(2);
     }
 
     [Test]
@@ -48,7 +48,7 @@ public sealed class AsyncSuspensionTests
         mapper.SetResult(5);
         var result = await pending;
 
-        await Assert.That(result.OrThrow()).IsEqualTo(5);
+        await Assert.That(result.Expect("test")).IsEqualTo(5);
     }
 
     [Test]
@@ -62,7 +62,7 @@ public sealed class AsyncSuspensionTests
         binder.SetResult(Result.Ok(9));
         var result = await pending;
 
-        await Assert.That(result.OrThrow()).IsEqualTo(9);
+        await Assert.That(result.Expect("test")).IsEqualTo(9);
     }
 
     [Test]
@@ -76,7 +76,7 @@ public sealed class AsyncSuspensionTests
         binder.SetResult(Result.Ok(7));
         var result = await pending;
 
-        await Assert.That(result.OrThrow()).IsEqualTo(7);
+        await Assert.That(result.Expect("test")).IsEqualTo(7);
     }
 
     [Test]
@@ -90,7 +90,7 @@ public sealed class AsyncSuspensionTests
         source.SetResult(Result.Err<int>(Sample.Error("E_X")));
         var result = await pending;
 
-        await Assert.That(result.ErrOrThrow().Code).IsEqualTo("E_LATE");
+        await Assert.That(result.ExpectErr().Code).IsEqualTo("E_LATE");
     }
 
     [Test]
@@ -104,7 +104,7 @@ public sealed class AsyncSuspensionTests
         fallback.SetResult(Result.Ok(11));
         var result = await pending;
 
-        await Assert.That(result.OrThrow()).IsEqualTo(11);
+        await Assert.That(result.Expect("test")).IsEqualTo(11);
     }
 
     [Test]
@@ -139,7 +139,7 @@ public sealed class AsyncSuspensionTests
         source.SetResult(Option.Some(4));
         var option = await pending;
 
-        await Assert.That(option.OrThrow()).IsEqualTo(8);
+        await Assert.That(option.Expect("test")).IsEqualTo(8);
     }
 
     [Test]
@@ -153,7 +153,7 @@ public sealed class AsyncSuspensionTests
         binder.SetResult(Option.Some(6));
         var option = await pending;
 
-        await Assert.That(option.OrThrow()).IsEqualTo(6);
+        await Assert.That(option.Expect("test")).IsEqualTo(6);
     }
 
     [Test]
@@ -167,7 +167,7 @@ public sealed class AsyncSuspensionTests
         fallback.SetResult(Option.Some(3));
         var option = await pending;
 
-        await Assert.That(option.OrThrow()).IsEqualTo(3);
+        await Assert.That(option.Expect("test")).IsEqualTo(3);
     }
 
     [Test]
@@ -216,7 +216,7 @@ public sealed class AsyncSuspensionTests
         source.SetResult(42);
         var result = await pending;
 
-        await Assert.That(result.OrThrow()).IsEqualTo(42);
+        await Assert.That(result.Expect("test")).IsEqualTo(42);
     }
 
     [Test]
@@ -230,6 +230,6 @@ public sealed class AsyncSuspensionTests
         source.SetResult(Result.Ok(5));
         var result = await pending;
 
-        await TestSupport.AssertSequenceAsync(result.OrThrow(), 5);
+        await TestSupport.AssertSequenceAsync(result.Expect("test"), 5);
     }
 }

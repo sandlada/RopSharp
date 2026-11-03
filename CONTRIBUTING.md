@@ -20,7 +20,7 @@ dotnet pack -c Release --no-build
 
 ```bash
 dotnet test -- --treenode-filter "/*/*/ResultCoreTests/*"
-dotnet test -- --treenode-filter "/*/*/ResultCoreTests/OrThrow_ReturnsValueOnSuccess"
+dotnet test -- --treenode-filter "/*/*/ResultCoreTests/Expect_ReturnsValueOnSuccess"
 ```
 
 The legacy VSTest `--filter "FullyQualifiedName~..."` syntax is not supported in this mode.

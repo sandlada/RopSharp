@@ -9,7 +9,7 @@ public sealed class OptionCollectionTests
     {
         var option = Option.Combine(Option.Some(2), Option.Some(3), (int a, int b) => a * b);
 
-        await Assert.That(option.OrThrow()).IsEqualTo(6);
+        await Assert.That(option.Expect("test")).IsEqualTo(6);
     }
 
     [Test]
@@ -32,7 +32,7 @@ public sealed class OptionCollectionTests
     {
         var option = Option.Combine(Option.Some(1), Option.Some(2), Option.Some(3), (int a, int b, int c) => a + b + c);
 
-        await Assert.That(option.OrThrow()).IsEqualTo(6);
+        await Assert.That(option.Expect("test")).IsEqualTo(6);
     }
 
     [Test]
@@ -46,8 +46,8 @@ public sealed class OptionCollectionTests
     [Test]
     public async Task Zip_PairsOptions()
     {
-        var pair = Option.Zip(Option.Some(1), Option.Some("a")).OrThrow();
-        var triple = Option.Zip(Option.Some(1), Option.Some("a"), Option.Some(true)).OrThrow();
+        var pair = Option.Zip(Option.Some(1), Option.Some("a")).Expect("test");
+        var triple = Option.Zip(Option.Some(1), Option.Some("a"), Option.Some(true)).Expect("test");
 
         await Assert.That(pair.Item1).IsEqualTo(1);
         await Assert.That(pair.Item2).IsEqualTo("a");
@@ -66,7 +66,7 @@ public sealed class OptionCollectionTests
     {
         var option = Option.Sequence(Array.Empty<Option<int>>());
 
-        await Assert.That(option.OrThrow().Count).IsEqualTo(0);
+        await Assert.That(option.Expect("test").Count).IsEqualTo(0);
     }
 
     [Test]
@@ -74,7 +74,7 @@ public sealed class OptionCollectionTests
     {
         var option = Option.Sequence(new[] { Option.Some(1), Option.Some(2), Option.Some(3) });
 
-        await TestSupport.AssertSequenceAsync(option.OrThrow(), 1, 2, 3);
+        await TestSupport.AssertSequenceAsync(option.Expect("test"), 1, 2, 3);
     }
 
     [Test]
@@ -100,7 +100,7 @@ public sealed class OptionCollectionTests
         var some = Option.Traverse([1, 2, 3], value => Option.Some(value * 2));
         var none = Option.Traverse([1, 2, 3], value => value == 2 ? Option.None<int>() : Option.Some(value));
 
-        await TestSupport.AssertSequenceAsync(some.OrThrow(), 2, 4, 6);
+        await TestSupport.AssertSequenceAsync(some.Expect("test"), 2, 4, 6);
         await Assert.That(none.IsNone).IsTrue();
     }
 

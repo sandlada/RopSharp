@@ -9,7 +9,7 @@ public sealed class OptionCombinatorTests
     {
         var option = Option.Some(2).MapSome(value => value * 10);
 
-        await Assert.That(option.OrThrow()).IsEqualTo(20);
+        await Assert.That(option.Expect("test")).IsEqualTo(20);
     }
 
     [Test]
@@ -70,7 +70,7 @@ public sealed class OptionCombinatorTests
         var option = Option.Some(1).TeeNone(() => observed = true);
 
         await Assert.That(observed).IsFalse();
-        await Assert.That(option.OrThrow()).IsEqualTo(1);
+        await Assert.That(option.Expect("test")).IsEqualTo(1);
     }
 
     [Test]
@@ -112,7 +112,7 @@ public sealed class OptionCombinatorTests
         var some = Option.Some(1).MapSomeValue(Unit.Value);
         var none = Option.None<int>().MapSomeValue(Unit.Value);
 
-        await Assert.That(some.OrThrow()).IsEqualTo(Unit.Value);
+        await Assert.That(some.Expect("test")).IsEqualTo(Unit.Value);
         await Assert.That(none.IsNone).IsTrue();
     }
 
@@ -127,7 +127,7 @@ public sealed class OptionCombinatorTests
             .BindSome(_ => Option.None<int>())
             .BindSome(value => Option.Some(value + 1));
 
-        await Assert.That(chained.OrThrow()).IsEqualTo(7);
+        await Assert.That(chained.Expect("test")).IsEqualTo(7);
         await Assert.That(none.IsNone).IsTrue();
     }
 
@@ -152,7 +152,7 @@ public sealed class OptionCombinatorTests
         var recovered = Option.None<int>().BindNone(() => Option.Some(5));
         var stillNone = Option.None<int>().BindNone(static () => Option.None<int>());
 
-        await Assert.That(recovered.OrThrow()).IsEqualTo(5);
+        await Assert.That(recovered.Expect("test")).IsEqualTo(5);
         await Assert.That(stillNone.IsNone).IsTrue();
     }
 
@@ -190,14 +190,14 @@ public sealed class OptionCombinatorTests
         });
 
         await Assert.That(calls).IsEqualTo(1);
-        await Assert.That(some.OrThrow()).IsEqualTo(1);
-        await Assert.That(none.OrThrow()).IsEqualTo(9);
+        await Assert.That(some.Expect("test")).IsEqualTo(1);
+        await Assert.That(none.Expect("test")).IsEqualTo(9);
     }
 
     [Test]
     public async Task Flatten_UnwrapsNestedOptions()
     {
-        await Assert.That(Option.Some(Option.Some("x")).Flatten().OrThrow()).IsEqualTo("x");
+        await Assert.That(Option.Some(Option.Some("x")).Flatten().Expect("test")).IsEqualTo("x");
         await Assert.That(Option.Some(Option.None<string>()).Flatten().IsNone).IsTrue();
         await Assert.That(Option.None<Option<string>>().Flatten().IsNone).IsTrue();
     }

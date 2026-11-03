@@ -38,7 +38,7 @@ public sealed class ResultCoreTests
 
         await Assert.That(ok.IsOk).IsTrue();
         await Assert.That(err.IsErr).IsTrue();
-        await Assert.That(err.ErrOrThrow().Code).IsEqualTo("E_TEST");
+        await Assert.That(err.ExpectErr().Code).IsEqualTo("E_TEST");
     }
 
     [Test]
@@ -47,8 +47,8 @@ public sealed class ResultCoreTests
         Result<int, string> ok = Result.Ok<int, string>(42);
         Result<int, string> err = Result.Err<int, string>("bad");
 
-        await Assert.That(ok.OrThrow()).IsEqualTo(42);
-        await Assert.That(err.ErrOrThrow()).IsEqualTo("bad");
+        await Assert.That(ok.Expect("test")).IsEqualTo(42);
+        await Assert.That(err.ExpectErr()).IsEqualTo("bad");
     }
 
     [Test]
@@ -76,11 +76,14 @@ public sealed class ResultCoreTests
     }
 
     [Test]
-    public async Task OkOrDefault_ReturnsValueOrDefault()
+    public async Task Match_ReturnsDefaultOnErrInsteadOfOkOrDefault()
     {
-        await Assert.That(Result.Ok<int, RopError>(7).OkOrDefault()).IsEqualTo(7);
-        await Assert.That(Result.Err<int, RopError>(Sample.Error()).OkOrDefault()).IsEqualTo(0);
-        await Assert.That(Result.Err<string, RopError>(Sample.Error()).OkOrDefault()).IsNull();
+        var amount = Result.Err<decimal, RopError>(Sample.Error()).Match(
+            ok: static value => value,
+            err: static _ => 0m);
+
+        await Assert.That(Result.Ok<decimal, RopError>(7).Match(ok: static value => value, err: static _ => 0m)).IsEqualTo(7);
+        await Assert.That(amount).IsEqualTo(0m);
     }
 
     [Test]
@@ -156,33 +159,41 @@ public sealed class ResultCoreTests
     }
 
     [Test]
-    public async Task OrThrow_ReturnsValueOnSuccess()
+    public async Task Expect_ReturnsValueOnSuccess()
     {
-        await Assert.That(Result.Ok<int, RopError>(5).OrThrow()).IsEqualTo(5);
-        await Assert.That(Result.Ok<int, RopError>(5).OkOrThrow()).IsEqualTo(5);
+        await Assert.That(Result.Ok<int, RopError>(5).Expect("test boundary")).IsEqualTo(5);
     }
 
     [Test]
-    public async Task OrThrow_OnError_ThrowsInvalidOperation()
+    public async Task Expect_OnError_ThrowsInvalidOperationWithReason()
     {
-        var exception = TestSupport.Catch(() => Result.Err<int, RopError>(Sample.Error()).OrThrow());
+        var exception = TestSupport.Catch(() => Result.Err<int, RopError>(Sample.Error()).Expect("test boundary"));
 
         await Assert.That(exception is InvalidOperationException).IsTrue();
-        await Assert.That(exception!.Message).Contains("E_TEST");
+        await Assert.That(exception!.Message).Contains("test boundary");
+        await Assert.That(exception.Message).Contains("E_TEST");
     }
 
     [Test]
-    public async Task ErrOrThrow_ReturnsErrorOnFailure()
+    public async Task Expect_WithBlankReason_ThrowsArgumentException()
+    {
+        var exception = TestSupport.Catch(() => Result.Ok(1).Expect("   "));
+
+        await Assert.That(exception is ArgumentException).IsTrue();
+    }
+
+    [Test]
+    public async Task ExpectErr_ReturnsErrorOnFailure()
     {
         var error = Sample.Error();
 
-        await Assert.That(Result.Err<int, RopError>(error).ErrOrThrow()).IsSameReferenceAs(error);
+        await Assert.That(Result.Err<int, RopError>(error).ExpectErr()).IsSameReferenceAs(error);
     }
 
     [Test]
-    public async Task ErrOrThrow_OnSuccess_Throws()
+    public async Task ExpectErr_OnSuccess_Throws()
     {
-        var exception = TestSupport.Catch(() => Result.Ok<int, RopError>(1).ErrOrThrow());
+        var exception = TestSupport.Catch(() => Result.Ok<int, RopError>(1).ExpectErr());
 
         await Assert.That(exception is InvalidOperationException).IsTrue();
     }

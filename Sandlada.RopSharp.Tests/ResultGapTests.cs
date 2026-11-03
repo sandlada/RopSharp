@@ -12,8 +12,8 @@ public sealed class ResultGapTests
         var ok = Result.SuccessIf(true, 42, error);
         var err = Result.SuccessIf(false, 42, error);
 
-        await Assert.That(ok.OrThrow()).IsEqualTo(42);
-        await Assert.That(err.ErrOrThrow()).IsSameReferenceAs(error);
+        await Assert.That(ok.Expect("test")).IsEqualTo(42);
+        await Assert.That(err.ExpectErr()).IsSameReferenceAs(error);
     }
 
     [Test]
@@ -27,7 +27,7 @@ public sealed class ResultGapTests
             return Sample.Error();
         });
 
-        await Assert.That(ok.OrThrow()).IsEqualTo(42);
+        await Assert.That(ok.Expect("test")).IsEqualTo(42);
         await Assert.That(called).IsFalse();
     }
 
@@ -39,8 +39,8 @@ public sealed class ResultGapTests
         var err = Result.FailureIf(true, 42, error);
         var ok = Result.FailureIf(false, 42, error);
 
-        await Assert.That(err.ErrOrThrow()).IsSameReferenceAs(error);
-        await Assert.That(ok.OrThrow()).IsEqualTo(42);
+        await Assert.That(err.ExpectErr()).IsSameReferenceAs(error);
+        await Assert.That(ok.Expect("test")).IsEqualTo(42);
     }
 
     [Test]
@@ -54,7 +54,7 @@ public sealed class ResultGapTests
             return Sample.Error();
         });
 
-        await Assert.That(ok.OrThrow()).IsEqualTo(42);
+        await Assert.That(ok.Expect("test")).IsEqualTo(42);
         await Assert.That(called).IsFalse();
     }
 
@@ -64,14 +64,14 @@ public sealed class ResultGapTests
         var ok = Result.Parse<int>("42");
         var err = Result.Parse<int>("not-a-number");
 
-        await Assert.That(ok.OrThrow()).IsEqualTo(42);
-        await Assert.That(err.ErrOrThrow().Code).IsEqualTo("E_PARSE");
+        await Assert.That(ok.Expect("test")).IsEqualTo(42);
+        await Assert.That(err.ExpectErr().Code).IsEqualTo("E_PARSE");
     }
 
     [Test]
     public async Task TryParse_ReturnsSomeOrNone()
     {
-        await Assert.That(Result.TryParse<int>("42").OrThrow()).IsEqualTo(42);
+        await Assert.That(Result.TryParse<int>("42").Expect("test")).IsEqualTo(42);
         await Assert.That(Result.TryParse<int>("nope").IsNone).IsTrue();
         await Assert.That(Result.TryParse<int>(null).IsNone).IsTrue();
     }
@@ -84,8 +84,8 @@ public sealed class ResultGapTests
         var ok = Result.Ok(1).FailIf(value => value > 10, error);
         var err = Result.Ok(20).FailIf(value => value > 10, error);
 
-        await Assert.That(ok.OrThrow()).IsEqualTo(1);
-        await Assert.That(err.ErrOrThrow()).IsSameReferenceAs(error);
+        await Assert.That(ok.Expect("test")).IsEqualTo(1);
+        await Assert.That(err.ExpectErr()).IsSameReferenceAs(error);
     }
 
     [Test]
@@ -101,7 +101,7 @@ public sealed class ResultGapTests
                 return Sample.Error("E_TOO_LARGE", value.ToString());
             });
 
-        await Assert.That(ok.OrThrow()).IsEqualTo(1);
+        await Assert.That(ok.Expect("test")).IsEqualTo(1);
         await Assert.That(called).IsFalse();
     }
 
@@ -110,7 +110,7 @@ public sealed class ResultGapTests
     {
         var result = Result.Ok(42).ThenEnsure(value => Result.Ok<Unit>(Unit.Value));
 
-        await Assert.That(result.OrThrow()).IsEqualTo(42);
+        await Assert.That(result.Expect("test")).IsEqualTo(42);
     }
 
     [Test]
@@ -119,7 +119,7 @@ public sealed class ResultGapTests
         var error = Sample.Error("E_CHECK");
         var result = Result.Ok(42).ThenEnsure(_ => Result.Err<Unit>(error));
 
-        await Assert.That(result.ErrOrThrow()).IsSameReferenceAs(error);
+        await Assert.That(result.ExpectErr()).IsSameReferenceAs(error);
     }
 
     [Test]
@@ -134,7 +134,7 @@ public sealed class ResultGapTests
             return Result.Ok<Unit>(Unit.Value);
         });
 
-        await Assert.That(result.ErrOrThrow()).IsSameReferenceAs(error);
+        await Assert.That(result.ExpectErr()).IsSameReferenceAs(error);
         await Assert.That(called).IsFalse();
     }
 
@@ -240,8 +240,8 @@ public sealed class ResultGapTests
             Task.FromResult(Result.Err<int>(Sample.Error("E_SECOND"))),
             (int a, int b) => a + b);
 
-        await Assert.That(ok.OrThrow()).IsEqualTo(6);
-        await Assert.That(err.ErrOrThrow()).IsSameReferenceAs(first);
+        await Assert.That(ok.Expect("test")).IsEqualTo(6);
+        await Assert.That(err.ExpectErr()).IsSameReferenceAs(first);
     }
 
     [Test]
@@ -253,7 +253,7 @@ public sealed class ResultGapTests
             Task.FromResult(Result.Ok(3)),
             (int a, int b, int c) => a + b + c);
 
-        await Assert.That(result.OrThrow()).IsEqualTo(6);
+        await Assert.That(result.Expect("test")).IsEqualTo(6);
     }
 
     [Test]
@@ -267,7 +267,7 @@ public sealed class ResultGapTests
             Task.FromResult(Result.Err<int>(second)),
             (int a, int b) => a + b);
 
-        await TestSupport.AssertSequenceAsync(result.ErrOrThrow(), first, second);
+        await TestSupport.AssertSequenceAsync(result.ExpectErr(), first, second);
     }
 
     [Test]
@@ -282,7 +282,7 @@ public sealed class ResultGapTests
             Task.FromResult(Result.Err<int>(third)),
             (int a, int b, int c) => a + b + c);
 
-        await TestSupport.AssertSequenceAsync(result.ErrOrThrow(), first, third);
+        await TestSupport.AssertSequenceAsync(result.ExpectErr(), first, third);
     }
 
     [Test]
@@ -294,8 +294,8 @@ public sealed class ResultGapTests
             Task.FromResult(Result.Ok("a")),
             Task.FromResult(Result.Ok(true)));
 
-        await Assert.That(pair.OrThrow()).IsEqualTo((1, "a"));
-        await Assert.That(triple.OrThrow()).IsEqualTo((1, "a", true));
+        await Assert.That(pair.Expect("test")).IsEqualTo((1, "a"));
+        await Assert.That(triple.Expect("test")).IsEqualTo((1, "a", true));
     }
 
     [Test]
@@ -336,8 +336,8 @@ public sealed class ResultGapTests
         var error = Sample.Error();
         var err = await Task.FromResult(Result.Err<int>(error)).Select(value => value * 2);
 
-        await Assert.That(ok.OrThrow()).IsEqualTo(4);
-        await Assert.That(err.ErrOrThrow()).IsSameReferenceAs(error);
+        await Assert.That(ok.Expect("test")).IsEqualTo(4);
+        await Assert.That(err.ExpectErr()).IsSameReferenceAs(error);
     }
 
     [Test]
@@ -353,8 +353,8 @@ public sealed class ResultGapTests
             from b in Result.Ok(3)
             select a + b;
 
-        await Assert.That((await result).OrThrow()).IsEqualTo(6);
-        await Assert.That((await syncBinder).OrThrow()).IsEqualTo(5);
+        await Assert.That((await result).Expect("test")).IsEqualTo(6);
+        await Assert.That((await syncBinder).Expect("test")).IsEqualTo(5);
     }
 
     [Test]
@@ -370,7 +370,7 @@ public sealed class ResultGapTests
             from b in Result.Ok(3)
             select a + b;
 
-        await Assert.That((await asyncBinder).ErrOrThrow()).IsSameReferenceAs(error);
-        await Assert.That((await syncBinder).ErrOrThrow()).IsSameReferenceAs(error);
+        await Assert.That((await asyncBinder).ExpectErr()).IsSameReferenceAs(error);
+        await Assert.That((await syncBinder).ExpectErr()).IsSameReferenceAs(error);
     }
 }

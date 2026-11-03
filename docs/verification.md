@@ -67,7 +67,7 @@ Single test (Microsoft.Testing.Platform syntax):
 
 ```bash
 dotnet test -- --treenode-filter "/*/*/ResultCoreTests/*"
-dotnet test -- --treenode-filter "/*/*/ResultCoreTests/OrThrow_ReturnsValueOnSuccess"
+dotnet test -- --treenode-filter "/*/*/ResultCoreTests/Expect_ReturnsValueOnSuccess"
 ```
 
 ## Code coverage

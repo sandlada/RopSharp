@@ -153,9 +153,9 @@ public sealed class RopErrorInnerErrorsTests
         var collapsed = Result.Err<int, IReadOnlyList<RopError>>([first, second])
             .ToSingleError(RopError.Combine);
 
-        await Assert.That(collapsed.ErrOrThrow().Code).IsEqualTo("E_MULTIPLE");
-        await Assert.That(collapsed.ErrOrThrow().InnerErrors.Count).IsEqualTo(2);
-        await Assert.That(collapsed.ErrOrThrow().InnerErrors[0]).IsSameReferenceAs(first);
-        await Assert.That(collapsed.ErrOrThrow().InnerErrors[1]).IsSameReferenceAs(second);
+        await Assert.That(collapsed.ExpectErr().Code).IsEqualTo("E_MULTIPLE");
+        await Assert.That(collapsed.ExpectErr().InnerErrors.Count).IsEqualTo(2);
+        await Assert.That(collapsed.ExpectErr().InnerErrors[0]).IsSameReferenceAs(first);
+        await Assert.That(collapsed.ExpectErr().InnerErrors[1]).IsSameReferenceAs(second);
     }
 }

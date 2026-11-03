@@ -494,70 +494,43 @@ public static class ResultExtensions
     }
 
     /// <summary>
-    /// Returns the success value or throws when the result is a failure.
+    /// Returns the success value when the result is on the Ok track.
     /// </summary>
     /// <typeparam name="TOk">The success type.</typeparam>
     /// <typeparam name="TErr">The error type.</typeparam>
     /// <param name="result">The source result.</param>
+    /// <param name="reason">
+    /// A non-empty explanation of why unwrapping is justified at this boundary. Included in the exception when the
+    /// result is not Ok.
+    /// </param>
     /// <returns>The success value.</returns>
-    /// <exception cref="InvalidOperationException">The result is an error or an uninitialized default.</exception>
-    /// <remarks>Intended for tests and boundaries only; production code should use <see cref="Match{TOk,TErr,T}"/>.
+    /// <exception cref="ArgumentException"><paramref name="reason"/> is null, empty, or whitespace.</exception>
+    /// <exception cref="InvalidOperationException">
+    /// The result is an error, uninitialized, or otherwise not on the Ok track.
+    /// </exception>
+    /// <remarks>
+    /// <para>
+    /// This is a boundary exit, not a domain failure channel. Expected failures stay on the Err track and should be
+    /// handled with <see cref="Match{TOk,TErr,T}"/> or the bind/map combinators.
+    /// </para>
     /// <code><![CDATA[
     /// var charged = Result.Try(() => OrderFixtures.Charge(OrderFixtures.Sample), "E_CHARGE");
-    /// var receipt = charged.OrThrow();
+    /// var receipt = charged.Expect("integration test asserts the charge succeeded");
     ///
     /// // Ok(payment) yields the payment,
-    /// // Err(E_CHARGE) throws - OrThrow is for tests and boundaries only.
+    /// // Err(E_CHARGE) throws and the message includes the reason and result text.
     /// ]]></code>
     /// </remarks>
-    public static TOk OrThrow<TOk, TErr>(this Result<TOk, TErr> result)
+    public static TOk Expect<TOk, TErr>(this Result<TOk, TErr> result, string reason)
     {
+        ArgumentException.ThrowIfNullOrWhiteSpace(reason);
+
         if (result.TryGetOk(out var value))
         {
             return value;
         }
 
         result.ThrowIfUninitialized();
-        throw new InvalidOperationException($"Expected Ok but was {result}.");
+        throw new InvalidOperationException($"{reason}: {result}");
     }
-
-    /// <summary>
-    /// Returns the success value or throws when the result is a failure.
-    /// </summary>
-    /// <typeparam name="TOk">The success type.</typeparam>
-    /// <typeparam name="TErr">The error type.</typeparam>
-    /// <param name="result">The source result.</param>
-    /// <returns>The success value.</returns>
-    /// <exception cref="InvalidOperationException">The result is an error or an uninitialized default.</exception>
-    /// <remarks>This is the explicitly named form of <see cref="OrThrow{TOk,TErr}"/>.
-    /// <code><![CDATA[
-    /// var charged = Result.Try(() => OrderFixtures.Charge(OrderFixtures.Sample), "E_CHARGE");
-    /// var receipt = charged.OkOrThrow();
-    ///
-    /// // Ok(payment) yields the payment,
-    /// // Err(E_CHARGE) throws - OkOrThrow is for tests and boundaries only.
-    /// ]]></code>
-    /// </remarks>
-    public static TOk OkOrThrow<TOk, TErr>(this Result<TOk, TErr> result) => result.OrThrow();
-
-    /// <summary>
-    /// Returns the error value or throws when the result is a success.
-    /// </summary>
-    /// <typeparam name="TOk">The success type.</typeparam>
-    /// <typeparam name="TErr">The error type.</typeparam>
-    /// <param name="result">The source result.</param>
-    /// <returns>The error value.</returns>
-    /// <exception cref="InvalidOperationException">The result is a success or an uninitialized default.</exception>
-    /// <remarks>Intended for tests and boundaries only; production code should use <see cref="Match{TOk,TErr,T}"/>.
-    /// <code><![CDATA[
-    /// var charged = Result.Try(() => OrderFixtures.Charge(OrderFixtures.Declined), "E_CHARGE");
-    /// var error = charged.ErrOrThrow();
-    ///
-    /// // Err(E_CHARGE) yields the error,
-    /// // Ok(payment) throws - ErrOrThrow is for tests and boundaries only.
-    /// ]]></code>
-    /// </remarks>
-    public static TErr ErrOrThrow<TOk, TErr>(this Result<TOk, TErr> result) => result.TryGetErr(out var error)
-        ? error
-        : throw new InvalidOperationException($"Expected Err but was {result}.");
 }

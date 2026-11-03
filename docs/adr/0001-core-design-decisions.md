@@ -18,6 +18,7 @@ This ADR records the decisions that shape the public surface so future changes c
 ## Decisions
 
 - **Revised:** 2026-11-03. `Result<TOk,TErr>` and `Either<TLeft,TRight>` use a three-state tag (`0` = uninitialized, `1`/`2` = branch). `default(Result<,>)` and `default(Either<,>)` are never valid branch values; value-type error payloads at `default(TErr)` no longer make `default(Result<,>)` look like `Err(default(TErr))`.
+- **Revised:** 2026-11-03. Boundary unwrapping uses `Expect(string reason)` on `Result` and `Option`; silent `OkOrDefault` and parameterless `*OrThrow` helpers are removed.
 
 ### D1 — Core types are readonly structs with value equality
 
@@ -33,8 +34,8 @@ an either do not.
 
 No combinator throws for an expected failure. `Rop.Try`/`Rop.TryAsync` are the single place where exceptions become
 `Err` values, and `OperationCanceledException` is always rethrown. `ArgumentNullException` is reserved for null
-arguments passed to non-null parameters (programming errors). `InvalidOperationException` is used by test-only
-`OrThrow`/`*OrThrow` helpers and by internal invariant violations.
+arguments passed to non-null parameters (programming errors). `InvalidOperationException` is used by
+`Expect(string reason)` at intentional boundaries and by internal invariant violations.
 
 **Consequence:** `try/catch` inside a pipeline is an anti-pattern; lift the boundary instead.
 

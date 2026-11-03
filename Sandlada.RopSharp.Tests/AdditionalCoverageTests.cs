@@ -16,7 +16,7 @@ public sealed class AdditionalCoverageTests
         });
 
         await Assert.That(called).IsFalse();
-        await Assert.That(result.ErrOrThrow().Code).IsEqualTo("E_X");
+        await Assert.That(result.ExpectErr().Code).IsEqualTo("E_X");
     }
 
     [Test]
@@ -31,7 +31,7 @@ public sealed class AdditionalCoverageTests
         });
 
         await Assert.That(called).IsFalse();
-        await Assert.That(result.OrThrow()).IsEqualTo(1);
+        await Assert.That(result.Expect("test")).IsEqualTo(1);
     }
 
     [Test]
@@ -61,7 +61,7 @@ public sealed class AdditionalCoverageTests
         });
 
         await Assert.That(called).IsFalse();
-        await Assert.That(option.OrThrow()).IsEqualTo(1);
+        await Assert.That(option.Expect("test")).IsEqualTo(1);
     }
 
     [Test]
@@ -80,7 +80,7 @@ public sealed class AdditionalCoverageTests
             return Task.FromResult(value == 1 ? Result.Err<int>(Sample.Error("E_FIRST")) : Result.Ok(value));
         });
 
-        await Assert.That(result.ErrOrThrow().Code).IsEqualTo("E_FIRST");
+        await Assert.That(result.ExpectErr().Code).IsEqualTo("E_FIRST");
         await TestSupport.AssertSequenceAsync(mapped, 1);
     }
 
@@ -91,7 +91,7 @@ public sealed class AdditionalCoverageTests
 
         var result = Result.Zip(Result.Ok(1), Result.Err<int>(error), Result.Ok(3));
 
-        await Assert.That(result.ErrOrThrow()).IsSameReferenceAs(error);
+        await Assert.That(result.ExpectErr()).IsSameReferenceAs(error);
     }
 
     [Test]
@@ -110,7 +110,7 @@ public sealed class AdditionalCoverageTests
             });
 
         await Assert.That(called).IsFalse();
-        await Assert.That(result.ErrOrThrow().Count).IsEqualTo(1);
+        await Assert.That(result.ExpectErr().Count).IsEqualTo(1);
     }
 
     [Test]
@@ -181,7 +181,7 @@ public sealed class AdditionalCoverageTests
         var result = await Task.FromResult(Result.Err<int>(Sample.Error("E_X")))
             .MapOkAsync((value, _) => Task.FromResult(value + 1), cts.Token);
 
-        await Assert.That(result.ErrOrThrow().Code).IsEqualTo("E_X");
+        await Assert.That(result.ExpectErr().Code).IsEqualTo("E_X");
     }
 
     [Test]
@@ -196,6 +196,6 @@ public sealed class AdditionalCoverageTests
         second.SetResult(Result.Ok(2));
         first.SetResult(Result.Ok(1));
 
-        await TestSupport.AssertSequenceAsync((await pending).OrThrow(), 1, 2);
+        await TestSupport.AssertSequenceAsync((await pending).Expect("test"), 1, 2);
     }
 }

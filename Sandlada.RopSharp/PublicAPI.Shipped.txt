@@ -30,7 +30,6 @@ Sandlada.RopSharp.Result<TOk, TErr>
 Sandlada.RopSharp.Result<TOk, TErr>.Equals(Sandlada.RopSharp.Result<TOk, TErr> other) -> bool
 Sandlada.RopSharp.Result<TOk, TErr>.IsErr.get -> bool
 Sandlada.RopSharp.Result<TOk, TErr>.IsOk.get -> bool
-Sandlada.RopSharp.Result<TOk, TErr>.OkOrDefault() -> TOk
 Sandlada.RopSharp.Result<TOk, TErr>.Result() -> void
 Sandlada.RopSharp.Result<TOk, TErr>.TryGetErr(out TErr error) -> bool
 Sandlada.RopSharp.Result<TOk, TErr>.TryGetOk(out TOk value) -> bool
@@ -134,7 +133,6 @@ static Sandlada.RopSharp.OptionExtensions.Flatten<T>(this Sandlada.RopSharp.Opti
 static Sandlada.RopSharp.OptionExtensions.MapSome<T, TOut>(this Sandlada.RopSharp.Option<T> option, System.Func<T, TOut>! mapper) -> Sandlada.RopSharp.Option<TOut>
 static Sandlada.RopSharp.OptionExtensions.MapSomeValue<T, TOut>(this Sandlada.RopSharp.Option<T> option, TOut value) -> Sandlada.RopSharp.Option<TOut>
 static Sandlada.RopSharp.OptionExtensions.Match<T, TResult>(this Sandlada.RopSharp.Option<T> option, System.Func<T, TResult>! some, System.Func<TResult>! none) -> TResult
-static Sandlada.RopSharp.OptionExtensions.OrThrow<T>(this Sandlada.RopSharp.Option<T> option) -> T
 static Sandlada.RopSharp.OptionExtensions.TeeNone<T>(this Sandlada.RopSharp.Option<T> option, System.Action! action) -> Sandlada.RopSharp.Option<T>
 static Sandlada.RopSharp.OptionExtensions.TeeSome<T>(this Sandlada.RopSharp.Option<T> option, System.Action<T>! action) -> Sandlada.RopSharp.Option<T>
 static Sandlada.RopSharp.OptionLinqExtensions.Select<T, TOut>(this Sandlada.RopSharp.Option<T> option, System.Func<T, TOut>! selector) -> Sandlada.RopSharp.Option<TOut>
@@ -179,13 +177,10 @@ static Sandlada.RopSharp.ResultExtensions.BindErrValue<TOk, TErr>(this Sandlada.
 static Sandlada.RopSharp.ResultExtensions.BindOk<TOk, TOut, TErr>(this Sandlada.RopSharp.Result<TOk, TErr> result, System.Func<TOk, Sandlada.RopSharp.Result<TOut, TErr>>! binder) -> Sandlada.RopSharp.Result<TOut, TErr>
 static Sandlada.RopSharp.ResultExtensions.Ensure<TOk, TErr>(this Sandlada.RopSharp.Result<TOk, TErr> result, System.Func<TOk, bool>! predicate, System.Func<TOk, TErr>! errorFactory) -> Sandlada.RopSharp.Result<TOk, TErr>
 static Sandlada.RopSharp.ResultExtensions.Ensure<TOk, TErr>(this Sandlada.RopSharp.Result<TOk, TErr> result, System.Func<TOk, bool>! predicate, TErr error) -> Sandlada.RopSharp.Result<TOk, TErr>
-static Sandlada.RopSharp.ResultExtensions.ErrOrThrow<TOk, TErr>(this Sandlada.RopSharp.Result<TOk, TErr> result) -> TErr
 static Sandlada.RopSharp.ResultExtensions.MapErr<TOk, TErr, TErr2>(this Sandlada.RopSharp.Result<TOk, TErr> result, System.Func<TErr, TErr2>! mapper) -> Sandlada.RopSharp.Result<TOk, TErr2>
 static Sandlada.RopSharp.ResultExtensions.MapOk<TOk, TOut, TErr>(this Sandlada.RopSharp.Result<TOk, TErr> result, System.Func<TOk, TOut>! mapper) -> Sandlada.RopSharp.Result<TOut, TErr>
 static Sandlada.RopSharp.ResultExtensions.MapOkValue<TOk, TOut, TErr>(this Sandlada.RopSharp.Result<TOk, TErr> result, TOut value) -> Sandlada.RopSharp.Result<TOut, TErr>
 static Sandlada.RopSharp.ResultExtensions.Match<TOk, TErr, T>(this Sandlada.RopSharp.Result<TOk, TErr> result, System.Func<TOk, T>! ok, System.Func<TErr, T>! err) -> T
-static Sandlada.RopSharp.ResultExtensions.OkOrThrow<TOk, TErr>(this Sandlada.RopSharp.Result<TOk, TErr> result) -> TOk
-static Sandlada.RopSharp.ResultExtensions.OrThrow<TOk, TErr>(this Sandlada.RopSharp.Result<TOk, TErr> result) -> TOk
 static Sandlada.RopSharp.ResultExtensions.RequireNotNull<T>(this Sandlada.RopSharp.Result<T?, Sandlada.RopSharp.RopError!> result, System.Func<Sandlada.RopSharp.RopError!>! errorFactory) -> Sandlada.RopSharp.Result<T!, Sandlada.RopSharp.RopError!>
 static Sandlada.RopSharp.ResultExtensions.TeeErr<TOk, TErr>(this Sandlada.RopSharp.Result<TOk, TErr> result, System.Action<TErr>! action) -> Sandlada.RopSharp.Result<TOk, TErr>
 static Sandlada.RopSharp.ResultExtensions.TeeOk<TOk, TErr>(this Sandlada.RopSharp.Result<TOk, TErr> result, System.Action<TOk>! action) -> Sandlada.RopSharp.Result<TOk, TErr>

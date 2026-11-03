@@ -9,7 +9,7 @@ public sealed class ResultAggregationTests
     {
         var result = Result.Combine(Result.Ok(2), Result.Ok(3), (int a, int b) => a * b);
 
-        await Assert.That(result.OrThrow()).IsEqualTo(6);
+        await Assert.That(result.Expect("test")).IsEqualTo(6);
     }
 
     [Test]
@@ -28,7 +28,7 @@ public sealed class ResultAggregationTests
             });
 
         await Assert.That(mergerCalled).IsFalse();
-        await Assert.That(result.ErrOrThrow()).IsSameReferenceAs(first);
+        await Assert.That(result.ExpectErr()).IsSameReferenceAs(first);
     }
 
     [Test]
@@ -38,7 +38,7 @@ public sealed class ResultAggregationTests
 
         var result = Result.Combine(Result.Ok(1), Result.Err<int>(second), (int a, int b) => a + b);
 
-        await Assert.That(result.ErrOrThrow()).IsSameReferenceAs(second);
+        await Assert.That(result.ExpectErr()).IsSameReferenceAs(second);
     }
 
     [Test]
@@ -50,7 +50,7 @@ public sealed class ResultAggregationTests
             Result.Ok(3),
             (int a, int b, int c) => a + b + c);
 
-        await Assert.That(result.OrThrow()).IsEqualTo(6);
+        await Assert.That(result.Expect("test")).IsEqualTo(6);
     }
 
     [Test]
@@ -64,7 +64,7 @@ public sealed class ResultAggregationTests
             Result.Err<int>(third),
             (int a, int b, int c) => a + b + c);
 
-        await Assert.That(result.ErrOrThrow()).IsSameReferenceAs(third);
+        await Assert.That(result.ExpectErr()).IsSameReferenceAs(third);
     }
 
     [Test]
@@ -72,7 +72,7 @@ public sealed class ResultAggregationTests
     {
         var result = Result.Zip(Result.Ok(1), Result.Ok("a"));
 
-        var pair = result.OrThrow();
+        var pair = result.Expect("test");
 
         await Assert.That(pair.Item1).IsEqualTo(1);
         await Assert.That(pair.Item2).IsEqualTo("a");
@@ -85,13 +85,13 @@ public sealed class ResultAggregationTests
 
         var result = Result.Zip(Result.Err<int>(error), Result.Ok("a"));
 
-        await Assert.That(result.ErrOrThrow()).IsSameReferenceAs(error);
+        await Assert.That(result.ExpectErr()).IsSameReferenceAs(error);
     }
 
     [Test]
     public async Task Zip3_PairsValues()
     {
-        var triple = Result.Zip(Result.Ok(1), Result.Ok("a"), Result.Ok(true)).OrThrow();
+        var triple = Result.Zip(Result.Ok(1), Result.Ok("a"), Result.Ok(true)).Expect("test");
 
         await Assert.That(triple.Item1).IsEqualTo(1);
         await Assert.That(triple.Item2).IsEqualTo("a");
@@ -103,7 +103,7 @@ public sealed class ResultAggregationTests
     {
         var result = Result.Validate(Result.Ok(2), Result.Ok(3), (int a, int b) => a * b);
 
-        await Assert.That(result.OrThrow()).IsEqualTo(6);
+        await Assert.That(result.Expect("test")).IsEqualTo(6);
     }
 
     [Test]
@@ -117,7 +117,7 @@ public sealed class ResultAggregationTests
             Result.Err<int>(second),
             (int a, int b) => a + b);
 
-        await TestSupport.AssertSequenceAsync(result.ErrOrThrow(), first, second);
+        await TestSupport.AssertSequenceAsync(result.ExpectErr(), first, second);
     }
 
     [Test]
@@ -132,7 +132,7 @@ public sealed class ResultAggregationTests
             Result.Err<int>(third),
             (int a, int b, int c) => a + b + c);
 
-        var errors = result.ErrOrThrow();
+        var errors = result.ExpectErr();
 
         await Assert.That(errors.Count).IsEqualTo(2);
         await Assert.That(errors[0]).IsSameReferenceAs(first);
@@ -147,7 +147,7 @@ public sealed class ResultAggregationTests
             Result.Ok(2),
             (int a, int b) => a + b);
 
-        await Assert.That(result.ErrOrThrow().Count).IsGreaterThan(0);
+        await Assert.That(result.ExpectErr().Count).IsGreaterThan(0);
     }
 
     [Test]
@@ -155,7 +155,7 @@ public sealed class ResultAggregationTests
     {
         var result = Result.Sequence(Array.Empty<Result<int, RopError>>());
 
-        await Assert.That(result.OrThrow().Count).IsEqualTo(0);
+        await Assert.That(result.Expect("test").Count).IsEqualTo(0);
     }
 
     [Test]
@@ -163,7 +163,7 @@ public sealed class ResultAggregationTests
     {
         var result = Result.Sequence(new[] { Result.Ok(1), Result.Ok(2), Result.Ok(3) });
 
-        await TestSupport.AssertSequenceAsync(result.OrThrow(), 1, 2, 3);
+        await TestSupport.AssertSequenceAsync(result.Expect("test"), 1, 2, 3);
     }
 
     [Test]
@@ -179,7 +179,7 @@ public sealed class ResultAggregationTests
 
         var result = Result.Sequence(source);
 
-        await Assert.That(result.ErrOrThrow()).IsSameReferenceAs(error);
+        await Assert.That(result.ExpectErr()).IsSameReferenceAs(error);
         await Assert.That(source.GetEnumeratorCalls).IsEqualTo(1);
         await Assert.That(source.ItemsYielded).IsEqualTo(2);
     }
@@ -198,7 +198,7 @@ public sealed class ResultAggregationTests
 
         var result = Result.SequenceValidation(source);
 
-        await TestSupport.AssertSequenceAsync(result.ErrOrThrow(), first, second);
+        await TestSupport.AssertSequenceAsync(result.ExpectErr(), first, second);
         await Assert.That(source.GetEnumeratorCalls).IsEqualTo(1);
         await Assert.That(source.ItemsYielded).IsEqualTo(3);
     }
@@ -211,7 +211,7 @@ public sealed class ResultAggregationTests
         var result = Result.Traverse([1, 2, 3, 4], value =>
             value % 2 == 0 ? Result.Ok(value * 10) : Result.Err<int>(error));
 
-        await Assert.That(result.ErrOrThrow()).IsSameReferenceAs(error);
+        await Assert.That(result.ExpectErr()).IsSameReferenceAs(error);
     }
 
     [Test]
@@ -219,7 +219,7 @@ public sealed class ResultAggregationTests
     {
         var result = Result.Traverse([1, 2, 3], value => Result.Ok(value * 2));
 
-        await TestSupport.AssertSequenceAsync(result.OrThrow(), 2, 4, 6);
+        await TestSupport.AssertSequenceAsync(result.Expect("test"), 2, 4, 6);
     }
 
     [Test]
@@ -247,8 +247,8 @@ public sealed class ResultAggregationTests
 
         var err = Result.Err<int>(error).ToValidation();
 
-        await Assert.That(ok.OrThrow()).IsEqualTo(1);
-        await TestSupport.AssertSequenceAsync(err.ErrOrThrow(), error);
+        await Assert.That(ok.Expect("test")).IsEqualTo(1);
+        await TestSupport.AssertSequenceAsync(err.ExpectErr(), error);
     }
 
     [Test]
@@ -259,7 +259,7 @@ public sealed class ResultAggregationTests
         var result = Result.Err<int, IReadOnlyList<RopError>>([first, Sample.Error("E_SECOND")])
             .ToSingleError();
 
-        await Assert.That(result.ErrOrThrow()).IsSameReferenceAs(first);
+        await Assert.That(result.ExpectErr()).IsSameReferenceAs(first);
     }
 
     [Test]
@@ -271,7 +271,7 @@ public sealed class ResultAggregationTests
             Sample.Error("E_SECOND", "two"),
         ]).ToSingleError(RopError.Combine);
 
-        var combined = result.ErrOrThrow();
+        var combined = result.ExpectErr();
 
         await Assert.That(combined.Code).IsEqualTo("E_MULTIPLE");
     }
@@ -281,7 +281,7 @@ public sealed class ResultAggregationTests
     {
         var result = Result.Ok<int, IReadOnlyList<RopError>>(5).ToSingleError();
 
-        await Assert.That(result.OrThrow()).IsEqualTo(5);
+        await Assert.That(result.Expect("test")).IsEqualTo(5);
     }
 
     [Test]

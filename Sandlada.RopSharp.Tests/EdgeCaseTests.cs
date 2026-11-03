@@ -9,7 +9,7 @@ public sealed class EdgeCaseTests
     {
         var result = Result.SequenceValidation(Array.Empty<Result<int, RopError>>());
 
-        await Assert.That(result.OrThrow().Count).IsEqualTo(0);
+        await Assert.That(result.Expect("test").Count).IsEqualTo(0);
     }
 
     [Test]
@@ -17,7 +17,7 @@ public sealed class EdgeCaseTests
     {
         var result = Result.SequenceValidation(new[] { Result.Ok(1), Result.Ok(2) });
 
-        await TestSupport.AssertSequenceAsync(result.OrThrow(), 1, 2);
+        await TestSupport.AssertSequenceAsync(result.Expect("test"), 1, 2);
     }
 
     [Test]
@@ -25,7 +25,7 @@ public sealed class EdgeCaseTests
     {
         var result = Result.Traverse(Array.Empty<int>(), value => Result.Ok(value));
 
-        await Assert.That(result.OrThrow().Count).IsEqualTo(0);
+        await Assert.That(result.Expect("test").Count).IsEqualTo(0);
     }
 
     [Test]
@@ -42,7 +42,7 @@ public sealed class EdgeCaseTests
     {
         var option = Option.Traverse(Array.Empty<int>(), value => Option.Some(value));
 
-        await Assert.That(option.OrThrow().Count).IsEqualTo(0);
+        await Assert.That(option.Expect("test").Count).IsEqualTo(0);
     }
 
     [Test]
@@ -62,7 +62,7 @@ public sealed class EdgeCaseTests
             });
 
         await Assert.That(called).IsFalse();
-        await Assert.That(result.ErrOrThrow()).IsSameReferenceAs(error);
+        await Assert.That(result.ExpectErr()).IsSameReferenceAs(error);
     }
 
     [Test]
@@ -101,7 +101,7 @@ public sealed class EdgeCaseTests
         var result = await Task.FromResult(Result.Err<int>(Sample.Error("E_X")))
             .MapErrAsync((error, token) => Task.FromResult(error.WithCode(token == cts.Token ? "E_CT" : "E_NO")), cts.Token);
 
-        await Assert.That(result.ErrOrThrow().Code).IsEqualTo("E_CT");
+        await Assert.That(result.ExpectErr().Code).IsEqualTo("E_CT");
     }
 
     [Test]
@@ -171,15 +171,15 @@ public sealed class EdgeCaseTests
 
         var option = Option.Sequence(source);
 
-        await Assert.That(option.OrThrow().Count).IsEqualTo(2);
+        await Assert.That(option.Expect("test").Count).IsEqualTo(2);
         await Assert.That(source.GetEnumeratorCalls).IsEqualTo(1);
     }
 
     [Test]
     public async Task EmptyAggregations_NeverReturnNullLists()
     {
-        var sequence = Result.Sequence(Array.Empty<Result<int, RopError>>()).OrThrow();
-        var validation = Result.SequenceValidation(Array.Empty<Result<int, RopError>>()).OrThrow();
+        var sequence = Result.Sequence(Array.Empty<Result<int, RopError>>()).Expect("test");
+        var validation = Result.SequenceValidation(Array.Empty<Result<int, RopError>>()).Expect("test");
         var (oks, errs) = Result.Partition(Array.Empty<Result<int, RopError>>());
 
         await Assert.That(sequence).IsNotNull();
@@ -191,8 +191,8 @@ public sealed class EdgeCaseTests
     [Test]
     public async Task ExposedAggregationLists_AreReadOnlyViews()
     {
-        var sequence = Result.Sequence(new[] { Result.Ok(1), Result.Ok(2) }).OrThrow();
-        var validation = Result.SequenceValidation(new[] { Result.Ok(1), Result.Ok(2) }).OrThrow();
+        var sequence = Result.Sequence(new[] { Result.Ok(1), Result.Ok(2) }).Expect("test");
+        var validation = Result.SequenceValidation(new[] { Result.Ok(1), Result.Ok(2) }).Expect("test");
         var (oks, errs) = Result.Partition(new[] { Result.Ok(1), Result.Err<int>(Sample.Error()) });
 
         foreach (var list in new IReadOnlyList<int>[] { sequence, validation, oks })

@@ -9,7 +9,7 @@ public sealed class ResultCombinatorTests
     {
         var result = Result.Ok(2).MapOk(value => value * 10);
 
-        await Assert.That(result.OrThrow()).IsEqualTo(20);
+        await Assert.That(result.Expect("test")).IsEqualTo(20);
     }
 
     [Test]
@@ -25,7 +25,7 @@ public sealed class ResultCombinatorTests
             });
 
         await Assert.That(called).IsFalse();
-        await Assert.That(result.ErrOrThrow().Code).IsEqualTo("E_X");
+        await Assert.That(result.ExpectErr().Code).IsEqualTo("E_X");
     }
 
     [Test]
@@ -39,7 +39,7 @@ public sealed class ResultCombinatorTests
     {
         var result = Result.Err<int>(Sample.Error("E_X")).MapErr(error => error.WithCode("E_Y"));
 
-        await Assert.That(result.ErrOrThrow().Code).IsEqualTo("E_Y");
+        await Assert.That(result.ExpectErr().Code).IsEqualTo("E_Y");
     }
 
     [Test]
@@ -54,7 +54,7 @@ public sealed class ResultCombinatorTests
         });
 
         await Assert.That(called).IsFalse();
-        await Assert.That(result.OrThrow()).IsEqualTo(1);
+        await Assert.That(result.Expect("test")).IsEqualTo(1);
     }
 
     [Test]
@@ -102,7 +102,7 @@ public sealed class ResultCombinatorTests
         var result = Result.Ok(1).TeeErr(_ => observed = true);
 
         await Assert.That(observed).IsFalse();
-        await Assert.That(result.OrThrow()).IsEqualTo(1);
+        await Assert.That(result.Expect("test")).IsEqualTo(1);
     }
 
     [Test]
@@ -110,7 +110,7 @@ public sealed class ResultCombinatorTests
     {
         var result = Result.Ok(-1).Ensure(value => value >= 0, Sample.Error("E_AGE", "negative"));
 
-        await Assert.That(result.ErrOrThrow().Code).IsEqualTo("E_AGE");
+        await Assert.That(result.ExpectErr().Code).IsEqualTo("E_AGE");
     }
 
     [Test]
@@ -138,7 +138,7 @@ public sealed class ResultCombinatorTests
             Sample.Error());
 
         await Assert.That(called).IsFalse();
-        await Assert.That(result.ErrOrThrow()).IsSameReferenceAs(error);
+        await Assert.That(result.ExpectErr()).IsSameReferenceAs(error);
     }
 
     [Test]
@@ -164,7 +164,7 @@ public sealed class ResultCombinatorTests
 
         await Assert.That(ok.IsOk).IsTrue();
         await Assert.That(factoryCalls).IsEqualTo(1);
-        await Assert.That(failed.ErrOrThrow().Message).IsEqualTo("-5");
+        await Assert.That(failed.ExpectErr().Message).IsEqualTo("-5");
     }
 
     [Test]
@@ -173,8 +173,8 @@ public sealed class ResultCombinatorTests
         var ok = Result.Ok(5).MapOkValue(Unit.Value);
         var err = Result.Err<int>(Sample.Error("E_X")).MapOkValue(Unit.Value);
 
-        await Assert.That(ok.OrThrow()).IsEqualTo(Unit.Value);
-        await Assert.That(err.ErrOrThrow().Code).IsEqualTo("E_X");
+        await Assert.That(ok.Expect("test")).IsEqualTo(Unit.Value);
+        await Assert.That(err.ExpectErr().Code).IsEqualTo("E_X");
     }
 
     [Test]
@@ -192,7 +192,7 @@ public sealed class ResultCombinatorTests
 
         var result = source.RequireNotNull(() => Sample.Error("E_NULL", "name null"));
 
-        await Assert.That(result.ErrOrThrow().Code).IsEqualTo("E_NULL");
+        await Assert.That(result.ExpectErr().Code).IsEqualTo("E_NULL");
     }
 
     [Test]
@@ -202,7 +202,7 @@ public sealed class ResultCombinatorTests
 
         var result = source.RequireNotNull(() => Sample.Error());
 
-        await Assert.That(result.OrThrow()).IsEqualTo("bob");
+        await Assert.That(result.Expect("test")).IsEqualTo("bob");
     }
 
     [Test]
@@ -213,7 +213,7 @@ public sealed class ResultCombinatorTests
 
         var result = source.RequireNotNull(() => Sample.Error());
 
-        await Assert.That(result.ErrOrThrow()).IsSameReferenceAs(error);
+        await Assert.That(result.ExpectErr()).IsSameReferenceAs(error);
     }
 
     [Test]
@@ -223,7 +223,7 @@ public sealed class ResultCombinatorTests
             .BindOk(value => Result.Ok(value * 3))
             .BindOk(value => Result.Ok(value + 1));
 
-        await Assert.That(result.OrThrow()).IsEqualTo(7);
+        await Assert.That(result.Expect("test")).IsEqualTo(7);
     }
 
     [Test]
@@ -240,7 +240,7 @@ public sealed class ResultCombinatorTests
             });
 
         await Assert.That(secondCalled).IsFalse();
-        await Assert.That(result.ErrOrThrow()).IsSameReferenceAs(error);
+        await Assert.That(result.ExpectErr()).IsSameReferenceAs(error);
     }
 
     [Test]
@@ -248,7 +248,7 @@ public sealed class ResultCombinatorTests
     {
         var result = Result.Ok(1).BindOk<int, int, RopError>(_ => Result.Err<int>(Sample.Error("E_BIND")));
 
-        await Assert.That(result.ErrOrThrow().Code).IsEqualTo("E_BIND");
+        await Assert.That(result.ExpectErr().Code).IsEqualTo("E_BIND");
     }
 
     [Test]
@@ -256,7 +256,7 @@ public sealed class ResultCombinatorTests
     {
         var result = Result.Err<int>(Sample.Error()).BindErr(_ => Result.Ok(99));
 
-        await Assert.That(result.OrThrow()).IsEqualTo(99);
+        await Assert.That(result.Expect("test")).IsEqualTo(99);
     }
 
     [Test]
@@ -281,7 +281,7 @@ public sealed class ResultCombinatorTests
         var result = Result.Err<int>(Sample.Error("E_A"))
             .BindErr(error => Result.Err<int>(error.WithCode("E_B")));
 
-        await Assert.That(result.ErrOrThrow().Code).IsEqualTo("E_B");
+        await Assert.That(result.ExpectErr().Code).IsEqualTo("E_B");
     }
 
     [Test]
@@ -289,7 +289,7 @@ public sealed class ResultCombinatorTests
     {
         var result = Result.Err<int>(Sample.Error()).BindErrValue(7);
 
-        await Assert.That(result.OrThrow()).IsEqualTo(7);
+        await Assert.That(result.Expect("test")).IsEqualTo(7);
     }
 
     [Test]
@@ -320,7 +320,7 @@ public sealed class ResultCombinatorTests
         });
 
         await Assert.That(calls).IsEqualTo(1);
-        await Assert.That(ok.OrThrow()).IsEqualTo(3);
-        await Assert.That(failed.OrThrow()).IsEqualTo(7);
+        await Assert.That(ok.Expect("test")).IsEqualTo(3);
+        await Assert.That(failed.Expect("test")).IsEqualTo(7);
     }
 }

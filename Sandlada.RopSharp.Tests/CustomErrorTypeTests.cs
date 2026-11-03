@@ -47,7 +47,7 @@ public sealed class CustomErrorTypeTests
             .Ensure(value => value.Length > 1, App("E_SHORT"))
             .MapErr(error => error with { Code = "E_MAPPED" });
 
-        await Assert.That(result.OrThrow()).IsEqualTo("v6");
+        await Assert.That(result.Expect("test")).IsEqualTo("v6");
     }
 
     [Test]
@@ -57,8 +57,8 @@ public sealed class CustomErrorTypeTests
 
         var mapped = failed.MapErr(error => error with { Message = "mapped" });
 
-        await Assert.That(mapped.ErrOrThrow().Code).IsEqualTo("E_ORIGINAL");
-        await Assert.That(mapped.ErrOrThrow().Message).IsEqualTo("mapped");
+        await Assert.That(mapped.ExpectErr().Code).IsEqualTo("E_ORIGINAL");
+        await Assert.That(mapped.ExpectErr().Message).IsEqualTo("mapped");
     }
 
     [Test]
@@ -90,8 +90,8 @@ public sealed class CustomErrorTypeTests
         var err = Result.FromNullable(missing, () => App("E_NULL"));
         var ok = Result.FromNullable(present, () => App("E_NULL"));
 
-        await Assert.That(err.ErrOrThrow().Code).IsEqualTo("E_NULL");
-        await Assert.That(ok.OrThrow()).IsEqualTo("value");
+        await Assert.That(err.ExpectErr().Code).IsEqualTo("E_NULL");
+        await Assert.That(ok.Expect("test")).IsEqualTo("value");
     }
 
     [Test]
@@ -103,8 +103,8 @@ public sealed class CustomErrorTypeTests
         var err = Result.FromNullableValue(missing, () => App("E_MISSING"));
         var ok = Result.FromNullableValue(present, () => App("E_MISSING"));
 
-        await Assert.That(err.ErrOrThrow().Code).IsEqualTo("E_MISSING");
-        await Assert.That(ok.OrThrow()).IsEqualTo(5);
+        await Assert.That(err.ExpectErr().Code).IsEqualTo("E_MISSING");
+        await Assert.That(ok.Expect("test")).IsEqualTo(5);
     }
 
     [Test]
@@ -115,10 +115,10 @@ public sealed class CustomErrorTypeTests
         var failure = Result.FailureIf(true, 2, App("E_REJECT"));
         var failureSuccess = Result.FailureIf(false, 2, App("E_REJECT"));
 
-        await Assert.That(success.OrThrow()).IsEqualTo(1);
-        await Assert.That(successFailure.ErrOrThrow().Code).IsEqualTo("E_CONDITION");
-        await Assert.That(failure.ErrOrThrow().Code).IsEqualTo("E_REJECT");
-        await Assert.That(failureSuccess.OrThrow()).IsEqualTo(2);
+        await Assert.That(success.Expect("test")).IsEqualTo(1);
+        await Assert.That(successFailure.ExpectErr().Code).IsEqualTo("E_CONDITION");
+        await Assert.That(failure.ExpectErr().Code).IsEqualTo("E_REJECT");
+        await Assert.That(failureSuccess.Expect("test")).IsEqualTo(2);
     }
 
     [Test]
@@ -133,7 +133,7 @@ public sealed class CustomErrorTypeTests
         });
 
         await Assert.That(called).IsFalse();
-        await Assert.That(result.OrThrow()).IsEqualTo(1);
+        await Assert.That(result.Expect("test")).IsEqualTo(1);
     }
 
     [Test]
@@ -144,7 +144,7 @@ public sealed class CustomErrorTypeTests
 
         var result = source.RequireNotNull(() => App("E_NULL", "name required"));
 
-        await Assert.That(result.ErrOrThrow().Code).IsEqualTo("E_NULL");
+        await Assert.That(result.ExpectErr().Code).IsEqualTo("E_NULL");
     }
 
     [Test]
@@ -154,7 +154,7 @@ public sealed class CustomErrorTypeTests
 
         var result = source.RequireNotNull(() => App("E_NULL"));
 
-        await Assert.That(result.ErrOrThrow().Code).IsEqualTo("E_ORIGINAL");
+        await Assert.That(result.ExpectErr().Code).IsEqualTo("E_ORIGINAL");
     }
 
     [Test]
@@ -166,8 +166,8 @@ public sealed class CustomErrorTypeTests
         var err = left.ToResult(error => error);
         var ok = right.ToResult(error => error);
 
-        await Assert.That(err.ErrOrThrow().Code).IsEqualTo("E_LEFT");
-        await Assert.That(ok.OrThrow()).IsEqualTo(42);
+        await Assert.That(err.ExpectErr().Code).IsEqualTo("E_LEFT");
+        await Assert.That(ok.Expect("test")).IsEqualTo(42);
     }
 
     [Test]
@@ -215,7 +215,7 @@ public sealed class CustomErrorTypeTests
 
         var single = Result.SequenceValidation(results).ToSingleError();
 
-        await Assert.That(single.ErrOrThrow().Code).IsEqualTo("E_A");
+        await Assert.That(single.ExpectErr().Code).IsEqualTo("E_A");
     }
 
     [Test]
@@ -230,8 +230,8 @@ public sealed class CustomErrorTypeTests
         var single = Result.SequenceValidation(results)
             .ToSingleError(errors => new AppError("E_MULTIPLE", string.Join(";", errors.Select(error => error.Code))));
 
-        await Assert.That(single.ErrOrThrow().Code).IsEqualTo("E_MULTIPLE");
-        await Assert.That(single.ErrOrThrow().Message).IsEqualTo("E_A;E_B");
+        await Assert.That(single.ExpectErr().Code).IsEqualTo("E_MULTIPLE");
+        await Assert.That(single.ExpectErr().Message).IsEqualTo("E_A;E_B");
     }
 
     [Test]
@@ -245,8 +245,8 @@ public sealed class CustomErrorTypeTests
                      from b in Result.Ok<int, AppError>(2)
                      select a + b;
 
-        await Assert.That(sum.OrThrow()).IsEqualTo(3);
-        await Assert.That(failed.ErrOrThrow().Code).IsEqualTo("E_LINQ");
+        await Assert.That(sum.Expect("test")).IsEqualTo(3);
+        await Assert.That(failed.ExpectErr().Code).IsEqualTo("E_LINQ");
     }
 
     [Test]
@@ -254,7 +254,7 @@ public sealed class CustomErrorTypeTests
     {
         var result = Result.Try(() => 42, _ => App("E_FAIL"), () => App("E_NULL"));
 
-        await Assert.That(result.OrThrow()).IsEqualTo(42);
+        await Assert.That(result.Expect("test")).IsEqualTo(42);
     }
 
     [Test]
@@ -265,8 +265,8 @@ public sealed class CustomErrorTypeTests
             exception => App("E_PARSE", exception.Message),
             () => App("E_NULL"));
 
-        await Assert.That(result.ErrOrThrow().Code).IsEqualTo("E_PARSE");
-        await Assert.That(result.ErrOrThrow().Message).IsEqualTo("bad");
+        await Assert.That(result.ExpectErr().Code).IsEqualTo("E_PARSE");
+        await Assert.That(result.ExpectErr().Message).IsEqualTo("bad");
     }
 
     [Test]
@@ -283,7 +283,7 @@ public sealed class CustomErrorTypeTests
                 return App("E_NULL", "null result");
             });
 
-        await Assert.That(result.ErrOrThrow().Code).IsEqualTo("E_NULL");
+        await Assert.That(result.ExpectErr().Code).IsEqualTo("E_NULL");
         await Assert.That(called).IsEqualTo(1);
     }
 
@@ -335,7 +335,7 @@ public sealed class CustomErrorTypeTests
 
         await Assert.That(executed).IsTrue();
         await Assert.That(result.IsOk).IsTrue();
-        await Assert.That(result.OrThrow()).IsEqualTo(Unit.Value);
+        await Assert.That(result.Expect("test")).IsEqualTo(Unit.Value);
     }
 
     [Test]
@@ -345,7 +345,7 @@ public sealed class CustomErrorTypeTests
             () => throw new FormatException("bad"),
             exception => App("E_ACTION", exception.Message));
 
-        await Assert.That(result.ErrOrThrow().Code).IsEqualTo("E_ACTION");
+        await Assert.That(result.ExpectErr().Code).IsEqualTo("E_ACTION");
     }
 
     [Test]
@@ -359,8 +359,8 @@ public sealed class CustomErrorTypeTests
         var ok = lifted("12");
         var err = lifted("nope");
 
-        await Assert.That(ok.OrThrow()).IsEqualTo(12);
-        await Assert.That(err.ErrOrThrow().Code).IsEqualTo("E_PARSE");
+        await Assert.That(ok.Expect("test")).IsEqualTo(12);
+        await Assert.That(err.ExpectErr().Code).IsEqualTo("E_PARSE");
     }
 
     [Test]
@@ -373,7 +373,7 @@ public sealed class CustomErrorTypeTests
 
         var result = lifted("x");
 
-        await Assert.That(result.ErrOrThrow().Code).IsEqualTo("E_NULL");
+        await Assert.That(result.ExpectErr().Code).IsEqualTo("E_NULL");
     }
 
     [Test]
@@ -384,7 +384,7 @@ public sealed class CustomErrorTypeTests
             _ => App("E_FAIL"),
             () => App("E_NULL"));
 
-        await Assert.That(result.OrThrow()).IsEqualTo(42);
+        await Assert.That(result.Expect("test")).IsEqualTo(42);
     }
 
     [Test]
@@ -395,7 +395,7 @@ public sealed class CustomErrorTypeTests
             exception => App("E_PARSE", exception.Message),
             () => App("E_NULL"));
 
-        await Assert.That(result.ErrOrThrow().Code).IsEqualTo("E_PARSE");
+        await Assert.That(result.ExpectErr().Code).IsEqualTo("E_PARSE");
     }
 
     [Test]
@@ -406,7 +406,7 @@ public sealed class CustomErrorTypeTests
             _ => App("E_FAIL"),
             () => App("E_NULL", "null result"));
 
-        await Assert.That(result.ErrOrThrow().Code).IsEqualTo("E_NULL");
+        await Assert.That(result.ExpectErr().Code).IsEqualTo("E_NULL");
     }
 
     [Test]
@@ -460,7 +460,7 @@ public sealed class CustomErrorTypeTests
             exception => App("E_ACTION", exception.Message));
 
         await Assert.That(result.IsOk).IsTrue();
-        await Assert.That(result.OrThrow()).IsEqualTo(Unit.Value);
+        await Assert.That(result.Expect("test")).IsEqualTo(Unit.Value);
     }
 
     [Test]
@@ -470,7 +470,7 @@ public sealed class CustomErrorTypeTests
             () => Task.FromException(new InvalidOperationException("bad")),
             exception => App("E_ACTION", exception.Message));
 
-        await Assert.That(result.ErrOrThrow().Code).IsEqualTo("E_ACTION");
+        await Assert.That(result.ExpectErr().Code).IsEqualTo("E_ACTION");
     }
 
     [Test]
@@ -484,8 +484,8 @@ public sealed class CustomErrorTypeTests
         var ok = await lifted("12");
         var err = await lifted("nope");
 
-        await Assert.That(ok.OrThrow()).IsEqualTo(12);
-        await Assert.That(err.ErrOrThrow().Code).IsEqualTo("E_PARSE");
+        await Assert.That(ok.Expect("test")).IsEqualTo(12);
+        await Assert.That(err.ExpectErr().Code).IsEqualTo("E_PARSE");
     }
 
     [Test]
@@ -493,7 +493,7 @@ public sealed class CustomErrorTypeTests
     {
         var result = Result.Parse<int, AppError>("42", failure => new AppError(failure.Code, failure.Message));
 
-        await Assert.That(result.OrThrow()).IsEqualTo(42);
+        await Assert.That(result.Expect("test")).IsEqualTo(42);
     }
 
     [Test]
@@ -598,7 +598,7 @@ public sealed class CustomErrorTypeTests
         });
 
         await Assert.That(called).IsFalse();
-        await Assert.That(result.OrThrow()).IsEqualTo(42);
+        await Assert.That(result.Expect("test")).IsEqualTo(42);
     }
 
     [Test]
@@ -631,7 +631,7 @@ public sealed class CustomErrorTypeTests
         });
 
         await Assert.That(called).IsFalse();
-        await Assert.That(result.OrThrow()).IsEqualTo(1);
+        await Assert.That(result.Expect("test")).IsEqualTo(1);
     }
 
     [Test]
@@ -639,7 +639,7 @@ public sealed class CustomErrorTypeTests
     {
         var result = Result.FailureIf(true, 1, () => App("E_REJECT"));
 
-        await Assert.That(result.ErrOrThrow().Code).IsEqualTo("E_REJECT");
+        await Assert.That(result.ExpectErr().Code).IsEqualTo("E_REJECT");
     }
 
     [Test]
@@ -658,7 +658,7 @@ public sealed class CustomErrorTypeTests
             () => throw new InvalidOperationException("sync"),
             exception => App("E_ACTION", exception.Message));
 
-        await Assert.That(result.ErrOrThrow().Code).IsEqualTo("E_ACTION");
+        await Assert.That(result.ExpectErr().Code).IsEqualTo("E_ACTION");
     }
 
     [Test]
@@ -753,14 +753,14 @@ public sealed class CustomErrorTypeTests
             .MapOk<string, string?, RopError>(_ => null);
         Result<string, RopError> required = nullSuccess.RequireNotNull(() => Sample.Error("E_NULL"));
 
-        await Assert.That(ok.OrThrow()).IsEqualTo(1);
+        await Assert.That(ok.Expect("test")).IsEqualTo(1);
         await Assert.That(err.IsErr).IsTrue();
-        await Assert.That(nullable.ErrOrThrow().Code).IsEqualTo("E_TEST");
-        await Assert.That(conditional.OrThrow()).IsEqualTo(1);
-        await Assert.That(tried.OrThrow()).IsEqualTo(1);
-        await Assert.That((await triedAsync).OrThrow()).IsEqualTo(1);
-        await Assert.That(validated.OrThrow()).IsEqualTo(2);
-        await Assert.That(fromEither.OrThrow()).IsEqualTo(1);
-        await Assert.That(required.ErrOrThrow().Code).IsEqualTo("E_NULL");
+        await Assert.That(nullable.ExpectErr().Code).IsEqualTo("E_TEST");
+        await Assert.That(conditional.Expect("test")).IsEqualTo(1);
+        await Assert.That(tried.Expect("test")).IsEqualTo(1);
+        await Assert.That((await triedAsync).Expect("test")).IsEqualTo(1);
+        await Assert.That(validated.Expect("test")).IsEqualTo(2);
+        await Assert.That(fromEither.Expect("test")).IsEqualTo(1);
+        await Assert.That(required.ExpectErr().Code).IsEqualTo("E_NULL");
     }
 }

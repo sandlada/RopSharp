@@ -11,7 +11,7 @@ public sealed class SmokeTests
 
         await Assert.That(result.IsOk).IsTrue();
         await Assert.That(result.IsErr).IsFalse();
-        await Assert.That(result.OrThrow()).IsEqualTo(42);
+        await Assert.That(result.Expect("test")).IsEqualTo(42);
     }
 
     [Test]

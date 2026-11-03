@@ -9,7 +9,7 @@ public sealed class ValidationTraversalTests
     {
         var result = Result.TraverseValidation([1, 2, 3], value => Result.Ok(value * 10));
 
-        await TestSupport.AssertSequenceAsync(result.OrThrow(), 10, 20, 30);
+        await TestSupport.AssertSequenceAsync(result.Expect("test"), 10, 20, 30);
     }
 
     [Test]
@@ -22,7 +22,7 @@ public sealed class ValidationTraversalTests
             [1, 2, 3],
             value => value == 2 ? Result.Ok<int, RopError>(value) : Result.Err<int>(value == 1 ? first : second));
 
-        await TestSupport.AssertSequenceAsync(result.ErrOrThrow(), first, second);
+        await TestSupport.AssertSequenceAsync(result.ExpectErr(), first, second);
     }
 
     [Test]
@@ -39,7 +39,7 @@ public sealed class ValidationTraversalTests
             });
 
         await Assert.That(calls).IsEqualTo(3);
-        await Assert.That(result.ErrOrThrow().Count).IsEqualTo(3);
+        await Assert.That(result.ExpectErr().Count).IsEqualTo(3);
     }
 
     [Test]
@@ -49,7 +49,7 @@ public sealed class ValidationTraversalTests
             [1, 2, 3, 4],
             value => value % 2 == 0 ? Result.Ok(value) : Result.Err<int>(Sample.Error()));
 
-        await TestSupport.AssertSequenceAsync(result.ErrOrThrow().Select(error => error.Code), "E_TEST", "E_TEST");
+        await TestSupport.AssertSequenceAsync(result.ExpectErr().Select(error => error.Code), "E_TEST", "E_TEST");
         await Assert.That(result.IsErr).IsTrue();
     }
 
@@ -59,7 +59,7 @@ public sealed class ValidationTraversalTests
         var result = Result.TraverseValidation(Array.Empty<int>(), value => Result.Ok(value));
 
         await Assert.That(result.IsOk).IsTrue();
-        await Assert.That(result.OrThrow().Count).IsEqualTo(0);
+        await Assert.That(result.Expect("test").Count).IsEqualTo(0);
     }
 
     [Test]
@@ -90,7 +90,7 @@ public sealed class ValidationTraversalTests
             Task.FromResult(Result.Ok(3)),
         });
 
-        await TestSupport.AssertSequenceAsync(result.OrThrow(), 1, 2, 3);
+        await TestSupport.AssertSequenceAsync(result.Expect("test"), 1, 2, 3);
     }
 
     [Test]
@@ -106,7 +106,7 @@ public sealed class ValidationTraversalTests
             Task.FromResult(Result.Err<int>(second)),
         });
 
-        await TestSupport.AssertSequenceAsync(result.ErrOrThrow(), first, second);
+        await TestSupport.AssertSequenceAsync(result.ExpectErr(), first, second);
     }
 
     [Test]
@@ -125,7 +125,7 @@ public sealed class ValidationTraversalTests
         await Assert.That(operation.IsCompleted).IsFalse();
         pending.SetResult(Result.Err<int>(second));
 
-        await TestSupport.AssertSequenceAsync((await operation).ErrOrThrow(), first, second);
+        await TestSupport.AssertSequenceAsync((await operation).ExpectErr(), first, second);
     }
 
     [Test]
@@ -134,7 +134,7 @@ public sealed class ValidationTraversalTests
         var result = await Result.SequenceValidationAsync(Array.Empty<Task<Result<int, RopError>>>());
 
         await Assert.That(result.IsOk).IsTrue();
-        await Assert.That(result.OrThrow().Count).IsEqualTo(0);
+        await Assert.That(result.Expect("test").Count).IsEqualTo(0);
     }
 
     [Test]
@@ -194,7 +194,7 @@ public sealed class ValidationTraversalTests
             [1, 2, 3],
             value => Task.FromResult(Result.Ok(value * 10)));
 
-        await TestSupport.AssertSequenceAsync(result.OrThrow(), 10, 20, 30);
+        await TestSupport.AssertSequenceAsync(result.Expect("test"), 10, 20, 30);
     }
 
     [Test]
@@ -214,7 +214,7 @@ public sealed class ValidationTraversalTests
             });
 
         await Assert.That(calls).IsEqualTo(3);
-        await TestSupport.AssertSequenceAsync(result.ErrOrThrow(), first, second);
+        await TestSupport.AssertSequenceAsync(result.ExpectErr(), first, second);
     }
 
     [Test]
@@ -225,7 +225,7 @@ public sealed class ValidationTraversalTests
             value => Task.FromResult(Result.Ok(value)));
 
         await Assert.That(result.IsOk).IsTrue();
-        await Assert.That(result.OrThrow().Count).IsEqualTo(0);
+        await Assert.That(result.Expect("test").Count).IsEqualTo(0);
     }
 
     [Test]
@@ -309,7 +309,7 @@ public sealed class ValidationTraversalTests
             cts.Token);
 
         await Assert.That(observed).IsEqualTo(cts.Token);
-        await TestSupport.AssertSequenceAsync(result.OrThrow(), 1, 2);
+        await TestSupport.AssertSequenceAsync(result.Expect("test"), 1, 2);
     }
 
     [Test]

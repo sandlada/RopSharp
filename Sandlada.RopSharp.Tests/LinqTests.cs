@@ -18,7 +18,7 @@ public sealed class LinqTests
         var query = from user in GetUser(2)
                     select user.Name;
 
-        await Assert.That(query.OrThrow()).IsEqualTo("bob");
+        await Assert.That(query.Expect("test")).IsEqualTo("bob");
     }
 
     [Test]
@@ -28,7 +28,7 @@ public sealed class LinqTests
                     from order in GetOrder(user.Age)
                     select order.Amount;
 
-        await Assert.That(query.OrThrow()).IsEqualTo(20m);
+        await Assert.That(query.Expect("test")).IsEqualTo(20m);
     }
 
     [Test]
@@ -38,7 +38,7 @@ public sealed class LinqTests
                     from order in GetOrder(user.Age)
                     select order.Amount;
 
-        await Assert.That(query.ErrOrThrow().Code).IsEqualTo("E_USER");
+        await Assert.That(query.ExpectErr().Code).IsEqualTo("E_USER");
     }
 
     [Test]
@@ -49,7 +49,7 @@ public sealed class LinqTests
                     where a < b
                     select a + b;
 
-        await Assert.That(query.OrThrow()).IsEqualTo(3);
+        await Assert.That(query.Expect("test")).IsEqualTo(3);
     }
 
     [Test]

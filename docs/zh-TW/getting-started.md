@@ -70,7 +70,7 @@ int fallback = result.BindErrValue(0);
 int lazily  = result.BindErrValue(() => ComputeDefault());
 ```
 
-`OrThrow()`／`OkOrThrow()`／`ErrOrThrow()` 僅供測試與邊界使用。
+`Expect(string reason)` 僅供測試與邊界使用；展開時必須提供非空理由。
 
 ## 錯誤模型
 
@@ -289,7 +289,7 @@ Result<Address, RopError> address =
 ## 反模式
 
 - 用 `try/catch` 包住組合子鏈 → 用 `Result.Try` 包邊界。
-- 生產路徑用 `OrThrow` → 用 `Match`、`BindErrValue`、`TryGet*`。
+- 生產路徑用無理由的 `Expect` → 用 `Match`、`BindErrValue`、`TryGet*`。
 - 用 `null` 表示失敗 → 用 `Err`。
 - 用 `Option` 表達需要原因的領域失敗 → 用 `Result`。
 - 用 `Option` 包集合 → 空集合就是空集合。

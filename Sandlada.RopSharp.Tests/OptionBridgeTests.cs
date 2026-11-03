@@ -9,7 +9,7 @@ public sealed class OptionBridgeTests
     {
         var result = Option.Some(5).RequireSome(Sample.Error());
 
-        await Assert.That(result.OrThrow()).IsEqualTo(5);
+        await Assert.That(result.Expect("test")).IsEqualTo(5);
     }
 
     [Test]
@@ -19,7 +19,7 @@ public sealed class OptionBridgeTests
 
         var result = Option.None<int>().RequireSome(error);
 
-        await Assert.That(result.ErrOrThrow()).IsSameReferenceAs(error);
+        await Assert.That(result.ExpectErr()).IsSameReferenceAs(error);
     }
 
     [Test]
@@ -40,14 +40,14 @@ public sealed class OptionBridgeTests
         });
 
         await Assert.That(calls).IsEqualTo(1);
-        await Assert.That(some.OrThrow()).IsEqualTo(1);
-        await Assert.That(none.ErrOrThrow().Code).IsEqualTo("E_NONE");
+        await Assert.That(some.Expect("test")).IsEqualTo(1);
+        await Assert.That(none.ExpectErr().Code).IsEqualTo("E_NONE");
     }
 
     [Test]
     public async Task ToOption_MapsTracks()
     {
-        await Assert.That(Result.Ok(1).ToOption().OrThrow()).IsEqualTo(1);
+        await Assert.That(Result.Ok(1).ToOption().Expect("test")).IsEqualTo(1);
         await Assert.That(Result.Err<int>(Sample.Error()).ToOption().IsNone).IsTrue();
     }
 
@@ -85,7 +85,7 @@ public sealed class OptionBridgeTests
         var some = Option.Some(withValue).BindSomeNullable(value => value.Nickname);
 
         await Assert.That(none.IsNone).IsTrue();
-        await Assert.That(some.OrThrow()).IsEqualTo("nick");
+        await Assert.That(some.Expect("test")).IsEqualTo("nick");
     }
 
     [Test]
@@ -113,7 +113,7 @@ public sealed class OptionBridgeTests
         var some = Option.Some(withScore).BindSomeNullableValue(value => value.Score);
 
         await Assert.That(none.IsNone).IsTrue();
-        await Assert.That(some.OrThrow()).IsEqualTo(7);
+        await Assert.That(some.Expect("test")).IsEqualTo(7);
     }
 
     [Test]
@@ -124,10 +124,10 @@ public sealed class OptionBridgeTests
         var none = Option.None<Result<int, RopError>>().Transpose();
 
         await Assert.That(ok.IsOk).IsTrue();
-        await Assert.That(ok.OrThrow().OrThrow()).IsEqualTo(1);
-        await Assert.That(err.ErrOrThrow().Code).IsEqualTo("E_X");
+        await Assert.That(ok.Expect("test").Expect("test")).IsEqualTo(1);
+        await Assert.That(err.ExpectErr().Code).IsEqualTo("E_X");
         await Assert.That(none.IsOk).IsTrue();
-        await Assert.That(none.OrThrow().IsNone).IsTrue();
+        await Assert.That(none.Expect("test").IsNone).IsTrue();
     }
 
     [Test]
@@ -137,9 +137,9 @@ public sealed class OptionBridgeTests
         var none = Result.Ok(Option.None<int>()).Transpose();
         var err = Result.Err<Option<int>>(Sample.Error("E_X")).Transpose();
 
-        await Assert.That(some.OrThrow().OrThrow()).IsEqualTo(1);
+        await Assert.That(some.Expect("test").Expect("test")).IsEqualTo(1);
         await Assert.That(none.IsNone).IsTrue();
-        await Assert.That(err.OrThrow().ErrOrThrow().Code).IsEqualTo("E_X");
+        await Assert.That(err.Expect("test").ExpectErr().Code).IsEqualTo("E_X");
     }
 
     [Test]
@@ -149,6 +149,6 @@ public sealed class OptionBridgeTests
 
         var roundTrip = original.Transpose().Transpose();
 
-        await Assert.That(roundTrip.OrThrow().OrThrow()).IsEqualTo(3);
+        await Assert.That(roundTrip.Expect("test").Expect("test")).IsEqualTo(3);
     }
 }

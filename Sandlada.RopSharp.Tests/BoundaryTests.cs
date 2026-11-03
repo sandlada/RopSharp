@@ -10,7 +10,7 @@ public sealed class BoundaryTests
     {
         var result = Result.Try(() => 42, _ => Sample.Error());
 
-        await Assert.That(result.OrThrow()).IsEqualTo(42);
+        await Assert.That(result.Expect("test")).IsEqualTo(42);
     }
 
     [Test]
@@ -18,7 +18,7 @@ public sealed class BoundaryTests
     {
         var result = Result.Try<int>(() => throw new FormatException("bad"), exception => RopError.FromException(exception, "E_PARSE"));
 
-        var error = result.ErrOrThrow();
+        var error = result.ExpectErr();
 
         await Assert.That(error.Code).IsEqualTo("E_PARSE");
         await Assert.That(error.Cause is FormatException).IsTrue();
@@ -29,7 +29,7 @@ public sealed class BoundaryTests
     {
         var result = Result.Try<int>(() => throw new InvalidOperationException("bad"), "E_CODE");
 
-        await Assert.That(result.ErrOrThrow().Code).IsEqualTo("E_CODE");
+        await Assert.That(result.ExpectErr().Code).IsEqualTo("E_CODE");
     }
 
     [Test]
@@ -37,7 +37,7 @@ public sealed class BoundaryTests
     {
         var result = Result.Try<string>(() => null!, _ => Sample.Error());
 
-        await Assert.That(result.ErrOrThrow().Code).IsEqualTo("E_NULL_RESULT");
+        await Assert.That(result.ExpectErr().Code).IsEqualTo("E_NULL_RESULT");
     }
 
     [Test]
@@ -66,8 +66,8 @@ public sealed class BoundaryTests
         var ok = safeParse("12");
         var err = safeParse("nope");
 
-        await Assert.That(ok.OrThrow()).IsEqualTo(12);
-        await Assert.That(err.ErrOrThrow().Code).IsEqualTo("E_PARSE");
+        await Assert.That(ok.Expect("test")).IsEqualTo(12);
+        await Assert.That(err.ExpectErr().Code).IsEqualTo("E_PARSE");
     }
 
     [Test]
@@ -78,7 +78,7 @@ public sealed class BoundaryTests
         var ok = parse("12");
         var exception = TestSupport.Catch(() => parse("nope"));
 
-        await Assert.That(ok.OrThrow()).IsEqualTo(12);
+        await Assert.That(ok.Expect("test")).IsEqualTo(12);
         await Assert.That(exception is FormatException).IsTrue();
     }
 
@@ -99,8 +99,8 @@ public sealed class BoundaryTests
         var err = Result.FromNullable(missing, () => Sample.Error("E_NULL"));
         var ok = Result.FromNullable(present, () => Sample.Error());
 
-        await Assert.That(err.ErrOrThrow().Code).IsEqualTo("E_NULL");
-        await Assert.That(ok.OrThrow()).IsEqualTo("x");
+        await Assert.That(err.ExpectErr().Code).IsEqualTo("E_NULL");
+        await Assert.That(ok.Expect("test")).IsEqualTo("x");
     }
 
     [Test]
@@ -116,7 +116,7 @@ public sealed class BoundaryTests
         });
 
         await Assert.That(called).IsFalse();
-        await Assert.That(result.OrThrow()).IsEqualTo("x");
+        await Assert.That(result.Expect("test")).IsEqualTo("x");
     }
 
     [Test]
@@ -128,8 +128,8 @@ public sealed class BoundaryTests
         var err = Result.FromNullableValue(missing, () => Sample.Error("E_AGE_NULL"));
         var ok = Result.FromNullableValue(present, () => Sample.Error());
 
-        await Assert.That(err.ErrOrThrow().Code).IsEqualTo("E_AGE_NULL");
-        await Assert.That(ok.OrThrow()).IsEqualTo(5);
+        await Assert.That(err.ExpectErr().Code).IsEqualTo("E_AGE_NULL");
+        await Assert.That(ok.Expect("test")).IsEqualTo(5);
     }
 
     [Test]

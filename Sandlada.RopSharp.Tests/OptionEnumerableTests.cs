@@ -7,7 +7,7 @@ public sealed class OptionEnumerableTests
     [Test]
     public async Task TryFirst_ReturnsFirstOrNone()
     {
-        await Assert.That(new[] { 1, 2, 3 }.TryFirst().OrThrow()).IsEqualTo(1);
+        await Assert.That(new[] { 1, 2, 3 }.TryFirst().Expect("test")).IsEqualTo(1);
         await Assert.That(Array.Empty<int>().TryFirst().IsNone).IsTrue();
     }
 
@@ -17,14 +17,14 @@ public sealed class OptionEnumerableTests
         var match = new[] { 1, 2, 3, 4 }.TryFirst(value => value % 2 == 0);
         var missing = new[] { 1, 3, 5 }.TryFirst(value => value % 2 == 0);
 
-        await Assert.That(match.OrThrow()).IsEqualTo(2);
+        await Assert.That(match.Expect("test")).IsEqualTo(2);
         await Assert.That(missing.IsNone).IsTrue();
     }
 
     [Test]
     public async Task TryLast_ReturnsLastOrNone()
     {
-        await Assert.That(new[] { 1, 2, 3 }.TryLast().OrThrow()).IsEqualTo(3);
+        await Assert.That(new[] { 1, 2, 3 }.TryLast().Expect("test")).IsEqualTo(3);
         await Assert.That(Array.Empty<int>().TryLast().IsNone).IsTrue();
     }
 
@@ -34,7 +34,7 @@ public sealed class OptionEnumerableTests
         var match = new[] { 1, 2, 3, 4 }.TryLast(value => value % 2 == 0);
         var missing = new[] { 1, 3, 5 }.TryLast(value => value % 2 == 0);
 
-        await Assert.That(match.OrThrow()).IsEqualTo(4);
+        await Assert.That(match.Expect("test")).IsEqualTo(4);
         await Assert.That(missing.IsNone).IsTrue();
     }
 
@@ -46,7 +46,7 @@ public sealed class OptionEnumerableTests
             ["a"] = 1,
         };
 
-        await Assert.That(source.TryFind("a").OrThrow()).IsEqualTo(1);
+        await Assert.That(source.TryFind("a").Expect("test")).IsEqualTo(1);
         await Assert.That(source.TryFind("missing").IsNone).IsTrue();
     }
 

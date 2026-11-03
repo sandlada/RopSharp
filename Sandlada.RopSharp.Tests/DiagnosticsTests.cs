@@ -41,13 +41,13 @@ public sealed class DiagnosticsTests
         var result = Result.Parse<int>("42");
 
         await Assert.That(result.IsOk).IsTrue();
-        await Assert.That(result.OrThrow()).IsEqualTo(42);
+        await Assert.That(result.Expect("test")).IsEqualTo(42);
     }
 
     [Test]
     public async Task Parse_WithInvalidValue_EchoesInputInMessageAndDetails()
     {
-        var error = Result.Parse<int>("not-a-number").ErrOrThrow();
+        var error = Result.Parse<int>("not-a-number").ExpectErr();
 
         await Assert.That(error.Message).IsEqualTo("'not-a-number' is not a valid Int32.");
         await Assert.That(error.Details).IsEqualTo("input=\"not-a-number\"");
@@ -56,7 +56,7 @@ public sealed class DiagnosticsTests
     [Test]
     public async Task Parse_WithNullValue_ReportsNullInsteadOfEmptyQuotes()
     {
-        var error = Result.Parse<int>(null).ErrOrThrow();
+        var error = Result.Parse<int>(null).ExpectErr();
 
         await Assert.That(error.Message).IsEqualTo("The value is null, which is not a valid Int32.");
         await Assert.That(error.Details).IsEqualTo("input=null");
@@ -65,7 +65,7 @@ public sealed class DiagnosticsTests
     [Test]
     public async Task Parse_WithEmptyValue_EchoesEmptyQuotes()
     {
-        var error = Result.Parse<int>(string.Empty).ErrOrThrow();
+        var error = Result.Parse<int>(string.Empty).ExpectErr();
 
         await Assert.That(error.Message).IsEqualTo("'' is not a valid Int32.");
         await Assert.That(error.Details).IsEqualTo("input=\"\"");
@@ -74,7 +74,7 @@ public sealed class DiagnosticsTests
     [Test]
     public async Task Parse_WithCustomCode_UsesProvidedCode()
     {
-        var error = Result.Parse<int>("nope", "E_QUANTITY").ErrOrThrow();
+        var error = Result.Parse<int>("nope", "E_QUANTITY").ExpectErr();
 
         await Assert.That(error.Code).IsEqualTo("E_QUANTITY");
     }
@@ -90,7 +90,7 @@ public sealed class DiagnosticsTests
     [Test]
     public async Task Parse_WithControlCharacters_EscapesThemInMessageAndDetails()
     {
-        var error = Result.Parse<int>("a\nb\rc\td\u0001e").ErrOrThrow();
+        var error = Result.Parse<int>("a\nb\rc\td\u0001e").ExpectErr();
         var details = error.Details!;
 
         await Assert.That(error.Message.Contains("\\n")).IsTrue();
@@ -105,7 +105,7 @@ public sealed class DiagnosticsTests
     [Test]
     public async Task Parse_WithQuotesAndBackslashes_EscapesThem()
     {
-        var error = Result.Parse<int>("a\"b\\c").ErrOrThrow();
+        var error = Result.Parse<int>("a\"b\\c").ExpectErr();
         var details = error.Details!;
 
         await Assert.That(details.Contains("\\\"")).IsTrue();
@@ -117,7 +117,7 @@ public sealed class DiagnosticsTests
     {
         var input = new string('a', DiagnosticTextProbe.MaxEchoLength + 10);
 
-        var error = Result.Parse<int>(input).ErrOrThrow();
+        var error = Result.Parse<int>(input).ExpectErr();
         var details = error.Details!;
 
         await Assert.That(details.EndsWith("...\"", StringComparison.Ordinal)).IsTrue();
@@ -130,7 +130,7 @@ public sealed class DiagnosticsTests
     {
         var input = new string('b', DiagnosticTextProbe.MaxEchoLength);
 
-        var error = Result.Parse<int>(input).ErrOrThrow();
+        var error = Result.Parse<int>(input).ExpectErr();
 
         await Assert.That(error.Details).IsEqualTo($"input=\"{input}\"");
     }
@@ -140,7 +140,7 @@ public sealed class DiagnosticsTests
     {
         var input = new string('a', DiagnosticTextProbe.MaxEchoLength - 1) + "😀";
 
-        var error = Result.Parse<int>(input).ErrOrThrow();
+        var error = Result.Parse<int>(input).ExpectErr();
 
         await Assert.That(error.Details).IsEqualTo($"input=\"{input}\"");
     }
@@ -151,7 +151,7 @@ public sealed class DiagnosticsTests
         var prefix = new string('a', DiagnosticTextProbe.MaxEchoLength - 1);
         var input = prefix + "😀😀";
 
-        var error = Result.Parse<int>(input).ErrOrThrow();
+        var error = Result.Parse<int>(input).ExpectErr();
 
         await Assert.That(error.Details).IsEqualTo($"input=\"{prefix}😀...\"");
     }
@@ -159,7 +159,7 @@ public sealed class DiagnosticsTests
     [Test]
     public async Task Parse_WithLoneSurrogate_EscapesItInsteadOfEmittingInvalidText()
     {
-        var error = Result.Parse<int>("a\uD800b").ErrOrThrow();
+        var error = Result.Parse<int>("a\uD800b").ExpectErr();
         var details = error.Details!;
 
         await Assert.That(details.Contains("\\uD800")).IsTrue();
@@ -169,7 +169,7 @@ public sealed class DiagnosticsTests
     [Test]
     public async Task Parse_WithUnicodeLineSeparators_EscapesThem()
     {
-        var error = Result.Parse<int>("a\u2028b\u2029c").ErrOrThrow();
+        var error = Result.Parse<int>("a\u2028b\u2029c").ExpectErr();
         var details = error.Details!;
 
         await Assert.That(details.Contains("\\u2028")).IsTrue();
@@ -181,7 +181,7 @@ public sealed class DiagnosticsTests
     [Test]
     public async Task Parse_WithBidiControls_EscapesThem()
     {
-        var error = Result.Parse<int>("a\u202Eb\u2066c\u200Fd").ErrOrThrow();
+        var error = Result.Parse<int>("a\u202Eb\u2066c\u200Fd").ExpectErr();
         var details = error.Details!;
 
         await Assert.That(details.Contains("\\u202E")).IsTrue();

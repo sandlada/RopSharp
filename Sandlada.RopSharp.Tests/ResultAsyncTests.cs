@@ -9,7 +9,7 @@ public sealed class ResultAsyncTests
     {
         var result = await Result.Ok(5).AsTask();
 
-        await Assert.That(result.OrThrow()).IsEqualTo(5);
+        await Assert.That(result.Expect("test")).IsEqualTo(5);
     }
 
     [Test]
@@ -17,7 +17,7 @@ public sealed class ResultAsyncTests
     {
         var result = await Task.FromResult(Result.Ok(2)).MapOkAsync(value => value * 10);
 
-        await Assert.That(result.OrThrow()).IsEqualTo(20);
+        await Assert.That(result.Expect("test")).IsEqualTo(20);
     }
 
     [Test]
@@ -25,7 +25,7 @@ public sealed class ResultAsyncTests
     {
         var result = await Task.FromResult(Result.Ok(2)).MapOkAsync(value => Task.FromResult(value * 10));
 
-        await Assert.That(result.OrThrow()).IsEqualTo(20);
+        await Assert.That(result.Expect("test")).IsEqualTo(20);
     }
 
     [Test]
@@ -36,7 +36,7 @@ public sealed class ResultAsyncTests
         var result = await Task.FromResult(Result.Ok(2))
             .MapOkAsync((value, token) => Task.FromResult(token == cts.Token ? value + 1 : -1), cts.Token);
 
-        await Assert.That(result.OrThrow()).IsEqualTo(3);
+        await Assert.That(result.Expect("test")).IsEqualTo(3);
     }
 
     [Test]
@@ -44,7 +44,7 @@ public sealed class ResultAsyncTests
     {
         var result = await Result.Ok(2).MapOkAsync(value => Task.FromResult(value * 3));
 
-        await Assert.That(result.OrThrow()).IsEqualTo(6);
+        await Assert.That(result.Expect("test")).IsEqualTo(6);
     }
 
     [Test]
@@ -60,7 +60,7 @@ public sealed class ResultAsyncTests
         });
 
         await Assert.That(called).IsFalse();
-        await Assert.That(result.ErrOrThrow()).IsSameReferenceAs(error);
+        await Assert.That(result.ExpectErr()).IsSameReferenceAs(error);
     }
 
     [Test]
@@ -70,8 +70,8 @@ public sealed class ResultAsyncTests
             .MapErrAsync(error => error.WithCode("E_Y"));
         var untouched = await Task.FromResult(Result.Ok(1)).MapErrAsync(error => error.WithCode("E_Y"));
 
-        await Assert.That(mapped.ErrOrThrow().Code).IsEqualTo("E_Y");
-        await Assert.That(untouched.OrThrow()).IsEqualTo(1);
+        await Assert.That(mapped.ExpectErr().Code).IsEqualTo("E_Y");
+        await Assert.That(untouched.Expect("test")).IsEqualTo(1);
     }
 
     [Test]
@@ -80,7 +80,7 @@ public sealed class ResultAsyncTests
         var mapped = await Task.FromResult(Result.Err<int>(Sample.Error("E_X")))
             .MapErrAsync(error => Task.FromResult(error.WithCode("E_ASYNC")));
 
-        await Assert.That(mapped.ErrOrThrow().Code).IsEqualTo("E_ASYNC");
+        await Assert.That(mapped.ExpectErr().Code).IsEqualTo("E_ASYNC");
     }
 
     [Test]
@@ -90,7 +90,7 @@ public sealed class ResultAsyncTests
             .BindOkAsync(value => Task.FromResult(Result.Ok(value * 5)))
             .BindOkAsync(value => Task.FromResult(Result.Ok(value + 1)));
 
-        await Assert.That(result.OrThrow()).IsEqualTo(11);
+        await Assert.That(result.Expect("test")).IsEqualTo(11);
     }
 
     [Test]
@@ -101,7 +101,7 @@ public sealed class ResultAsyncTests
         var result = await Task.FromResult(Result.Ok(2))
             .BindOkAsync((value, token) => Task.FromResult(Result.Ok(value + (token == cts.Token ? 1 : 0))), cts.Token);
 
-        await Assert.That(result.OrThrow()).IsEqualTo(3);
+        await Assert.That(result.Expect("test")).IsEqualTo(3);
     }
 
     [Test]
@@ -109,7 +109,7 @@ public sealed class ResultAsyncTests
     {
         var result = await Result.Ok(2).BindOkAsync(value => Task.FromResult(Result.Ok(value * 4)));
 
-        await Assert.That(result.OrThrow()).IsEqualTo(8);
+        await Assert.That(result.Expect("test")).IsEqualTo(8);
     }
 
     [Test]
@@ -118,7 +118,7 @@ public sealed class ResultAsyncTests
         var result = await Task.FromResult(Result.Err<int>(Sample.Error()))
             .BindErrAsync(_ => Task.FromResult(Result.Ok(7)));
 
-        await Assert.That(result.OrThrow()).IsEqualTo(7);
+        await Assert.That(result.Expect("test")).IsEqualTo(7);
     }
 
     [Test]
@@ -129,7 +129,7 @@ public sealed class ResultAsyncTests
         var result = await Task.FromResult(Result.Err<int>(Sample.Error()))
             .BindErrAsync((error, token) => Task.FromResult(Result.Ok(token == cts.Token ? 1 : 0)), cts.Token);
 
-        await Assert.That(result.OrThrow()).IsEqualTo(1);
+        await Assert.That(result.Expect("test")).IsEqualTo(1);
     }
 
     [Test]
@@ -137,7 +137,7 @@ public sealed class ResultAsyncTests
     {
         var result = await Result.Err<int>(Sample.Error()).BindErrAsync(_ => Task.FromResult(Result.Ok(9)));
 
-        await Assert.That(result.OrThrow()).IsEqualTo(9);
+        await Assert.That(result.Expect("test")).IsEqualTo(9);
     }
 
     [Test]
@@ -152,7 +152,7 @@ public sealed class ResultAsyncTests
         });
 
         await Assert.That(observed).IsEqualTo(3);
-        await Assert.That(result.OrThrow()).IsEqualTo(3);
+        await Assert.That(result.Expect("test")).IsEqualTo(3);
     }
 
     [Test]
@@ -215,7 +215,7 @@ public sealed class ResultAsyncTests
         var result = await Task.FromResult(Result.Err<int>(Sample.Error("E_X")))
             .MapOkAsync(value => value + 1, cts.Token);
 
-        await Assert.That(result.ErrOrThrow().Code).IsEqualTo("E_X");
+        await Assert.That(result.ExpectErr().Code).IsEqualTo("E_X");
     }
 
     [Test]
@@ -229,7 +229,7 @@ public sealed class ResultAsyncTests
 
         var result = await Result.SequenceAsync(tasks);
 
-        await TestSupport.AssertSequenceAsync(result.OrThrow(), 1, 2);
+        await TestSupport.AssertSequenceAsync(result.Expect("test"), 1, 2);
     }
 
     [Test]
@@ -237,7 +237,7 @@ public sealed class ResultAsyncTests
     {
         var result = await Result.SequenceAsync(Array.Empty<Task<Result<int, RopError>>>());
 
-        await Assert.That(result.OrThrow().Count).IsEqualTo(0);
+        await Assert.That(result.Expect("test").Count).IsEqualTo(0);
     }
 
     [Test]
@@ -248,7 +248,7 @@ public sealed class ResultAsyncTests
 
         var result = await Result.SequenceAsync(Source());
 
-        await Assert.That(result.ErrOrThrow()).IsSameReferenceAs(error);
+        await Assert.That(result.ExpectErr()).IsSameReferenceAs(error);
         await Assert.That(laterRequested).IsFalse();
 
         IEnumerable<Task<Result<int, RopError>>> Source()
@@ -264,7 +264,7 @@ public sealed class ResultAsyncTests
     {
         var result = await Result.TraverseAsync([1, 2, 3], value => Task.FromResult(Result.Ok(value * 2)));
 
-        await TestSupport.AssertSequenceAsync(result.OrThrow(), 2, 4, 6);
+        await TestSupport.AssertSequenceAsync(result.Expect("test"), 2, 4, 6);
     }
 
     [Test]
@@ -272,7 +272,7 @@ public sealed class ResultAsyncTests
     {
         var result = await Result.TryAsync(() => Task.FromResult(42), _ => Sample.Error());
 
-        await Assert.That(result.OrThrow()).IsEqualTo(42);
+        await Assert.That(result.Expect("test")).IsEqualTo(42);
     }
 
     [Test]
@@ -282,8 +282,8 @@ public sealed class ResultAsyncTests
             () => Task.FromException<int>(new InvalidOperationException("bad")),
             exception => RopError.FromException(exception, "E_ASYNC"));
 
-        await Assert.That(result.ErrOrThrow().Code).IsEqualTo("E_ASYNC");
-        await Assert.That(result.ErrOrThrow().Cause is InvalidOperationException).IsTrue();
+        await Assert.That(result.ExpectErr().Code).IsEqualTo("E_ASYNC");
+        await Assert.That(result.ExpectErr().Cause is InvalidOperationException).IsTrue();
     }
 
     [Test]
@@ -293,7 +293,7 @@ public sealed class ResultAsyncTests
             () => throw new InvalidOperationException("sync"),
             exception => RopError.FromException(exception, "E_SYNC"));
 
-        await Assert.That(result.ErrOrThrow().Code).IsEqualTo("E_SYNC");
+        await Assert.That(result.ExpectErr().Code).IsEqualTo("E_SYNC");
     }
 
     [Test]
@@ -310,7 +310,7 @@ public sealed class ResultAsyncTests
     {
         var result = await Result.TryAsync<string?>(() => Task.FromResult<string?>(null), _ => Sample.Error());
 
-        await Assert.That(result.ErrOrThrow().Code).IsEqualTo("E_NULL_RESULT");
+        await Assert.That(result.ExpectErr().Code).IsEqualTo("E_NULL_RESULT");
     }
 
     [Test]
@@ -332,6 +332,6 @@ public sealed class ResultAsyncTests
             () => Task.FromException<int>(new InvalidOperationException("bad")),
             "E_CODE");
 
-        await Assert.That(result.ErrOrThrow().Code).IsEqualTo("E_CODE");
+        await Assert.That(result.ExpectErr().Code).IsEqualTo("E_CODE");
     }
 }

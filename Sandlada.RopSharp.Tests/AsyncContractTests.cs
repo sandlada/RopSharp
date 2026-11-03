@@ -17,7 +17,7 @@ public sealed class AsyncContractTests
         var result = await Result.Ok(2)
             .MapOkAsync((value, token) => Task.FromResult(value + (token == cts.Token ? 1 : 0)), cts.Token);
 
-        await Assert.That(result.OrThrow()).IsEqualTo(3);
+        await Assert.That(result.Expect("test")).IsEqualTo(3);
     }
 
     [Test]
@@ -28,7 +28,7 @@ public sealed class AsyncContractTests
         var result = await Result.Err<int>(error)
             .MapOkAsync((value, _) => Task.FromResult(value + 1));
 
-        await Assert.That(result.ErrOrThrow()).IsSameReferenceAs(error);
+        await Assert.That(result.ExpectErr()).IsSameReferenceAs(error);
     }
 
     [Test]
@@ -41,7 +41,7 @@ public sealed class AsyncContractTests
         await Assert.That(pending.IsCompleted).IsFalse();
         mapper.SetResult(4);
 
-        await Assert.That((await pending).OrThrow()).IsEqualTo(4);
+        await Assert.That((await pending).Expect("test")).IsEqualTo(4);
     }
 
     [Test]
@@ -50,7 +50,7 @@ public sealed class AsyncContractTests
         var result = await Result.Err<int>(Sample.Error("E_X"))
             .MapErrAsync(error => Task.FromResult(error.WithCode("E_ASYNC")));
 
-        await Assert.That(result.ErrOrThrow().Code).IsEqualTo("E_ASYNC");
+        await Assert.That(result.ExpectErr().Code).IsEqualTo("E_ASYNC");
     }
 
     [Test]
@@ -65,7 +65,7 @@ public sealed class AsyncContractTests
         });
 
         await Assert.That(called).IsFalse();
-        await Assert.That(result.OrThrow()).IsEqualTo(1);
+        await Assert.That(result.Expect("test")).IsEqualTo(1);
     }
 
     [Test]
@@ -76,7 +76,7 @@ public sealed class AsyncContractTests
         var result = await Result.Err<int>(Sample.Error("E_X"))
             .MapErrAsync((error, token) => Task.FromResult(error.WithCode(token == cts.Token ? "E_CT" : "E_NO")), cts.Token);
 
-        await Assert.That(result.ErrOrThrow().Code).IsEqualTo("E_CT");
+        await Assert.That(result.ExpectErr().Code).IsEqualTo("E_CT");
     }
 
     [Test]
@@ -84,7 +84,7 @@ public sealed class AsyncContractTests
     {
         var result = await Result.Ok(1).MapErrAsync((error, _) => Task.FromResult(error));
 
-        await Assert.That(result.OrThrow()).IsEqualTo(1);
+        await Assert.That(result.Expect("test")).IsEqualTo(1);
     }
 
     [Test]
@@ -97,7 +97,7 @@ public sealed class AsyncContractTests
         await Assert.That(pending.IsCompleted).IsFalse();
         mapper.SetResult(Sample.Error("E_LATE"));
 
-        await Assert.That((await pending).ErrOrThrow().Code).IsEqualTo("E_LATE");
+        await Assert.That((await pending).ExpectErr().Code).IsEqualTo("E_LATE");
     }
 
     [Test]

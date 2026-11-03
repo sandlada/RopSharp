@@ -118,12 +118,12 @@ public sealed class RandomizedLawTests
             var expected = new List<string>();
             if (first.IsErr)
             {
-                expected.Add(first.ErrOrThrow());
+                expected.Add(first.ExpectErr());
             }
 
             if (second.IsErr)
             {
-                expected.Add(second.ErrOrThrow());
+                expected.Add(second.ExpectErr());
             }
 
             if (expected.Count == 0)
@@ -132,7 +132,7 @@ public sealed class RandomizedLawTests
             }
             else
             {
-                await TestSupport.AssertSequenceAsync(result.ErrOrThrow(), [.. expected]);
+                await TestSupport.AssertSequenceAsync(result.ExpectErr(), [.. expected]);
             }
         }
     }

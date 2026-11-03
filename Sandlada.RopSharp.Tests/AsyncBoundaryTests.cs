@@ -17,7 +17,7 @@ public sealed class AsyncBoundaryTests
             _ => Sample.Error());
 
         await Assert.That(called).IsTrue();
-        await Assert.That(result.OrThrow()).IsEqualTo(Unit.Value);
+        await Assert.That(result.Expect("test")).IsEqualTo(Unit.Value);
     }
 
     [Test]
@@ -27,7 +27,7 @@ public sealed class AsyncBoundaryTests
             () => throw new FormatException("bad"),
             exception => RopError.FromException(exception, "E_PARSE"));
 
-        var error = result.ErrOrThrow();
+        var error = result.ExpectErr();
 
         await Assert.That(error.Code).IsEqualTo("E_PARSE");
         await Assert.That(error.Cause is FormatException).IsTrue();
@@ -38,7 +38,7 @@ public sealed class AsyncBoundaryTests
     {
         var result = Result.Try(() => throw new InvalidOperationException("bad"), "E_CODE");
 
-        await Assert.That(result.ErrOrThrow().Code).IsEqualTo("E_CODE");
+        await Assert.That(result.ExpectErr().Code).IsEqualTo("E_CODE");
     }
 
     [Test]
@@ -88,7 +88,7 @@ public sealed class AsyncBoundaryTests
             _ => Sample.Error());
 
         await Assert.That(called).IsTrue();
-        await Assert.That(result.OrThrow()).IsEqualTo(Unit.Value);
+        await Assert.That(result.Expect("test")).IsEqualTo(Unit.Value);
     }
 
     [Test]
@@ -102,7 +102,7 @@ public sealed class AsyncBoundaryTests
             },
             exception => RopError.FromException(exception, "E_PARSE"));
 
-        var error = result.ErrOrThrow();
+        var error = result.ExpectErr();
 
         await Assert.That(error.Code).IsEqualTo("E_PARSE");
         await Assert.That(error.Cause is FormatException).IsTrue();
@@ -115,7 +115,7 @@ public sealed class AsyncBoundaryTests
             () => throw new InvalidOperationException("bad"),
             exception => RopError.FromException(exception, "E_SYNC"));
 
-        await Assert.That(result.ErrOrThrow().Code).IsEqualTo("E_SYNC");
+        await Assert.That(result.ExpectErr().Code).IsEqualTo("E_SYNC");
     }
 
     [Test]
@@ -129,7 +129,7 @@ public sealed class AsyncBoundaryTests
             },
             "E_CODE");
 
-        await Assert.That(result.ErrOrThrow().Code).IsEqualTo("E_CODE");
+        await Assert.That(result.ExpectErr().Code).IsEqualTo("E_CODE");
     }
 
     [Test]
@@ -234,7 +234,7 @@ public sealed class AsyncBoundaryTests
         var ok = await lift("12");
         var exception = await TestSupport.CatchAsync(() => lift("nope"));
 
-        await Assert.That(ok.OrThrow()).IsEqualTo(12);
+        await Assert.That(ok.Expect("test")).IsEqualTo(12);
         await Assert.That(exception is FormatException).IsTrue();
     }
 
@@ -280,8 +280,8 @@ public sealed class AsyncBoundaryTests
         var ok = await safeParse("12");
         var err = await safeParse("nope");
 
-        await Assert.That(ok.OrThrow()).IsEqualTo(12);
-        await Assert.That(err.ErrOrThrow().Code).IsEqualTo("E_PARSE");
+        await Assert.That(ok.Expect("test")).IsEqualTo(12);
+        await Assert.That(err.ExpectErr().Code).IsEqualTo("E_PARSE");
     }
 
     [Test]
@@ -291,7 +291,7 @@ public sealed class AsyncBoundaryTests
 
         var result = await lift("x");
 
-        await Assert.That(result.ErrOrThrow().Code).IsEqualTo("E_NULL_RESULT");
+        await Assert.That(result.ExpectErr().Code).IsEqualTo("E_NULL_RESULT");
     }
 
     [Test]

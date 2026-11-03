@@ -167,7 +167,7 @@ public sealed class ResultLawTests
 
         await Assert.That(mapErrCalled).IsFalse();
         await Assert.That(mapOkCalled).IsFalse();
-        await Assert.That(ok.OrThrow()).IsEqualTo(1);
+        await Assert.That(ok.Expect("test")).IsEqualTo(1);
         await Assert.That(err.IsErr).IsTrue();
     }
 }
