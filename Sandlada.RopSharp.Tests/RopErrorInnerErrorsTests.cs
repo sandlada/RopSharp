@@ -130,7 +130,7 @@ public sealed class RopErrorInnerErrorsTests
     }
 
     [Test]
-    public async Task Equality_IgnoresInnerErrors()
+    public async Task StructuralEquality_DifferentInnerErrors_AreNotEqual()
     {
         var first = Sample.Error("E_A", "a");
         var second = Sample.Error("E_B", "b");
@@ -139,9 +139,48 @@ public sealed class RopErrorInnerErrorsTests
 
         await Assert.That(two.InnerErrors.Count).IsEqualTo(2);
         await Assert.That(three.InnerErrors.Count).IsEqualTo(3);
-        await Assert.That(two.Equals(three)).IsTrue();
-        await Assert.That(two == three).IsTrue();
-        await Assert.That(two.GetHashCode()).IsEqualTo(three.GetHashCode());
+        await Assert.That(two.Equals(three)).IsFalse();
+        await Assert.That(two == three).IsFalse();
+        await Assert.That(two.GetHashCode()).IsNotEqualTo(three.GetHashCode());
+    }
+
+    [Test]
+    public async Task Flatten_AtomicError_ReturnsSelf()
+    {
+        var error = Sample.Error("E_A", "a");
+
+        var flat = error.Flatten();
+
+        await Assert.That(flat.Count).IsEqualTo(1);
+        await Assert.That(flat[0]).IsSameReferenceAs(error);
+    }
+
+    [Test]
+    public async Task Flatten_NestedCombine_PreservesCombineOrder()
+    {
+        var first = Sample.Error("E_FIRST", "one");
+        var second = Sample.Error("E_SECOND", "two");
+        var third = Sample.Error("E_THIRD", "three");
+        var inner = RopError.Combine([first, second]);
+        var combined = RopError.Combine([inner, third]);
+
+        var flat = combined.Flatten();
+
+        await Assert.That(flat.Count).IsEqualTo(3);
+        await Assert.That(flat[0]).IsSameReferenceAs(first);
+        await Assert.That(flat[1]).IsSameReferenceAs(second);
+        await Assert.That(flat[2]).IsSameReferenceAs(third);
+    }
+
+    [Test]
+    public async Task CyclicInnerErrors_EqualityAndFlatten_Terminate()
+    {
+        var error = Sample.Error("E_A", "a");
+        var cyclic = RopError.RebindInnerErrorsForTests(error, [error]);
+
+        await Assert.That(cyclic.Equals(cyclic)).IsTrue();
+        await Assert.That(cyclic.GetHashCode()).IsEqualTo(cyclic.GetHashCode());
+        await Assert.That(cyclic.Flatten()).IsNotNull();
     }
 
     [Test]

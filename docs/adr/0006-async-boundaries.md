@@ -59,13 +59,19 @@ only needs `<T, TOut>`.
 **Consequence:** the lift API is consistent with the shipped synchronous lifts rather than introducing a second
 inference style.
 
-### D43 — The synchronous boundary documents the `Task` footgun
+### D43 — Synchronous and asynchronous `Try` reject task-like success types
 
-`Rop.Try<T>(Func<T>)` accepts `T = Task`, because C# has no way to exclude a type argument. Passing a task-returning
-lambda therefore produces `Ok(Task)` instead of awaiting. The XML remarks and README now direct callers to
-`Rop.TryAsync`.
+- **Revised:** 2026-11-03
 
-**Consequence:** the hazard is documented at the call site without adding an analyzer or a breaking overload.
+`Result.Try` and `Result.TryAsync` call `SuccessTypeGuards` before returning `Ok` when the success type is `Task`,
+`Task<T>`, `ValueTask` or `ValueTask<T>`, throwing `InvalidOperationException` with a message that names the
+asynchronous counterpart. The check is cached on the closed generic type argument.
+
+`Result.Ok(task)` remains valid: factories may still store an unstarted task as the success payload; only boundary
+`Try`/`TryAsync` enforce the await rule.
+
+**Consequence:** the footgun is enforced at the boundary without an analyzer. Callers that genuinely need
+`Result<Task, _>` construct it with `Ok`, not `Try`.
 
 ## Alternatives considered
 

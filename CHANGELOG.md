@@ -103,6 +103,13 @@ additive work below into the first version.
   - `Result.SwitchAsync` and `Result.TrySwitchAsync` lift asynchronous functions into task-wrapped results, mirroring
     `Result.Switch` / `Result.TrySwitch`.
   - The `Result.Try<T>` docs now warn that a `Task`-returning lambda belongs in `Result.TryAsync`.
+- **Breaking (0.0.2):** `RopError` structural equality and `Try` boundaries:
+  - `RopError.Equals`, `GetHashCode` and `==` now include `InnerErrors` in order (recursive, cycle-safe); `Cause` is
+    still ignored. Two `E_MULTIPLE` aggregates with the same summary but different child lists no longer compare equal.
+  - `RopError.Flatten()` returns every leaf in nested `Combine` order; aggregate nodes are omitted.
+  - `Result.Try` / `Result.TryAsync` throw `InvalidOperationException` when the success type is task-like; `Result.Ok(task)`
+    remains supported.
+- ADR 0005 D38 and ADR 0006 D43 revised for the equality and `Try` decisions.
 - ADR 0006 documents the boundary/lift decisions and naming.
 - Diagnostics:
   - `RopErrorKind` gains `Timeout`, `Unavailable` and `RateLimited` (appended values `7`–`9`, no renumbering).

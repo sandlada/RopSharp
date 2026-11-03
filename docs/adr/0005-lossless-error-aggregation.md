@@ -46,18 +46,20 @@ the caller's list afterwards cannot change a previously created aggregate.
 
 **Consequence:** aggregates are immutable values like every other `RopError`, even when the source collection is not.
 
-### D38 — Equality keeps ignoring `Cause` and now ignores `InnerErrors`
+### D38 — Equality includes `InnerErrors` and still ignores `Cause`
 
-Equality continues to compare `Kind`, `Code`, `Message` and `Details`. `InnerErrors` is excluded, for the same reason
-as `Cause`: the collapsed fields are the error's identity for branching and display, and deep structural comparison
-would add recursive equality/hashing to a type that is frequently compared in tests.
+- **Revised:** 2026-11-03
 
-The exclusion is documented on `InnerErrors` and in the class remarks, and callers that care about structure compare
-`InnerErrors` explicitly.
+Equality compares `Kind`, `Code`, `Message`, `Details` and `InnerErrors` in order, recursively. `Cause` remains
+excluded so stack-trace differences do not make two logically equal errors unequal. Comparison and hashing use an
+explicit stack rather than recursive calls, and both terminate when a cycle appears on the current path.
 
-**Consequence:** existing equality results are unchanged for every pre-existing error (all had no children), and two
-aggregates that collapse to the same summary compare equal even when their child lists differ in duplicates. This is
-intentional and now documented instead of surprising.
+`RopError.Flatten()` returns every leaf in the order implied by nested `Combine` calls; aggregate nodes themselves are
+omitted.
+
+**Consequence:** two aggregates that collapse to the same summary but differ in their child lists no longer compare
+equal. Callers that only need the collapsed summary can still branch on `Code`, `Message` and `Details`; callers that
+need every leaf use `Flatten()`.
 
 ### D39 — The addition is additive
 
@@ -72,7 +74,7 @@ binary-compatible.
 | Alternative | Why rejected |
 | --- | --- |
 | Flatten nested aggregates inside `Combine` | Loses the grouping a caller deliberately created and silently rewrites their structure |
-| Include `InnerErrors` in `Equals`/`GetHashCode` | Adds recursive comparison to a hot comparison type, and changes the documented equality contract |
+| Include `InnerErrors` in `Equals`/`GetHashCode` | Initially rejected to preserve summary-only equality; **revised in D38 (2026-11-03)** because duplicate aggregates with the same summary but different leaves were indistinguishable |
 | Introduce an `AggregateError : RopError` subtype | `RopError` is `sealed`; a subtype would break exhaustive handling and add a second error concept |
 | Return a tuple `(RopError Summary, IReadOnlyList<RopError> Errors)` | Changes every call site and forces callers to thread two values through the pipeline |
 | Keep the leaf list by reference | A mutable caller-owned list would make an otherwise immutable error change over time |

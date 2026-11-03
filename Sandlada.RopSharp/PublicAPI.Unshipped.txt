@@ -13,6 +13,7 @@ static Sandlada.RopSharp.Result.TryAsync(System.Func<System.Threading.Tasks.Task
 static Sandlada.RopSharp.Result.TryAsync(System.Func<System.Threading.Tasks.Task!>! action, string! code, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> Sandlada.RopSharp.ResultTask<Sandlada.RopSharp.Unit, Sandlada.RopSharp.RopError!>
 static Sandlada.RopSharp.ResultExtensions.Expect<TOk, TErr>(this Sandlada.RopSharp.Result<TOk, TErr> result, string! reason) -> TOk
 Sandlada.RopSharp.RopError.InnerErrors.get -> System.Collections.Generic.IReadOnlyList<Sandlada.RopSharp.RopError!>!
+Sandlada.RopSharp.RopError.Flatten() -> System.Collections.Generic.IReadOnlyList<Sandlada.RopSharp.RopError!>!
 Sandlada.RopSharp.RopErrorKind.RateLimited = 9 -> Sandlada.RopSharp.RopErrorKind
 Sandlada.RopSharp.RopErrorKind.Timeout = 7 -> Sandlada.RopSharp.RopErrorKind
 Sandlada.RopSharp.RopErrorKind.Unavailable = 8 -> Sandlada.RopSharp.RopErrorKind

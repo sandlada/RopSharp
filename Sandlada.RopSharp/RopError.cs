@@ -19,11 +19,10 @@ namespace Sandlada.RopSharp;
 /// exposes an empty <see cref="InnerErrors"/> list rather than <see langword="null"/>.
 /// </para>
 /// <para>
-/// Equality compares <see cref="Kind"/>, <see cref="Code"/>, <see cref="Message"/> and <see cref="Details"/>.
-/// <see cref="Cause"/> is deliberately excluded so that stack-trace differences do not make two logically equal
-/// errors unequal, and <see cref="InnerErrors"/> is excluded for the same reason: the collapsed
-/// code/message/details already describe the aggregate for branching and display. Compare
-/// <see cref="InnerErrors"/> explicitly when the structure matters.
+/// Equality compares <see cref="Kind"/>, <see cref="Code"/>, <see cref="Message"/>, <see cref="Details"/> and
+/// <see cref="InnerErrors"/> in order, recursively. <see cref="Cause"/> is deliberately excluded so that stack-trace
+/// differences do not make two logically equal errors unequal. Use <see cref="Flatten"/> when you need every leaf in
+/// combine order.
 /// </para>
 /// <para>
 /// An error is the payload of the failure track. It travels through a pipeline untouched until a combinator
@@ -454,6 +453,43 @@ public sealed class RopError : IEquatable<RopError>
     public RopError WithKind(RopErrorKind kind) => new(Code, Message, Details, Cause, kind, InnerErrors);
 
     /// <summary>
+    /// Returns every leaf error in the order implied by nested <see cref="Combine"/> calls.
+    /// </summary>
+    /// <returns>
+    /// A read-only list of atomic errors (those with an empty <see cref="InnerErrors"/>). Aggregate nodes themselves
+    /// are not included. An atomic error returns a single-element list containing itself.
+    /// </returns>
+    /// <remarks>
+    /// <para>
+    /// The walk mirrors the argument order of each <see cref="Combine"/> and terminates when a cycle is detected on the
+    /// current path.
+    /// </para>
+    /// <code><![CDATA[
+    /// var first = RopError.Create("E_ORDER_NOT_FOUND", "order 42 does not exist");
+    /// var second = RopError.Create("E_STOCK_MISSING", "SKU-1 is out of stock");
+    /// var aggregate = RopError.Combine([first, second]);
+    /// var placed = Result.Err<Payment>(aggregate);
+    /// var leaves = aggregate.Flatten();
+    ///
+    /// // Err(E_MULTIPLE) keeps both leaves in Flatten order,
+    /// // Ok(payment) is the other track of the same result.
+    /// ]]></code>
+    /// </remarks>
+    public IReadOnlyList<RopError> Flatten() => RopErrorTreeOperations.FlattenLeaves(this);
+
+    internal static RopError RebindInnerErrorsForTests(RopError error, IReadOnlyList<RopError> innerErrors)
+    {
+        ArgumentNullException.ThrowIfNull(error);
+        ArgumentNullException.ThrowIfNull(innerErrors);
+        foreach (var inner in innerErrors)
+        {
+            ArgumentNullException.ThrowIfNull(inner, nameof(innerErrors));
+        }
+
+        return new RopError(error.Code, error.Message, error.Details, error.Cause, error.Kind, innerErrors);
+    }
+
+    /// <summary>
     /// Combines a non-empty list of errors into a single error with code <c>E_MULTIPLE</c>.
     /// </summary>
     /// <param name="errors">The errors to combine. Must contain at least one element.</param>
@@ -550,7 +586,7 @@ public sealed class RopError : IEquatable<RopError>
     /// <inheritdoc />
     /// <remarks>
     /// <para>
-    /// Two errors are equal when their kind, code, message and details match. The cause and the inner errors are
+    /// Two errors are equal when their kind, code, message, details and inner errors match in order. The cause is
     /// deliberately ignored, so an error captured twice from different stack traces still compares equal.
     /// </para>
     /// <code><![CDATA[
@@ -563,19 +599,7 @@ public sealed class RopError : IEquatable<RopError>
     /// // Ok(payment) is irrelevant - only kind, code, message and details are compared.
     /// ]]></code>
     /// </remarks>
-    public bool Equals(RopError? other)
-    {
-        if (ReferenceEquals(this, other))
-        {
-            return true;
-        }
-
-        return other is not null
-            && Kind == other.Kind
-            && string.Equals(Code, other.Code, StringComparison.Ordinal)
-            && string.Equals(Message, other.Message, StringComparison.Ordinal)
-            && string.Equals(Details, other.Details, StringComparison.Ordinal);
-    }
+    public bool Equals(RopError? other) => RopErrorTreeOperations.StructuralEquals(this, other);
 
     /// <inheritdoc />
     /// <remarks>
@@ -597,8 +621,7 @@ public sealed class RopError : IEquatable<RopError>
     /// <inheritdoc />
     /// <remarks>
     /// <para>
-    /// The hash code is derived from the same four fields that equality compares, so equal errors always share a
-    /// hash code.
+    /// The hash code is derived from the same fields that equality compares, so equal errors always share a hash code.
     /// </para>
     /// <code><![CDATA[
     /// var error = RopError.Create("E_ORDER_NOT_FOUND", "order 42 does not exist");
@@ -609,11 +632,7 @@ public sealed class RopError : IEquatable<RopError>
     /// // Ok(payment) is the other track of the same result.
     /// ]]></code>
     /// </remarks>
-    public override int GetHashCode() => HashCode.Combine(
-        (int)Kind,
-        StringComparer.Ordinal.GetHashCode(Code),
-        StringComparer.Ordinal.GetHashCode(Message),
-        Details is null ? 0 : StringComparer.Ordinal.GetHashCode(Details));
+    public override int GetHashCode() => RopErrorTreeOperations.StructuralHashCode(this);
 
     /// <inheritdoc />
     /// <remarks>

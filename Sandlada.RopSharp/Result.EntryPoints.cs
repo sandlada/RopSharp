@@ -286,12 +286,10 @@ public static partial class Result
         ArgumentNullException.ThrowIfNull(func);
         ArgumentNullException.ThrowIfNull(errorFactory);
 
+        T value;
         try
         {
-            var value = func();
-            return value is null
-                ? Err<T, RopError>(NullResultError())
-                : Ok<T, RopError>(value);
+            value = func();
         }
         catch (OperationCanceledException)
         {
@@ -301,6 +299,14 @@ public static partial class Result
         {
             return Err<T, RopError>(MaterializeException(errorFactory, exception));
         }
+
+        if (value is null)
+        {
+            return Err<T, RopError>(NullResultError());
+        }
+
+        SuccessTypeGuards.ThrowIfTaskLike<T>("Try");
+        return Ok<T, RopError>(value);
     }
 
     /// <summary>
@@ -370,9 +376,13 @@ public static partial class Result
             return Err<T, TErr>(MaterializeException(errorFactory, exception));
         }
 
-        return value is null
-            ? Err<T, TErr>(MaterializeError(nullResultErrorFactory))
-            : Ok<T, TErr>(value);
+        if (value is null)
+        {
+            return Err<T, TErr>(MaterializeError(nullResultErrorFactory));
+        }
+
+        SuccessTypeGuards.ThrowIfTaskLike<T>("Try");
+        return Ok<T, TErr>(value);
     }
 
     /// <summary>

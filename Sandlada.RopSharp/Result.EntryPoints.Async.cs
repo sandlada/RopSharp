@@ -389,12 +389,10 @@ public static partial class Result
                 throw new InvalidOperationException("The boundary function returned a null task.");
             }
 
+            T value;
             try
             {
-                var value = await pending.WaitAsync(cancellationToken).ConfigureAwait(false);
-                return value is null
-                    ? Err<T, RopError>(NullResultError())
-                    : Ok<T, RopError>(value);
+                value = await pending.WaitAsync(cancellationToken).ConfigureAwait(false);
             }
             catch (OperationCanceledException)
             {
@@ -404,6 +402,14 @@ public static partial class Result
             {
                 return Err<T, RopError>(MaterializeException(errorFactory, exception));
             }
+
+            if (value is null)
+            {
+                return Err<T, RopError>(NullResultError());
+            }
+
+            SuccessTypeGuards.ThrowIfTaskLike<T>("TryAsync");
+            return Ok<T, RopError>(value);
 
         }
     }
@@ -502,9 +508,13 @@ public static partial class Result
                 return Err<T, TErr>(MaterializeException(errorFactory, exception));
             }
 
-            return value is null
-                ? Err<T, TErr>(MaterializeError(nullResultErrorFactory))
-                : Ok<T, TErr>(value);
+            if (value is null)
+            {
+                return Err<T, TErr>(MaterializeError(nullResultErrorFactory));
+            }
+
+            SuccessTypeGuards.ThrowIfTaskLike<T>("TryAsync");
+            return Ok<T, TErr>(value);
 
         }
     }
