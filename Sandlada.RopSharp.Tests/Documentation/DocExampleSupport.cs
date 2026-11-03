@@ -24,7 +24,7 @@ internal static class RepositoryLayout
 
     /// <summary>Gets the library source files, sorted for deterministic diagnostics.</summary>
     internal static IReadOnlyList<string> LibrarySourceFiles() =>
-        Directory.GetFiles(LibrarySourceDirectory, "*.cs", SearchOption.TopDirectoryOnly)
+        Directory.GetFiles(LibrarySourceDirectory, "*.cs", SearchOption.AllDirectories)
             .Where(static path => !path.Contains($"{Path.DirectorySeparatorChar}obj{Path.DirectorySeparatorChar}", StringComparison.Ordinal)
                 && !path.Contains($"{Path.DirectorySeparatorChar}bin{Path.DirectorySeparatorChar}", StringComparison.Ordinal))
             .OrderBy(static path => path, StringComparer.Ordinal)
