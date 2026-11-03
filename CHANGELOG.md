@@ -110,6 +110,10 @@ additive work below into the first version.
   - `Result.Try` / `Result.TryAsync` throw `InvalidOperationException` when the success type is task-like; `Result.Ok(task)`
     remains supported.
 - ADR 0005 D38 and ADR 0006 D43 revised for the equality and `Try` decisions.
+- Contract analyzers ship inside the NuGet package (`analyzers/dotnet/cs/Sandlada.RopSharp.Analyzers.dll`):
+  - `ROP0001`–`ROP0003` (errors): uninitialized contract values, discarded results, task-like delegates on synchronous combinators.
+  - `ROP0004` (warning): `RopError.Create` codes must match `^E_[A-Z0-9_]+$` at compile time.
+- ADR 0013 documents analyzer IDs, severities, and why tests reference the analyzer assembly without registering it as a compiler analyzer.
 - ADR 0006 documents the boundary/lift decisions and naming.
 - Diagnostics:
   - `RopErrorKind` gains `Timeout`, `Unavailable` and `RateLimited` (appended values `7`–`9`, no renumbering).

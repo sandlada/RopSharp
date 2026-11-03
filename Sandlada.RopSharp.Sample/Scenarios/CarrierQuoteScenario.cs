@@ -37,8 +37,11 @@ internal static class CarrierQuoteScenario
 
         try
         {
-            await QuoteAsync(Request(carriers: ["ground", "air"]), cancellation.Token);
-            Console.WriteLine("   => unexpected success");
+            var outcome = await QuoteAsync(Request(carriers: ["ground", "air"]), cancellation.Token);
+            if (outcome.IsOk)
+            {
+                Console.WriteLine("   => unexpected success");
+            }
         }
         catch (OperationCanceledException)
         {

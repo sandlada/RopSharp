@@ -62,8 +62,11 @@ internal static class FulfillmentSagaScenario
 
         try
         {
-            await FulfillAsync(Request("ord-7", lines: [new("SKU-1", 1)]), cancellation.Token);
-            Console.WriteLine("   => unexpected success");
+            var outcome = await FulfillAsync(Request("ord-7", lines: [new("SKU-1", 1)]), cancellation.Token);
+            if (outcome.IsOk)
+            {
+                Console.WriteLine("   => unexpected success");
+            }
         }
         catch (OperationCanceledException)
         {

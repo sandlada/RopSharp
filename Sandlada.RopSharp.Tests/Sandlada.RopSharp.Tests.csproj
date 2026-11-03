@@ -17,6 +17,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\Sandlada.RopSharp.Analyzers\Sandlada.RopSharp.Analyzers.csproj" />
     <ProjectReference Include="..\Sandlada.RopSharp\Sandlada.RopSharp.csproj" />
   </ItemGroup>
 

@@ -1,0 +1,5 @@
+; Rules for Sandlada.RopSharp.Analyzers
+
+is_global = true
+
+dotnet_diagnostic.RS2008.severity = none

@@ -38,6 +38,18 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\Sandlada.RopSharp.Analyzers\Sandlada.RopSharp.Analyzers.csproj">
+      <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
+      <OutputItemType>Analyzer</OutputItemType>
+      <SetTargetFramework>TargetFramework=netstandard2.0</SetTargetFramework>
+    </ProjectReference>
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="..\Sandlada.RopSharp.Analyzers\bin\$(Configuration)\netstandard2.0\Sandlada.RopSharp.Analyzers.dll" Pack="true" PackagePath="analyzers/dotnet/cs" Visible="false" Link="analyzers/dotnet/cs/Sandlada.RopSharp.Analyzers.dll" />
+  </ItemGroup>
+
+  <ItemGroup>
     <InternalsVisibleTo Include="Sandlada.RopSharp.Tests" />
   </ItemGroup>
 

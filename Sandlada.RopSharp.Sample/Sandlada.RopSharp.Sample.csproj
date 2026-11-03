@@ -11,6 +11,7 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\Sandlada.RopSharp.Analyzers\Sandlada.RopSharp.Analyzers.csproj" ReferenceOutputAssembly="false" OutputItemType="Analyzer" SetTargetFramework="TargetFramework=netstandard2.0" />
     <ProjectReference Include="..\Sandlada.RopSharp\Sandlada.RopSharp.csproj" />
   </ItemGroup>
 
