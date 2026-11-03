@@ -12,15 +12,21 @@ BenchmarkDotNet.Artifacts/
 *.nupkg
 *.snupkg
 
-# Markdown: ignore by default, whitelist essential docs
+# Markdown: ignore by default, then whitelist essential docs.
+# LICENSE has no extension, so the *.md rule does not apply to it.
 *.md
 !README.md
-!LICENSE.md
-!CONTRIBUTING.md
-!SECURITY.md
-!AGENTS.md
 !CHANGELOG.md
-!docs/adr/*.md
+!AGENTS.md
+!CONTRIBUTING.md
+!CONTRIBUTORS.md
+!CODE_OF_CONDUCT.md
+!SECURITY.md
+!LICENSE.md
+!docs/**/*.md
+!Sandlada.*/*.md
+!perf/README.md
+!TASK*.md
 
 # AI
 .codex
