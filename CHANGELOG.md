@@ -6,7 +6,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 
 ## [Unreleased]
 
-Planned for **0.0.2**.
+## [0.0.2] - 2026-11-03
+
+Production contract release: uninitialized tags, `Validation`, async computation types, structural `RopError`
+equality, contract analyzers in the package, and SourceLink to `https://github.com/sandlada/RopSharp`.
 
 ### Added
 
@@ -19,6 +22,8 @@ Planned for **0.0.2**.
 - `Either<TLeft,TRight>.BindLeft` and `BindRight` for chaining another either on the active branch.
 - `Result<TOk,TErr>.Expect(string reason)` and `Option<T>.Expect(string reason)` for boundary exits that must
   include a non-empty reason when unwrapping.
+- Contract analyzers in `analyzers/dotnet/cs/Sandlada.RopSharp.Analyzers.dll` (`ROP0001`–`ROP0004`; ADR 0013).
+- NuGet SourceLink and repository metadata pointing at `https://github.com/sandlada/RopSharp`.
 
 ### Removed
 
@@ -44,6 +49,18 @@ Planned for **0.0.2**.
 - `default(Either<,>)` is no longer observed as `Right`.
 - Accumulating validation is a separate `Validation<T, TErr>` type; `Result<T, IReadOnlyList<TErr>>` is no longer part
   of the public aggregation surface.
+- `RopError` structural equality and `Try` boundaries: equality includes `InnerErrors` (cycle-safe); `Flatten()`;
+  `Result.Try` / `Result.TryAsync` reject task-like success types (ADR 0005 D38, ADR 0006 D43).
+
+### Migration
+
+- Replace `Task<Result<,>>` / `Task<Option<>>` pipelines with `ResultTask` / `OptionTask` (await the computation type,
+  or use `ToResultTask` / `ToOptionTask` at boundaries).
+- Move accumulating validation from `Result.Validate*` / `Result.SequenceValidation*` to `Validation.*` and
+  `ValidationTask.*`; collapse with `Validation.Collapse` when you need a single `Result`.
+- Replace silent unwraps (`OkOrDefault`, `*OrThrow`) with `Match`, `TryGet*`, or `Expect("reason")`.
+- Treat `default(Result<,>)`, `default(Either<,>)`, and `default(ParseFailure)` as invalid; construct with factories.
+- Re-test `RopError` equality if you compared aggregates: child lists now participate in equality.
 
 ## [0.0.1] - 2026-10-31
 

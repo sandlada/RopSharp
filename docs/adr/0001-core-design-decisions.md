@@ -168,6 +168,7 @@ keeps the default analysis level so test naming conventions do not produce noise
 ## Future work
 
 1. Benchmarks (BenchmarkDotNet) for hot combinators and aggregation paths; publish allocation numbers.
-2. SourceLink and repository metadata once the package has a canonical git remote.
+2. ~~SourceLink and repository metadata once the package has a canonical git remote.~~ Done in 0.0.2 (`https://github.com/sandlada/RopSharp`).
+   - **Revised:** 2026-11-03
 3. Consider `ValueTask` overloads only with measured demand.
 4. Revisit `net12.0` support after its release; never back-port below `net10.0`.
