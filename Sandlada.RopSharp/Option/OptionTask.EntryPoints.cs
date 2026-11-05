@@ -62,6 +62,7 @@ public static class OptionTask
         ArgumentNullException.ThrowIfNull(merger);
         first.ThrowIfUninitialized();
         second.ThrowIfUninitialized();
+        cancellationToken.ThrowIfCancellationRequested();
         return OptionTask<TOut>.From(OptionTaskCore.CombineAsync(first.TaskUnsafe, second.TaskUnsafe, merger, cancellationToken))
             .WithCancellation(cancellationToken);
     }
@@ -87,6 +88,7 @@ public static class OptionTask
         first.ThrowIfUninitialized();
         second.ThrowIfUninitialized();
         third.ThrowIfUninitialized();
+        cancellationToken.ThrowIfCancellationRequested();
         return OptionTask<TOut>.From(
                 OptionTaskCore.CombineAsync(first.TaskUnsafe, second.TaskUnsafe, third.TaskUnsafe, merger, cancellationToken))
             .WithCancellation(cancellationToken);
@@ -140,6 +142,7 @@ public static class OptionTask
         IEnumerable<OptionTask<T>> computations, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(computations);
+        cancellationToken.ThrowIfCancellationRequested();
         var tasks = new List<Task<Option<T>>>();
         foreach (var computation in computations)
         {
@@ -167,6 +170,7 @@ public static class OptionTask
     {
         ArgumentNullException.ThrowIfNull(source);
         ArgumentNullException.ThrowIfNull(mapper);
+        cancellationToken.ThrowIfCancellationRequested();
         return OptionTask<IReadOnlyList<TOut>>.From(OptionTaskCore.TraverseAsync(source, mapper, cancellationToken))
             .WithCancellation(cancellationToken);
     }

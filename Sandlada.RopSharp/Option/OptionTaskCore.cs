@@ -8,7 +8,6 @@ internal static class OptionTaskCore
         var option = await source.WaitAsync(cancellationToken).ConfigureAwait(false);
         if (!option.TryGetValue(out var value)) return Option.None<TOut>();
         cancellationToken.ThrowIfCancellationRequested();
-        SuccessTypeGuards.ThrowIfTaskLike<TOut>("MapSome");
         return Option.Some(mapper(value));
     }
 
@@ -27,7 +26,6 @@ internal static class OptionTaskCore
         var option = await source.WaitAsync(cancellationToken).ConfigureAwait(false);
         if (!option.TryGetValue(out var value)) return Option.None<TOut>();
         cancellationToken.ThrowIfCancellationRequested();
-        SuccessTypeGuards.ThrowIfTaskLike<TOut>("BindSome");
         return binder(value);
     }
 

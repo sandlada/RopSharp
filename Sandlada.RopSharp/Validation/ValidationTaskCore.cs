@@ -7,7 +7,6 @@ internal static class ValidationTaskCore
     {
         var validation = await source.WaitAsync(cancellationToken).ConfigureAwait(false);
         cancellationToken.ThrowIfCancellationRequested();
-        SuccessTypeGuards.ThrowIfTaskLike<TOut>("Map");
         return validation.Map(mapper);
     }
 

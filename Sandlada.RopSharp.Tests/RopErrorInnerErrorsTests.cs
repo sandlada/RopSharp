@@ -184,6 +184,48 @@ public sealed class RopErrorInnerErrorsTests
     }
 
     [Test]
+    public async Task CyclicInnerErrors_DistinctInstances_AreEqualAndTerminate()
+    {
+        var e1 = Sample.Error("E_A", "a");
+        var cyclic1 = RopError.RebindInnerErrorsForTests(e1, [e1]);
+        var e2 = Sample.Error("E_A", "a");
+        var cyclic2 = RopError.RebindInnerErrorsForTests(e2, [e2]);
+
+        await Assert.That(cyclic1.Equals(cyclic2)).IsTrue();
+        await Assert.That(cyclic2.Equals(cyclic1)).IsTrue();
+        await Assert.That(cyclic1.GetHashCode()).IsEqualTo(cyclic2.GetHashCode());
+    }
+
+    [Test]
+    public async Task CyclicInnerErrors_OneCyclicOneAcyclic_AreNotEqual()
+    {
+        var e1 = Sample.Error("E_A", "a");
+        var cyclic1 = RopError.RebindInnerErrorsForTests(e1, [e1]);
+        var leaf = Sample.Error("E_LEAF", "leaf");
+        var e2 = Sample.Error("E_A", "a");
+        var acyclic2 = RopError.RebindInnerErrorsForTests(e2, [leaf]);
+
+        await Assert.That(cyclic1.Equals(acyclic2)).IsFalse();
+        await Assert.That(acyclic2.Equals(cyclic1)).IsFalse();
+    }
+
+    [Test]
+    public async Task DeepTree_FlattenAndHash_DoesNotOverflowStack()
+    {
+        var current = Sample.Error("E_LEAF", "bottom");
+        for (var i = 0; i < 5000; i++)
+        {
+            var parent = Sample.Error("E_NODE", $"level_{i}");
+            current = RopError.RebindInnerErrorsForTests(parent, [current]);
+        }
+
+        var flat = current.Flatten();
+        await Assert.That(flat.Count).IsEqualTo(1);
+        await Assert.That(flat[0].Code).IsEqualTo("E_LEAF");
+        await Assert.That(current.GetHashCode()).IsNotEqualTo(0);
+    }
+
+    [Test]
     public async Task ToSingleError_WithCombine_PreservesInnerErrors()
     {
         var first = Sample.Error("E_FIRST", "one");

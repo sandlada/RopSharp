@@ -143,4 +143,112 @@ public sealed class AsyncCancellationTests
 
         await Assert.That(failures).IsEqualTo(0);
     }
+
+    [Test]
+    public async Task ResultTask_ChainedCombinators_PreserveCancellationToken()
+    {
+        using var cts = new CancellationTokenSource();
+        CancellationToken seenToken1 = default;
+        CancellationToken seenToken2 = default;
+
+        var result = await ResultTask.From(Result.Ok(10))
+            .WithCancellation(cts.Token)
+            .MapOk(x => x + 1)
+            .MapOkAsync((x, ct) =>
+            {
+                seenToken1 = ct;
+                return Task.FromResult(x * 2);
+            })
+            .TeeOk(x => { })
+            .BindOkAsync((x, ct) =>
+            {
+                seenToken2 = ct;
+                return Task.FromResult(Result.Ok(x));
+            });
+
+        await Assert.That(result.Expect("ok")).IsEqualTo(22);
+        await Assert.That(seenToken1).IsEqualTo(cts.Token);
+        await Assert.That(seenToken2).IsEqualTo(cts.Token);
+    }
+
+    [Test]
+    public async Task ValidationTask_ChainedCombinators_PreserveCancellationToken()
+    {
+        using var cts = new CancellationTokenSource();
+        CancellationToken seenToken = default;
+
+        var validation = await ValidationTask<int, RopError>.From(Validation.Success<int, RopError>(10))
+            .WithCancellation(cts.Token)
+            .Map(x => x + 1)
+            .MapAsync((x, ct) =>
+            {
+                seenToken = ct;
+                return Task.FromResult(x * 2);
+            });
+
+        await Assert.That(validation.Expect("ok")).IsEqualTo(22);
+        await Assert.That(seenToken).IsEqualTo(cts.Token);
+    }
+
+    [Test]
+    public async Task TaskAggregations_WithPreCancelledToken_ThrowSynchronously()
+    {
+        using var cts = new CancellationTokenSource();
+        cts.Cancel();
+
+        await Assert.That(() => OptionTask.Zip(
+            OptionTask.From(Option.Some(1)),
+            OptionTask.From(Option.Some(2)),
+            static (a, b) => a + b,
+            cts.Token)).Throws<OperationCanceledException>();
+
+        await Assert.That(() => OptionTask.Sequence([OptionTask.From(Option.Some(1))], cts.Token))
+            .Throws<OperationCanceledException>();
+
+        await Assert.That(() => OptionTask.Traverse([1], static (x, ct) => Task.FromResult(Option.Some(x)), cts.Token))
+            .Throws<OperationCanceledException>();
+
+        await Assert.That(() => ValidationTask.Zip(
+            ResultTask.From(Result.Ok(1)),
+            ResultTask.From(Result.Ok(2)),
+            static (a, b) => a + b,
+            cts.Token)).Throws<OperationCanceledException>();
+
+        await Assert.That(() => ValidationTask.Sequence([ResultTask.From(Result.Ok(1))], cts.Token))
+            .Throws<OperationCanceledException>();
+
+        await Assert.That(() => ValidationTask.Traverse([1], static (x, ct) => Task.FromResult(Result.Ok(x)), cts.Token))
+            .Throws<OperationCanceledException>();
+    }
+
+    [Test]
+    public async Task ValidationTask_FromUninitializedValidation_Throws()
+    {
+        Validation<int, RopError> uninitialized = default;
+        await Assert.That(() => ValidationTask<int, RopError>.From(uninitialized)).Throws<InvalidOperationException>();
+    }
+
+    [Test]
+    public async Task Validation_FailureList_DefensivelySnapshots()
+    {
+        var err1 = Sample.Error("E_1");
+        var err2 = Sample.Error("E_2");
+        var list = new List<RopError> { err1, err2 };
+
+        var val = Validation.Failure<int, RopError>(list);
+        list[0] = Sample.Error("E_MUTATED");
+
+        await Assert.That(val.ExpectErrors()[0].Code).IsEqualTo("E_1");
+    }
+
+    [Test]
+    public async Task ResultTask_Tee_OnUninitializedTaskResult_Throws()
+    {
+        var task = ResultTask.From(Task.FromResult(default(Result<int, RopError>)));
+
+        await Assert.That(async () => await task.TeeOk(static _ => { })).Throws<InvalidOperationException>();
+        await Assert.That(async () => await task.TeeOkAsync(static (_, _) => Task.CompletedTask)).Throws<InvalidOperationException>();
+        await Assert.That(async () => await task.TeeErr(static _ => { })).Throws<InvalidOperationException>();
+        await Assert.That(async () => await task.TeeErrAsync(static (_, _) => Task.CompletedTask)).Throws<InvalidOperationException>();
+    }
 }

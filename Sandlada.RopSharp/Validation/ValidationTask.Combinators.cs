@@ -27,7 +27,7 @@ public readonly partial struct ValidationTask<T, TErr>
         ArgumentNullException.ThrowIfNull(mapper);
         ThrowIfUninitialized();
         SuccessTypeGuards.ThrowIfTaskLike<TOut>("Map");
-        return ValidationTask<TOut, TErr>.From(ValidationTaskCore.Map(_task!, mapper, _cancellationToken));
+        return new(ValidationTaskCore.Map(_task!, mapper, _cancellationToken), TagReady, _cancellationToken);
     }
 
     /// <summary>Maps the success value with an asynchronous mapper that receives the computation token.</summary>
@@ -44,6 +44,6 @@ public readonly partial struct ValidationTask<T, TErr>
     {
         ArgumentNullException.ThrowIfNull(mapper);
         ThrowIfUninitialized();
-        return ValidationTask<TOut, TErr>.From(ValidationTaskCore.MapAsync(_task!, mapper, _cancellationToken));
+        return new(ValidationTaskCore.MapAsync(_task!, mapper, _cancellationToken), TagReady, _cancellationToken);
     }
 }

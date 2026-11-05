@@ -61,6 +61,7 @@ public static class ResultExtensions
         Func<TOk, TOut> mapper)
     {
         ArgumentNullException.ThrowIfNull(mapper);
+        SuccessTypeGuards.ThrowIfTaskLike<TOut>(nameof(mapper));
         return result.TryGetOk(out var value)
             ? Result.OkUnchecked<TOut, TErr>(mapper(value))
             : Result.Err<TOut, TErr>(result.ErrUnsafe);
@@ -367,6 +368,7 @@ public static class ResultExtensions
         Func<TOk, Result<TOut, TErr>> binder)
     {
         ArgumentNullException.ThrowIfNull(binder);
+        SuccessTypeGuards.ThrowIfTaskLike<TOut>(nameof(binder));
         return result.TryGetOk(out var value)
             ? binder(value)
             : Result.Err<TOut, TErr>(result.ErrUnsafe);

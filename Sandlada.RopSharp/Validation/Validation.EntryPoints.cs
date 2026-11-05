@@ -86,15 +86,19 @@ public static partial class Validation
             throw new ArgumentException("The error list must not be empty.", nameof(errors));
         }
 
+        var copy = new TErr[errors.Count];
         for (var index = 0; index < errors.Count; index++)
         {
-            if (ArgumentGuards.IsNull(errors[index]))
+            var element = errors[index];
+            if (ArgumentGuards.IsNull(element))
             {
                 throw new ArgumentNullException(nameof(errors), "The error list must not contain null elements.");
             }
+
+            copy[index] = element;
         }
 
-        return new Validation<T, TErr>(default!, errors, Validation<T, TErr>.TagFailure);
+        return new Validation<T, TErr>(default!, Array.AsReadOnly(copy), Validation<T, TErr>.TagFailure);
     }
 
     /// <summary>Lifts a short-circuit result onto the validation track.</summary>
@@ -154,7 +158,7 @@ public static partial class Validation
 
         return errors is null
             ? Success<TOut, TErr>(merger(a!, b!))
-            : Failure<TOut, TErr>(Result.ToReadOnlyList(errors));
+            : new Validation<TOut, TErr>(default!, Result.ToReadOnlyList(errors), Validation<TOut, TErr>.TagFailure);
     }
 
     /// <summary>Combines three results applicatively, collecting every error.</summary>
@@ -196,7 +200,7 @@ public static partial class Validation
 
         return errors is null
             ? Success<TOut, TErr>(merger(a!, b!, c!))
-            : Failure<TOut, TErr>(Result.ToReadOnlyList(errors));
+            : new Validation<TOut, TErr>(default!, Result.ToReadOnlyList(errors), Validation<TOut, TErr>.TagFailure);
     }
 
     /// <summary>Sequences results, collecting every error.</summary>
@@ -222,7 +226,10 @@ public static partial class Validation
         {
             if (result.TryGetOk(out var value))
             {
-                values.Add(value);
+                if (errors is null)
+                {
+                    values.Add(value);
+                }
             }
             else
             {
@@ -232,7 +239,7 @@ public static partial class Validation
 
         return errors is null
             ? Success<IReadOnlyList<T>, TErr>(Result.ToReadOnlyList(values))
-            : Failure<IReadOnlyList<T>, TErr>(Result.ToReadOnlyList(errors));
+            : new Validation<IReadOnlyList<T>, TErr>(default!, Result.ToReadOnlyList(errors), Validation<IReadOnlyList<T>, TErr>.TagFailure);
     }
 
     /// <summary>Maps every element and collects every error.</summary>
@@ -260,7 +267,10 @@ public static partial class Validation
             var result = mapper(element);
             if (result.TryGetOk(out var value))
             {
-                values.Add(value);
+                if (errors is null)
+                {
+                    values.Add(value);
+                }
             }
             else
             {
@@ -270,7 +280,7 @@ public static partial class Validation
 
         return errors is null
             ? Success<IReadOnlyList<TOut>, TErr>(Result.ToReadOnlyList(values))
-            : Failure<IReadOnlyList<TOut>, TErr>(Result.ToReadOnlyList(errors));
+            : new Validation<IReadOnlyList<TOut>, TErr>(default!, Result.ToReadOnlyList(errors), Validation<IReadOnlyList<TOut>, TErr>.TagFailure);
     }
 
     private static List<T> AddError<T>(List<T>? errors, T error)

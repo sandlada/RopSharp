@@ -41,8 +41,11 @@ public readonly partial struct ValidationTask<T, TErr> : IEquatable<ValidationTa
     /// // Failure([E_X]) when it already failed - From only wraps a completed value.
     /// ]]></code>
     /// </remarks>
-    public static ValidationTask<T, TErr> From(Validation<T, TErr> validation) =>
-        new(Task.FromResult(validation), TagReady, default);
+    public static ValidationTask<T, TErr> From(Validation<T, TErr> validation)
+    {
+        validation.ThrowIfUninitialized();
+        return new(Task.FromResult(validation), TagReady, default);
+    }
 
     /// <summary>Adopts a task that already carries a validation.</summary>
     /// <remarks>

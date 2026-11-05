@@ -40,6 +40,7 @@ public static class OptionExtensions
     public static Option<TOut> MapSome<T, TOut>(this Option<T> option, Func<T, TOut> mapper)
     {
         ArgumentNullException.ThrowIfNull(mapper);
+        SuccessTypeGuards.ThrowIfTaskLike<TOut>(nameof(mapper));
         return option.TryGetValue(out var value) ? Option.Some(mapper(value)) : Option.None<TOut>();
     }
 
@@ -173,6 +174,7 @@ public static class OptionExtensions
     public static Option<TOut> BindSome<T, TOut>(this Option<T> option, Func<T, Option<TOut>> binder)
     {
         ArgumentNullException.ThrowIfNull(binder);
+        SuccessTypeGuards.ThrowIfTaskLike<TOut>(nameof(binder));
         return option.TryGetValue(out var value) ? binder(value) : Option.None<TOut>();
     }
 

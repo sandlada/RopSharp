@@ -20,7 +20,7 @@ public readonly partial struct ResultTask<TOk, TErr>
         ThrowIfUninitialized();
         SuccessTypeGuards.ThrowIfTaskLike<TOut>("MapOk");
 
-        return ResultTask<TOut, TErr>.From(ResultTaskCore.MapOk<TOk, TOut, TErr>(_task!, mapper, _cancellationToken));
+        return new(ResultTaskCore.MapOk<TOk, TOut, TErr>(_task!, mapper, _cancellationToken), TagReady, _cancellationToken);
     }
 
     /// <summary>Maps the success value with an asynchronous mapper that receives the computation token.</summary>
@@ -40,8 +40,10 @@ public readonly partial struct ResultTask<TOk, TErr>
         ArgumentNullException.ThrowIfNull(mapper);
         ThrowIfUninitialized();
 
-        return ResultTask<TOut, TErr>.From(
-            ResultTaskCore.MapOkAsync<TOk, TOut, TErr>(_task!, mapper, _cancellationToken));
+        return new(
+            ResultTaskCore.MapOkAsync<TOk, TOut, TErr>(_task!, mapper, _cancellationToken),
+            TagReady,
+            _cancellationToken);
     }
 
     /// <summary>Chains another result-producing step on the success track.</summary>
@@ -63,7 +65,7 @@ public readonly partial struct ResultTask<TOk, TErr>
         ThrowIfUninitialized();
         SuccessTypeGuards.ThrowIfTaskLike<TOut>("BindOk");
 
-        return ResultTask<TOut, TErr>.From(ResultTaskCore.BindOk<TOk, TOut, TErr>(_task!, binder, _cancellationToken));
+        return new(ResultTaskCore.BindOk<TOk, TOut, TErr>(_task!, binder, _cancellationToken), TagReady, _cancellationToken);
     }
 
     /// <summary>Chains an asynchronous binder on the success track.</summary>
@@ -85,7 +87,9 @@ public readonly partial struct ResultTask<TOk, TErr>
         ArgumentNullException.ThrowIfNull(binder);
         ThrowIfUninitialized();
 
-        return ResultTask<TOut, TErr>.From(
-            ResultTaskCore.BindOkAsync<TOk, TOut, TErr>(_task!, binder, _cancellationToken));
+        return new(
+            ResultTaskCore.BindOkAsync<TOk, TOut, TErr>(_task!, binder, _cancellationToken),
+            TagReady,
+            _cancellationToken);
     }
 }

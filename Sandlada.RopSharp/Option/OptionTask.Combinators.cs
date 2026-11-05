@@ -27,7 +27,7 @@ public readonly partial struct OptionTask<T>
         ArgumentNullException.ThrowIfNull(mapper);
         ThrowIfUninitialized();
         SuccessTypeGuards.ThrowIfTaskLike<TOut>("MapSome");
-        return OptionTask<TOut>.From(OptionTaskCore.MapSome(_task!, mapper, _cancellationToken));
+        return new(OptionTaskCore.MapSome(_task!, mapper, _cancellationToken), TagReady, _cancellationToken);
     }
 
     /// <summary>Maps the contained value with an asynchronous mapper that receives the computation token.</summary>
@@ -44,7 +44,7 @@ public readonly partial struct OptionTask<T>
     {
         ArgumentNullException.ThrowIfNull(mapper);
         ThrowIfUninitialized();
-        return OptionTask<TOut>.From(OptionTaskCore.MapSomeAsync(_task!, mapper, _cancellationToken));
+        return new(OptionTaskCore.MapSomeAsync(_task!, mapper, _cancellationToken), TagReady, _cancellationToken);
     }
 
     /// <summary>Chains another option-producing step on the present track.</summary>
@@ -62,7 +62,7 @@ public readonly partial struct OptionTask<T>
         ArgumentNullException.ThrowIfNull(binder);
         ThrowIfUninitialized();
         SuccessTypeGuards.ThrowIfTaskLike<TOut>("BindSome");
-        return OptionTask<TOut>.From(OptionTaskCore.BindSome(_task!, binder, _cancellationToken));
+        return new(OptionTaskCore.BindSome(_task!, binder, _cancellationToken), TagReady, _cancellationToken);
     }
 
     /// <summary>Chains an asynchronous binder on the present track.</summary>
@@ -79,7 +79,7 @@ public readonly partial struct OptionTask<T>
     {
         ArgumentNullException.ThrowIfNull(binder);
         ThrowIfUninitialized();
-        return OptionTask<TOut>.From(OptionTaskCore.BindSomeAsync(_task!, binder, _cancellationToken));
+        return new(OptionTaskCore.BindSomeAsync(_task!, binder, _cancellationToken), TagReady, _cancellationToken);
     }
 
     /// <summary>Recovers on the empty track with an asynchronous fallback.</summary>
@@ -97,7 +97,7 @@ public readonly partial struct OptionTask<T>
     {
         ArgumentNullException.ThrowIfNull(fallback);
         ThrowIfUninitialized();
-        return From(OptionTaskCore.BindNone(_task!, fallback, _cancellationToken));
+        return new(OptionTaskCore.BindNone(_task!, fallback, _cancellationToken), TagReady, _cancellationToken);
     }
 
     /// <summary>Keeps the value only when the predicate holds.</summary>
@@ -114,7 +114,7 @@ public readonly partial struct OptionTask<T>
     {
         ArgumentNullException.ThrowIfNull(predicate);
         ThrowIfUninitialized();
-        return From(OptionTaskCore.Filter(_task!, predicate, _cancellationToken));
+        return new(OptionTaskCore.Filter(_task!, predicate, _cancellationToken), TagReady, _cancellationToken);
     }
 
     /// <summary>Keeps the value only when the asynchronous predicate holds.</summary>
@@ -131,7 +131,7 @@ public readonly partial struct OptionTask<T>
     {
         ArgumentNullException.ThrowIfNull(predicate);
         ThrowIfUninitialized();
-        return From(OptionTaskCore.FilterAsync(_task!, predicate, _cancellationToken));
+        return new(OptionTaskCore.FilterAsync(_task!, predicate, _cancellationToken), TagReady, _cancellationToken);
     }
 
     /// <summary>Runs a side effect on the present track without changing the option.</summary>
@@ -145,8 +145,12 @@ public readonly partial struct OptionTask<T>
     /// // None when the address is missing - TeeSome never runs on the empty track.
     /// ]]></code>
     /// </remarks>
-    public OptionTask<T> TeeSome(Action<T> action) =>
-        From(OptionTaskCore.TeeSome(_task!, action, _cancellationToken));
+    public OptionTask<T> TeeSome(Action<T> action)
+    {
+        ArgumentNullException.ThrowIfNull(action);
+        ThrowIfUninitialized();
+        return new(OptionTaskCore.TeeSome(_task!, action, _cancellationToken), TagReady, _cancellationToken);
+    }
 
     /// <summary>Runs an asynchronous side effect on the present track.</summary>
     /// <remarks>
@@ -159,8 +163,12 @@ public readonly partial struct OptionTask<T>
     /// // None when the address is missing.
     /// ]]></code>
     /// </remarks>
-    public OptionTask<T> TeeSomeAsync(Func<T, CancellationToken, Task> action) =>
-        From(OptionTaskCore.TeeSomeAsync(_task!, action, _cancellationToken));
+    public OptionTask<T> TeeSomeAsync(Func<T, CancellationToken, Task> action)
+    {
+        ArgumentNullException.ThrowIfNull(action);
+        ThrowIfUninitialized();
+        return new(OptionTaskCore.TeeSomeAsync(_task!, action, _cancellationToken), TagReady, _cancellationToken);
+    }
 
     /// <summary>Runs a side effect on the empty track without changing the option.</summary>
     /// <remarks>
@@ -174,8 +182,12 @@ public readonly partial struct OptionTask<T>
     /// // None when a value was already present - the fallback never runs on the present track.
     /// ]]></code>
     /// </remarks>
-    public OptionTask<T> TeeNone(Action action) =>
-        From(OptionTaskCore.TeeNone(_task!, action, _cancellationToken));
+    public OptionTask<T> TeeNone(Action action)
+    {
+        ArgumentNullException.ThrowIfNull(action);
+        ThrowIfUninitialized();
+        return new(OptionTaskCore.TeeNone(_task!, action, _cancellationToken), TagReady, _cancellationToken);
+    }
 
     /// <summary>Runs an asynchronous side effect on the empty track.</summary>
     /// <remarks>
@@ -189,6 +201,10 @@ public readonly partial struct OptionTask<T>
     /// // None when a value was present - TeeNoneAsync never runs on the present track.
     /// ]]></code>
     /// </remarks>
-    public OptionTask<T> TeeNoneAsync(Func<CancellationToken, Task> action) =>
-        From(OptionTaskCore.TeeNoneAsync(_task!, action, _cancellationToken));
+    public OptionTask<T> TeeNoneAsync(Func<CancellationToken, Task> action)
+    {
+        ArgumentNullException.ThrowIfNull(action);
+        ThrowIfUninitialized();
+        return new(OptionTaskCore.TeeNoneAsync(_task!, action, _cancellationToken), TagReady, _cancellationToken);
+    }
 }

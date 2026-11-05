@@ -20,7 +20,7 @@ public readonly partial struct ResultTask<TOk, TErr>
         ArgumentNullException.ThrowIfNull(mapper);
         ThrowIfUninitialized();
 
-        return ResultTask<TOk, TErr2>.From(ResultTaskCore.MapErr<TOk, TErr, TErr2>(_task!, mapper, _cancellationToken));
+        return new(ResultTaskCore.MapErr<TOk, TErr, TErr2>(_task!, mapper, _cancellationToken), TagReady, _cancellationToken);
     }
 
     /// <summary>Maps the error with an asynchronous mapper that receives the computation token.</summary>
@@ -41,8 +41,10 @@ public readonly partial struct ResultTask<TOk, TErr>
         ArgumentNullException.ThrowIfNull(mapper);
         ThrowIfUninitialized();
 
-        return ResultTask<TOk, TErr2>.From(
-            ResultTaskCore.MapErrAsync<TOk, TErr, TErr2>(_task!, mapper, _cancellationToken));
+        return new(
+            ResultTaskCore.MapErrAsync<TOk, TErr, TErr2>(_task!, mapper, _cancellationToken),
+            TagReady,
+            _cancellationToken);
     }
 
     /// <summary>Recovers on the failure track with another result-producing step.</summary>
@@ -63,7 +65,7 @@ public readonly partial struct ResultTask<TOk, TErr>
         ArgumentNullException.ThrowIfNull(binder);
         ThrowIfUninitialized();
 
-        return From(ResultTaskCore.BindErr<TOk, TErr>(_task!, binder, _cancellationToken));
+        return new(ResultTaskCore.BindErr<TOk, TErr>(_task!, binder, _cancellationToken), TagReady, _cancellationToken);
     }
 
     /// <summary>Recovers on the failure track with an asynchronous binder.</summary>
@@ -84,7 +86,7 @@ public readonly partial struct ResultTask<TOk, TErr>
         ArgumentNullException.ThrowIfNull(binder);
         ThrowIfUninitialized();
 
-        return From(ResultTaskCore.BindErrAsync<TOk, TErr>(_task!, binder, _cancellationToken));
+        return new(ResultTaskCore.BindErrAsync<TOk, TErr>(_task!, binder, _cancellationToken), TagReady, _cancellationToken);
     }
 
     /// <summary>Runs a side effect on the success track without changing the result.</summary>
@@ -105,7 +107,7 @@ public readonly partial struct ResultTask<TOk, TErr>
         ArgumentNullException.ThrowIfNull(action);
         ThrowIfUninitialized();
 
-        return From(ResultTaskCore.TeeOk<TOk, TErr>(_task!, action, _cancellationToken));
+        return new(ResultTaskCore.TeeOk<TOk, TErr>(_task!, action, _cancellationToken), TagReady, _cancellationToken);
     }
 
     /// <summary>Runs an asynchronous side effect on the success track.</summary>
@@ -126,7 +128,7 @@ public readonly partial struct ResultTask<TOk, TErr>
         ArgumentNullException.ThrowIfNull(action);
         ThrowIfUninitialized();
 
-        return From(ResultTaskCore.TeeOkAsync<TOk, TErr>(_task!, action, _cancellationToken));
+        return new(ResultTaskCore.TeeOkAsync<TOk, TErr>(_task!, action, _cancellationToken), TagReady, _cancellationToken);
     }
 
     /// <summary>Runs a side effect on the failure track without changing the result.</summary>
@@ -148,7 +150,7 @@ public readonly partial struct ResultTask<TOk, TErr>
         ArgumentNullException.ThrowIfNull(action);
         ThrowIfUninitialized();
 
-        return From(ResultTaskCore.TeeErr<TOk, TErr>(_task!, action, _cancellationToken));
+        return new(ResultTaskCore.TeeErr<TOk, TErr>(_task!, action, _cancellationToken), TagReady, _cancellationToken);
     }
 
     /// <summary>Runs an asynchronous side effect on the failure track.</summary>
@@ -170,7 +172,7 @@ public readonly partial struct ResultTask<TOk, TErr>
         ArgumentNullException.ThrowIfNull(action);
         ThrowIfUninitialized();
 
-        return From(ResultTaskCore.TeeErrAsync<TOk, TErr>(_task!, action, _cancellationToken));
+        return new(ResultTaskCore.TeeErrAsync<TOk, TErr>(_task!, action, _cancellationToken), TagReady, _cancellationToken);
     }
 
     /// <summary>Runs the selected asynchronous action for the active track.</summary>

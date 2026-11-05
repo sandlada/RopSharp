@@ -212,4 +212,41 @@ public sealed class OptionAsyncTests
 
         await Assert.That(option.IsNone).IsTrue();
     }
+
+    [Test]
+    public async Task OptionTask_TeeCombinators_UninitializedAndNullGuards()
+    {
+        OptionTask<int> uninitialized = default;
+        await Assert.That(() => uninitialized.TeeSome(_ => { })).Throws<InvalidOperationException>();
+        await Assert.That(() => uninitialized.TeeSomeAsync((_, _) => Task.CompletedTask)).Throws<InvalidOperationException>();
+        await Assert.That(() => uninitialized.TeeNone(() => { })).Throws<InvalidOperationException>();
+        await Assert.That(() => uninitialized.TeeNoneAsync(_ => Task.CompletedTask)).Throws<InvalidOperationException>();
+
+        var ready = OptionTask.From(Option.Some(1));
+        await Assert.That(() => ready.TeeSome(null!)).Throws<ArgumentNullException>();
+        await Assert.That(() => ready.TeeSomeAsync(null!)).Throws<ArgumentNullException>();
+        await Assert.That(() => ready.TeeNone(null!)).Throws<ArgumentNullException>();
+        await Assert.That(() => ready.TeeNoneAsync(null!)).Throws<ArgumentNullException>();
+    }
+
+    [Test]
+    public async Task OptionTask_ChainedCombinators_PreserveCancellationToken()
+    {
+        using var cts = new CancellationTokenSource();
+        CancellationToken seenToken = default;
+
+        var option = await OptionTask.From(Option.Some(10))
+            .WithCancellation(cts.Token)
+            .MapSome(x => x + 1)
+            .TeeSome(x => { })
+            .Filter(x => x > 5)
+            .MapSomeAsync((x, ct) =>
+            {
+                seenToken = ct;
+                return Task.FromResult(x * 2);
+            });
+
+        await Assert.That(option.Expect("ok")).IsEqualTo(22);
+        await Assert.That(seenToken).IsEqualTo(cts.Token);
+    }
 }

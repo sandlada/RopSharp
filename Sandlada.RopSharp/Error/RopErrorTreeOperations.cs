@@ -2,6 +2,20 @@ namespace Sandlada.RopSharp;
 
 internal static class RopErrorTreeOperations
 {
+    private readonly struct EqualityFrame
+    {
+        public readonly RopError Left;
+        public readonly RopError Right;
+        public readonly bool IsExit;
+
+        public EqualityFrame(RopError left, RopError right, bool isExit)
+        {
+            Left = left;
+            Right = right;
+            IsExit = isExit;
+        }
+    }
+
     internal static bool StructuralEquals(RopError? left, RopError? right)
     {
         if (ReferenceEquals(left, right))
@@ -14,16 +28,30 @@ internal static class RopErrorTreeOperations
             return false;
         }
 
-        var stack = new Stack<(RopError Left, RopError Right)>();
-        stack.Push((left, right));
+        var stack = new Stack<EqualityFrame>();
+        stack.Push(new EqualityFrame(left, right, isExit: false));
         var leftPath = new HashSet<RopError>(ReferenceEqualityComparer.Instance);
         var rightPath = new HashSet<RopError>(ReferenceEqualityComparer.Instance);
 
         while (stack.Count > 0)
         {
-            var (currentLeft, currentRight) = stack.Pop();
+            var frame = stack.Pop();
+            if (frame.IsExit)
+            {
+                leftPath.Remove(frame.Left);
+                rightPath.Remove(frame.Right);
+                continue;
+            }
 
-            if (!ReferenceEquals(currentLeft, currentRight) && !SameHeader(currentLeft, currentRight))
+            var currentLeft = frame.Left;
+            var currentRight = frame.Right;
+
+            if (ReferenceEquals(currentLeft, currentRight))
+            {
+                continue;
+            }
+
+            if (!SameHeader(currentLeft, currentRight))
             {
                 return false;
             }
@@ -38,23 +66,27 @@ internal static class RopErrorTreeOperations
                 continue;
             }
 
-            if (!leftPath.Add(currentLeft))
+            var leftInPath = leftPath.Contains(currentLeft);
+            var rightInPath = rightPath.Contains(currentRight);
+
+            if (leftInPath || rightInPath)
             {
+                if (leftInPath && rightInPath)
+                {
+                    continue;
+                }
+
                 return false;
             }
 
-            if (!rightPath.Add(currentRight))
-            {
-                return false;
-            }
+            leftPath.Add(currentLeft);
+            rightPath.Add(currentRight);
 
+            stack.Push(new EqualityFrame(currentLeft, currentRight, isExit: true));
             for (var index = currentLeft.InnerErrors.Count - 1; index >= 0; index--)
             {
-                stack.Push((currentLeft.InnerErrors[index], currentRight.InnerErrors[index]));
+                stack.Push(new EqualityFrame(currentLeft.InnerErrors[index], currentRight.InnerErrors[index], isExit: false));
             }
-
-            leftPath.Remove(currentLeft);
-            rightPath.Remove(currentRight);
         }
 
         return true;
@@ -63,70 +95,104 @@ internal static class RopErrorTreeOperations
     internal static int StructuralHashCode(RopError error)
     {
         var memo = new Dictionary<RopError, int>(ReferenceEqualityComparer.Instance);
-        return ComputeHash(error, memo, new HashSet<RopError>(ReferenceEqualityComparer.Instance));
+        var path = new HashSet<RopError>(ReferenceEqualityComparer.Instance);
+        var stack = new Stack<(RopError Error, bool IsExit)>();
+        stack.Push((error, false));
+
+        while (stack.Count > 0)
+        {
+            var (current, isExit) = stack.Pop();
+
+            if (isExit)
+            {
+                path.Remove(current);
+                var childHash = 0;
+                for (var i = 0; i < current.InnerErrors.Count; i++)
+                {
+                    memo.TryGetValue(current.InnerErrors[i], out var h);
+                    childHash = HashCode.Combine(childHash, h);
+                }
+
+                var cached = HashCode.Combine(
+                    (int)current.Kind,
+                    StringComparer.Ordinal.GetHashCode(current.Code),
+                    StringComparer.Ordinal.GetHashCode(current.Message),
+                    current.Details is null ? 0 : StringComparer.Ordinal.GetHashCode(current.Details),
+                    childHash);
+                memo[current] = cached;
+                continue;
+            }
+
+            if (memo.ContainsKey(current))
+            {
+                continue;
+            }
+
+            if (!path.Add(current))
+            {
+                memo[current] = 0;
+                continue;
+            }
+
+            if (current.InnerErrors.Count == 0)
+            {
+                path.Remove(current);
+                var leafHash = HashCode.Combine(
+                    (int)current.Kind,
+                    StringComparer.Ordinal.GetHashCode(current.Code),
+                    StringComparer.Ordinal.GetHashCode(current.Message),
+                    current.Details is null ? 0 : StringComparer.Ordinal.GetHashCode(current.Details),
+                    0);
+                memo[current] = leafHash;
+                continue;
+            }
+
+            stack.Push((current, true));
+            for (var index = current.InnerErrors.Count - 1; index >= 0; index--)
+            {
+                stack.Push((current.InnerErrors[index], false));
+            }
+        }
+
+        return memo.TryGetValue(error, out var result) ? result : 0;
     }
 
     internal static IReadOnlyList<RopError> FlattenLeaves(RopError error)
     {
         var leaves = new List<RopError>();
         var path = new HashSet<RopError>(ReferenceEqualityComparer.Instance);
-        CollectLeaves(error, leaves, path);
+        var stack = new Stack<(RopError Error, bool IsExit)>();
+        stack.Push((error, false));
+
+        while (stack.Count > 0)
+        {
+            var (current, isExit) = stack.Pop();
+            if (isExit)
+            {
+                path.Remove(current);
+                continue;
+            }
+
+            if (!path.Add(current))
+            {
+                continue;
+            }
+
+            if (current.InnerErrors.Count == 0)
+            {
+                leaves.Add(current);
+                path.Remove(current);
+                continue;
+            }
+
+            stack.Push((current, true));
+            for (var index = current.InnerErrors.Count - 1; index >= 0; index--)
+            {
+                stack.Push((current.InnerErrors[index], false));
+            }
+        }
+
         return Array.AsReadOnly(leaves.ToArray());
-    }
-
-    private static void CollectLeaves(RopError error, List<RopError> leaves, HashSet<RopError> path)
-    {
-        if (!path.Add(error))
-        {
-            return;
-        }
-
-        if (error.InnerErrors.Count == 0)
-        {
-            leaves.Add(error);
-            path.Remove(error);
-            return;
-        }
-
-        foreach (var inner in error.InnerErrors)
-        {
-            CollectLeaves(inner, leaves, path);
-        }
-
-        path.Remove(error);
-    }
-
-    private static int ComputeHash(
-        RopError error,
-        Dictionary<RopError, int> memo,
-        HashSet<RopError> path)
-    {
-        if (memo.TryGetValue(error, out var cached))
-        {
-            return cached;
-        }
-
-        if (!path.Add(error))
-        {
-            return 0;
-        }
-
-        var childHash = 0;
-        foreach (var inner in error.InnerErrors)
-        {
-            childHash = HashCode.Combine(childHash, ComputeHash(inner, memo, path));
-        }
-
-        path.Remove(error);
-
-        cached = HashCode.Combine(
-            (int)error.Kind,
-            StringComparer.Ordinal.GetHashCode(error.Code),
-            StringComparer.Ordinal.GetHashCode(error.Message),
-            error.Details is null ? 0 : StringComparer.Ordinal.GetHashCode(error.Details),
-            childHash);
-        memo[error] = cached;
-        return cached;
     }
 
     private static bool SameHeader(RopError left, RopError right) =>

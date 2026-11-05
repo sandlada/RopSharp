@@ -14,7 +14,6 @@ internal static class ResultTaskCore
         }
 
         cancellationToken.ThrowIfCancellationRequested();
-        SuccessTypeGuards.ThrowIfTaskLike<TOut>("MapOk");
         return Result.OkUnchecked<TOut, TErr>(mapper(value));
     }
 
@@ -46,7 +45,6 @@ internal static class ResultTaskCore
         }
 
         cancellationToken.ThrowIfCancellationRequested();
-        SuccessTypeGuards.ThrowIfTaskLike<TOut>("BindOk");
         return binder(value);
     }
 
@@ -137,6 +135,10 @@ internal static class ResultTaskCore
             cancellationToken.ThrowIfCancellationRequested();
             action(value);
         }
+        else
+        {
+            result.ThrowIfUninitialized();
+        }
 
         return result;
     }
@@ -151,6 +153,10 @@ internal static class ResultTaskCore
         {
             cancellationToken.ThrowIfCancellationRequested();
             await AsyncGuards.Require(action(value, cancellationToken), "action").ConfigureAwait(false);
+        }
+        else
+        {
+            result.ThrowIfUninitialized();
         }
 
         return result;
@@ -167,6 +173,10 @@ internal static class ResultTaskCore
             cancellationToken.ThrowIfCancellationRequested();
             action(error);
         }
+        else
+        {
+            result.ThrowIfUninitialized();
+        }
 
         return result;
     }
@@ -181,6 +191,10 @@ internal static class ResultTaskCore
         {
             cancellationToken.ThrowIfCancellationRequested();
             await AsyncGuards.Require(action(error, cancellationToken), "action").ConfigureAwait(false);
+        }
+        else
+        {
+            result.ThrowIfUninitialized();
         }
 
         return result;

@@ -137,6 +137,7 @@ public readonly struct Validation<T, TErr> : IEquatable<Validation<T, TErr>>
     {
         ArgumentNullException.ThrowIfNull(mapper);
         ThrowIfUninitialized();
+        SuccessTypeGuards.ThrowIfTaskLike<TOut>(nameof(mapper));
 
         return _tag == TagFailure
             ? new Validation<TOut, TErr>(default!, _errors, TagFailure)
