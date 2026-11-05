@@ -22,8 +22,31 @@ equality, contract analyzers in the package, and SourceLink to `https://github.c
 - `Either<TLeft,TRight>.BindLeft` and `BindRight` for chaining another either on the active branch.
 - `Result<TOk,TErr>.Expect(string reason)` and `Option<T>.Expect(string reason)` for boundary exits that must
   include a non-empty reason when unwrapping.
-- Contract analyzers in `analyzers/dotnet/cs/Sandlada.RopSharp.Analyzers.dll` (`ROP0001`–`ROP0004`; ADR 0013).
+- Contract analyzers in `analyzers/dotnet/cs/Sandlada.RopSharp.Analyzers.dll` (`ROP0001`–`ROP0004`; ADR 0014).
+- `OptionTaskLinqExtensions` (`Select`, `SelectMany`, `Where`) providing LINQ query-syntax for `OptionTask<T>`.
+- `ResultTaskLinqExtensions` async `SelectMany` overloads for seamless composition with asynchronous operations.
+- `OptionTask<T>.BindNoneAsync` and synchronous fallbacks (`BindNone`, `BindNoneValue`).
+- `OptionTaskBridgeExtensions` (`MapSomeAsync`, `BindNoneAsync`, `FilterAsync`, `TeeSomeAsync`, `TeeNoneAsync`) and `ResultTaskBridgeExtensions` (`TeeOkAsync`, `TeeErrAsync`).
+- `ValidationTask.From` static factories and `ValidationTaskBridgeExtensions` (`ToValidationTask`, `MapAsync`).
+- `Validation<T, TErr>.Match` and `Switch` terminal combinators exposing the full error list.
 - NuGet SourceLink and repository metadata pointing at `https://github.com/sandlada/RopSharp`.
+
+### Fixed
+
+- `RopErrorTreeOperations.StructuralEquals`, `FlattenLeaves`, and `StructuralHashCode` non-recursive explicit frame stack traversal, preventing stack overflows and safely handling cyclic graphs.
+- CancellationToken propagation across all `ResultTask`, `OptionTask`, and `ValidationTask` combinator chains.
+- Entry guards on `OptionTask.Tee*` (`ThrowIfUninitialized`, `ArgumentNullException.ThrowIfNull`).
+- `SuccessTypeGuards.ThrowIfTaskLike<TOut>` on synchronous `MapOk`, `BindOk`, `MapSome`, `BindSome`, and `Validation.Map`.
+- Snapshotting in `Validation.Failure(IReadOnlyList<TErr>)` defensively copies input lists.
+- `Validation<T, TErr>.GetHashCode()` distributes hashes across all collected errors rather than only counting them.
+
+### Optimized
+
+- `Validation.Failure(TErr)` allocates a single array wrapped in `ReadOnlyCollection` rather than intermediate `List<TErr>`.
+- `OptionTask.Sequence` evaluates computations lazily and short-circuits upon encountering the first `None`.
+- `Result.Sequence`, `Result.Traverse`, `Option.Sequence`, and `Option.Traverse` pre-size capacity when input implements `ICollection<T>`.
+- Dead `CopyErrorsAsync` method removed from `ValidationTaskCore`.
+- Roslyn analyzer symbol caching via `RegisterCompilationStartAction`, symbol equality via `SymbolEqualityComparer.Default`, block-bodied lambda analysis for `ROP0003`, and expanded error-code verification in `ROP0004` covering `FromException`, `WithCode`, `Result.Try*`, `Parse`, and `ParseFailure`.
 
 ### Removed
 

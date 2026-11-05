@@ -49,9 +49,22 @@
     </ProjectReference>
   </ItemGroup>
 
-  <ItemGroup>
-    <None Include="..\Sandlada.RopSharp.Analyzers\bin\$(Configuration)\netstandard2.0\Sandlada.RopSharp.Analyzers.dll" Pack="true" PackagePath="analyzers/dotnet/cs" Visible="false" Link="analyzers/dotnet/cs/Sandlada.RopSharp.Analyzers.dll" />
-  </ItemGroup>
+  <PropertyGroup>
+    <TargetsForTfmSpecificContentInPackage Condition="'$(TargetFramework)' == 'net11.0'">$(TargetsForTfmSpecificContentInPackage);_PackAnalyzers</TargetsForTfmSpecificContentInPackage>
+  </PropertyGroup>
+
+  <Target Name="_PackAnalyzers">
+    <MSBuild Projects="..\Sandlada.RopSharp.Analyzers\Sandlada.RopSharp.Analyzers.csproj"
+             Targets="GetTargetPath"
+             Properties="Configuration=$(Configuration);TargetFramework=netstandard2.0">
+      <Output TaskParameter="TargetOutputs" ItemName="_AnalyzerTargetOutputs" />
+    </MSBuild>
+    <ItemGroup>
+      <TfmSpecificPackageFile Include="@(_AnalyzerTargetOutputs)">
+        <PackagePath>analyzers/dotnet/cs</PackagePath>
+      </TfmSpecificPackageFile>
+    </ItemGroup>
+  </Target>
 
   <ItemGroup>
     <InternalsVisibleTo Include="Sandlada.RopSharp.Tests" />

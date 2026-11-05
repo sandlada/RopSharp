@@ -91,7 +91,7 @@ IReadOnlyList<RopError> leaves = aggregate.InnerErrors; // 原始錯誤，依傳
 - `Details` 可為 `null`，但不可為空白字串。
 - `Kind` 是粗略分類（`Failure`、`Validation`、`NotFound`、`Conflict`、`Unauthorized`、`Forbidden`、`Unexpected`、
   `Timeout`、`Unavailable`、`RateLimited`），供傳輸層對映使用；精確分支請用 `Code`。新值只會附加，請把 enum 視為開放集合。
-- 相等性比 `Kind`、`Code`、`Message`、`Details`，**不比較 `Cause` 與 `InnerErrors`**（避免堆疊與結構差異）。
+- 相等性比對 `Kind`、`Code`、`Message`、`Details` 與遞迴的 `InnerErrors`（防循環安全），**不比較 `Cause`**（避免堆疊差異使邏輯相同的錯誤不等）。
 - `InnerErrors` 永不為 `null`：一般錯誤是空清單，`Combine` 的聚合則保留每個原始錯誤（不攤平，巢狀聚合維持巢狀）；
   `WithCode` 等 `With*` 方法會一併保留。
 - `RopError.Combine(errors)` 將非空清單合併為 `E_MULTIPLE`；只傳一個元素時直接回傳該錯誤，不再包一層。
@@ -107,18 +107,17 @@ Result<Order, RopError> order =
        .BindOk(CheckAmount);
 
 // 聚合：全部檢查，收集所有錯誤（依參數順序）
-Result<Order, IReadOnlyList<RopError>> validated =
-    Result.Validate(CheckCustomer(raw), CheckAmount(raw), CheckStock(raw),
-                 (customer, amount, stock) => new Order("ord-1001", customer, stock));
+Validation<Order, RopError> validated =
+    Validation.Zip(
+        CheckCustomer(raw), CheckAmount(raw), CheckStock(raw),
+        (customer, amount, stock) => new Order("ord-1001", customer, stock));
 
-// 顯式轉換
-Result<Order, IReadOnlyList<RopError>> lifted = order.ToValidation();
-Result<Order, RopError> first  = validated.ToSingleError();
-Result<Order, RopError> merged = validated.ToSingleError(RopError.Combine);
+// 摺疊回單一 Result
+Result<Order, RopError> merged = validated.Collapse(RopError.Combine);
 ```
 
 `Sequence`／`Traverse`／`Partition` 接受 `IEnumerable<T>`，但**立即物化一次**。空集合回傳 `Ok([])`／`Some([])`，永不回傳 `null`。
-`SequenceValidation`／`TraverseValidation` 遵循相同的集合規則，但採聚合語義：每個元素都會被映射，所有錯誤依元素順序回傳。
+`Validation.Sequence`／`Validation.Traverse` 遵循相同的集合規則，但採聚合語義：每個元素都會被映射，所有錯誤依元素順序完整累積。
 
 ## Option 快速上手
 
@@ -166,18 +165,16 @@ Option<Result<Payment, RopError>> back2   = Result.Ok(Option.Some(payment)).Tran
 
 ## 非同步與取消
 
-每個同步組合子都有 `...Async` 對應；`CancellationToken` 一律可選、放最後。取消一律拋
-`OperationCanceledException`，**不會**轉成 `Err`／`None`。
+非同步運算採用專用的運算型別——`ResultTask<TOk, TErr>`、`OptionTask<T>` 與 `ValidationTask<T, TErr>`，
+而不是在 `Task<Result<,>>` 上懸掛散落的擴充方法。`CancellationToken` 一律可選、放最後。取消一律拋
+`OperationCanceledException`，**不會**轉成領域錯誤。
 
 ```csharp
-Task<Result<string, RopError>> chained =
+ResultTask<string, RopError> chained =
     ChargeAsync(order, ct)
-        .MapOkAsync(payment => payment.Id, ct)
-        .BindOkAsync(id => GetShipmentAsync(id, ct), ct);
-
-// CT-aware 重載：同一個 token 透傳
-Task<Result<string, RopError>> ctAware =
-    ChargeAsync(order, ct).MapOkAsync((payment, token) => FetchReceiptAsync(payment, token), ct);
+        .ToResultTask()
+        .MapOkAsync((payment, token) => FetchReceiptAsync(payment, token), ct)
+        .BindOkAsync((id, token) => GetShipmentAsync(id, token), ct);
 ```
 
 語義：
@@ -188,17 +185,11 @@ Task<Result<string, RopError>> ctAware =
 - 程式庫內部一律 `ConfigureAwait(false)`。
 - async 方法的參數驗證透過回傳的 Task 觀察。
 
-`Result.TryAsync`、`Result.SequenceAsync`、`Result.TraverseAsync` 規則相同；`SequenceAsync` 依列舉順序逐一
-await，確保回報的錯誤具決定性（要並行請在呼叫端先啟動 Task）。
+`ResultTask.Sequence` 與 `ResultTask.Traverse` 依列舉順序逐一 await 並在首錯短路。
+非同步聚合驗證使用 `ValidationTask.Sequence` 與 `ValidationTask.Traverse`，會等待所有 Task 並依來源順序完整累積錯誤。
 
-聚合遍歷在非同步軌也維持「不短路」契約：`Result.SequenceValidationAsync` 與 `Result.TraverseValidationAsync`
-（含 CT-aware mapper 重載）會等待所有 Task，並依來源順序回傳所有錯誤。Task 擲出的例外一律往外拋，
-不視為領域錯誤；多個 Task 同時失敗時以第一個例外為準，其餘仍會被觀察。
-
-`Option` 也補齊了同樣的非同步表面：同步 `Option<T>` 可直接使用 `MapSomeAsync`／`BindSomeAsync`／
-`BindNoneAsync`／`TeeSomeAsync`／`TeeNoneAsync`／`FilterAsync`；`Option.CombineAsync`／`ZipAsync` 會等待
-所有輸入，`Option.SequenceAsync`／`TraverseAsync` 依序等待並在第一個 `None` 短路。`Task<Option<T>>` 也
-支援 `Select`／`SelectMany`／`Where` 查詢語法。
+`Option` 也提供了專屬的 `OptionTask<T>` 運算表面（`From`、`WithCancellation`、`MapSomeAsync`、`BindSomeAsync`、
+`BindNoneAsync`、`FilterAsync`、`TeeSomeAsync`、`TeeNoneAsync`），並支援 `Select`／`SelectMany`／`Where` LINQ 查詢語法。
 
 ## 邊界：例外只在此處變成值
 
@@ -284,7 +275,7 @@ Result<Address, RopError> address =
 | `Ensure` | `Filter` | 斷言 |
 | `Match` | `Match` | 全函數出口 |
 | `RequireNotNull` | `RequireSome` | 補 null／補 Some，抬升為 Result |
-| `Combine`／`Validate` | `Zip`／`Sequence` | 同層合併（Option 無錯誤可聚合） |
+| `Combine`／`Validation.Zip` | `Zip`／`Sequence` | 同層合併（Option 無錯誤可聚合） |
 
 ## 反模式
 
@@ -295,7 +286,7 @@ Result<Address, RopError> address =
 - 用 `Option` 包集合 → 空集合就是空集合。
 - 在同一個公開簽名混用 `Option` 與 `Nullable<T>` → 只在邊界轉換一次。
 - 用 `Message` 做分支 → 用 `Code`。
-- 需要短路卻用 `Validate` → 用 `BindOk`。
+- 需要短路卻用 `Validation.Zip` → 用 `BindOk`。
 - 在 `Tee*` 內改外部狀態並依賴執行順序 → 只做日誌／度量。
 
 ## 1.1 新增（摘要）

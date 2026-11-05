@@ -174,8 +174,8 @@ IReadOnlyList<RopError> leaves = aggregate.InnerErrors; // the originals, in sup
   precise domain decisions. New values are appended, so treat the enum as open-ended.
 - `InnerErrors` is never `null`: atomic errors expose an empty list, while a `Combine` aggregate keeps every input in
   order (no flattening) so nothing is lost by collapsing. `WithCode` and the other `With*` methods preserve it.
-- Equality compares `Kind`, `Code`, `Message` and `Details`; `Cause` and `InnerErrors` are excluded so stack-trace
-  noise and structural differences cannot make two equally reported errors unequal.
+- Equality compares `Kind`, `Code`, `Message`, `Details`, and recursively `InnerErrors` (cycle-safe); only `Cause` is
+  excluded so stack-trace noise cannot make two equally reported errors unequal.
 - `RopError.Combine(errors)` collapses a non-empty list into `E_MULTIPLE`; a uniform `Kind` is preserved and mixed
   kinds fall back to `Failure`. A single-element call returns that error unchanged instead of wrapping it.
 
@@ -224,35 +224,32 @@ Result<Order, RopError> order =
        .BindOk(CheckAmount);
 
 // Aggregating: every input is inspected, all errors are collected in argument order
-Result<Order, IReadOnlyList<RopError>> validated =
-    Result.Validate(CheckCustomer(raw), CheckAmount(raw), CheckStock(raw),
-                 (customer, amount, stock) => new Order("ord-1001", customer, stock));
+Validation<Order, RopError> validated =
+    Validation.Zip(
+        CheckCustomer(raw), CheckAmount(raw), CheckStock(raw),
+        (customer, amount, stock) => new Order("ord-1001", customer, stock));
 
-// Explicit conversions between the tracks
-Result<Order, IReadOnlyList<RopError>> lifted = order.ToValidation();
-Result<Order, RopError> single = validated.ToSingleError();               // first error
-Result<Order, RopError> merged = validated.ToSingleError(RopError.Combine);
+// Collapse back to a single Result
+Result<Order, RopError> merged = validated.Collapse(RopError.Combine);
 ```
 
 `Sequence`, `Traverse` and `Partition` accept any `IEnumerable<T>` but materialize exactly once. Empty input
-yields `Ok([])` (or `Some([])` for options), never `null`. `SequenceValidation` and `TraverseValidation` share
-those collection rules but aggregate: every element is mapped and every error is returned in element order.
+yields `Ok([])` (or `Some([])` for options), never `null`. `Validation.Sequence` and `Validation.Traverse` share
+those collection rules but aggregate: every element is mapped and every error is collected in element order.
 
 ## Async and cancellation
 
-The map/bind/tee combinators have `...Async` counterparts for both `Result` and `Option`. The token is optional
-and always last; cancellation is reported as `OperationCanceledException` and never converted into an error,
-because errors describe domain failures.
+Asynchronous computations use specialized computation types — `ResultTask<TOk, TErr>`, `OptionTask<T>`, and
+`ValidationTask<T, TErr>` — rather than loose extension methods on `Task<Result<,>>`. The token is optional and always
+last; cancellation is reported as `OperationCanceledException` and never converted into an error, because errors
+describe domain failures.
 
 ```csharp
-Task<Result<string, RopError>> chained =
+ResultTask<string, RopError> chained =
     ChargeAsync(order, ct)
-        .MapOkAsync(payment => payment.Id, ct)
-        .BindOkAsync(id => GetShipmentAsync(id, ct), ct);
-
-// Cancellation-aware mapper receives the same token; the library never creates its own CTS
-Task<Result<string, RopError>> ct2 =
-    ChargeAsync(order, ct).MapOkAsync((payment, token) => FetchReceiptAsync(payment, token), ct);
+        .ToResultTask()
+        .MapOkAsync((payment, token) => FetchReceiptAsync(payment, token), ct)
+        .BindOkAsync((id, token) => GetShipmentAsync(id, token), ct);
 ```
 
 Semantics:
@@ -261,26 +258,21 @@ Semantics:
 - The track that would invoke a callback checks the token first, so a cancelled token never starts new user work
   (`Ok` for `MapOk`/`BindOk`/`TeeOk`, `Err` for `MapErr`/`BindErr`/`TeeErr`, and the matching `Some`/`None` track).
 - The pass-through track (no callback to run) returns the original value without observing the token.
-- `SequenceAsync` and `TraverseAsync` check the token before the loop and before every element, so an
-  already-completed task cannot bypass cancellation and `TraverseAsync` never maps after cancellation.
+- `Sequence` and `Traverse` check the token before the loop and before every element, so an already-completed
+  task cannot bypass cancellation and `Traverse` never maps after cancellation.
 - Library code always uses `ConfigureAwait(false)`.
-- Async argument validation surfaces through the returned task (the methods are asynchronous).
-- A callback that returns a `Task` must not return `null`; that programming error faults with
-  `InvalidOperationException` naming the callback (`mapper`, `binder`, `fallback`, `action` or `predicate`).
+- A callback that returns a task-like object must not return `null`; that programming error faults with
+  `InvalidOperationException` naming the callback.
 
-`Result.TryAsync`, `Result.SequenceAsync` and `Result.TraverseAsync` follow the same rules. `SequenceAsync` awaits in
-enumeration order so the reported failure is deterministic; start tasks eagerly if they should run concurrently.
-
+`ResultTask.Sequence` and `ResultTask.Traverse` await in enumeration order and short-circuit on the first failure.
 The aggregating traversal helpers keep their no-short-circuit contract on the async track:
-`Result.SequenceValidationAsync` and `Result.TraverseValidationAsync` (plain and cancellation-aware mapper) await every
-task and return every error in source order. A faulted task surfaces as an exception rather than an error, and when
-several tasks fault the first fault wins while the rest are still observed.
+`ValidationTask.Sequence` and `ValidationTask.Traverse` await every task and collect every error in source order.
 
 ```csharp
 Validation<IReadOnlyList<OrderLine>, RopError> validated =
     Validation.Traverse(order.Lines, ValidateLine);
 
-var asyncValidated = await ValidationTask.Traverse(
+Validation<IReadOnlyList<OrderLine>, RopError> asyncValidated = await ValidationTask.Traverse(
     order.Lines,
     (line, _) => ValidateLineAsync(line));
 ```
@@ -381,19 +373,29 @@ Result<Address, RopError> address =
    `Deconstruct` and `|`/`>>` are all rejected: they hide the track.
 4. **No null on the public surface.** Aggregations return empty collections, never `null`.
 5. **No reflection on hot paths, no boxing of the core types.**
-6. **`default(Option<T>)` is `None`; `default(Result<,>)` is undefined** — never rely on it.
+6. **`default(Option<T>)` is `None`; `default(Result<,>)`, `default(Either<,>)`, `default(Validation<,>)`, and `default(ParseFailure)` are uninitialized** — they throw `InvalidOperationException` on access.
 
 ### Scope decisions
 
 Three larger topics are deliberately caller-owned (ADR 0010):
 
-- **Arity stops at three.** `Combine`/`Zip`/`Validate` cover 2 and 3 inputs; larger aggregations use a record, a
-  collection with `SequenceValidation`/`TraverseValidation`, or nested calls.
+- **Arity stops at three.** `Combine`/`Zip` cover 2 and 3 inputs; larger aggregations use a record, a
+  collection with `Sequence`/`Traverse` (or `Validation.Sequence`/`Validation.Traverse`), or nested calls.
 - **Concurrency policy stays at the call site.** The async helpers are sequential or await-all; for bounded fan-out
   compose `Task.WhenAll`/`Parallel.ForEachAsync` at the boundary. The library never throttles or creates a token
   source.
 - **`IAsyncEnumerable<T>` is composed, not wrapped.** Materialize with `await foreach` and pass the results to
-  `Result.SequenceAsync`/`SequenceValidationAsync` (or `Option.SequenceAsync`).
+  `ResultTask.Sequence` (or `OptionTask.Sequence` / `ValidationTask.Sequence`).
+
+## Roslyn Contract Analyzers
+
+`Sandlada.RopSharp` ships Roslyn contract analyzers (`ROP0001`–`ROP0004`; ADR 0014) directly inside the NuGet package
+to enforce railway invariants at compile time:
+
+- **`ROP0001` (Error):** Prevents creating `Result`, `Either`, `Validation`, `ParseFailure`, and async computation types via `default` or empty constructors.
+- **`ROP0002` (Error):** Disallows discarding contract values or leaving them as bare expression statements.
+- **`ROP0003` (Error):** Flags synchronous combinators receiving delegates or block-bodied lambdas returning task-like types (`Task`, `ValueTask`).
+- **`ROP0004` (Warning):** Enforces stable error codes matching `^E_[A-Z0-9_]+$` across `RopError.Create`, `FromException`, `WithCode`, `Result.Try*`, `Parse`, and `new ParseFailure`.
 
 ## API map
 
@@ -415,30 +417,34 @@ Match(ok, err) / Expect(reason)
 ```text
 Result.Combine(a, b, merger)                     Result.Combine(a, b, c, merger)
 Result.Zip(a, b)                                 Result.Zip(a, b, c)
-Result.Validate(a, b, merger)                    Result.Validate(a, b, c, merger)
-Result.Sequence(results)                         Result.SequenceValidation(results)
-Result.Traverse(source, mapper)                  Result.TraverseValidation(source, mapper)
+Result.Sequence(results)                         Result.Traverse(source, mapper)
 Result.Partition(results)
-ToValidation() / ToSingleError() / ToSingleError(combine)
 Result.Try(func, errorFactory) / Result.Try(func, code)
 Result.Try(action, errorFactory) / Result.Try(action, code)                 -> Result<Unit, RopError>
-Result.TryAsync(func, errorFactory, ct) / Result.TryAsync(func, code, ct)
-Result.TryAsync(action, errorFactory, ct) / Result.TryAsync(action, code, ct) -> Task<Result<Unit, RopError>>
+Result.TryAsync(func, errorFactory, ct) / Result.TryAsync(func, code, ct)   -> ResultTask<T, RopError>
+Result.TryAsync(action, errorFactory, ct) / Result.TryAsync(action, code, ct) -> ResultTask<Unit, RopError>
 Result.Switch(func) / Result.TrySwitch(func, errorFactory)
 Result.SwitchAsync(func) / Result.TrySwitchAsync(func, errorFactory)
 Result.FromNullable(value, errorFactory) / Result.FromNullableValue(value, errorFactory)
-Result.SequenceAsync(tasks, ct) / Result.TraverseAsync(source, mapper, ct)
-Result.SequenceValidationAsync(tasks, ct) / Result.TraverseValidationAsync(source, mapper, ct)
 Select / SelectMany
+```
+
+### Validation (accumulating — `Validation<T, TErr>` & `ValidationTask<T, TErr>`)
+
+```text
+Validation.Success / Validation.Failure / Validation.From
+Validation.Zip (2, 3) / Validation.Sequence / Validation.Traverse
+Validation.Collapse(merge) / Match / Switch / MatchFirst / SwitchFirst
+ValidationTask.From / ValidationTask.Zip / ValidationTask.Sequence / ValidationTask.Traverse
+ToValidationTask / MapAsync
 ```
 
 ### Result (async — `ResultTask<TOk, TErr>`)
 
 ```text
-ResultTask.From(Result | Task<Result>)
+ResultTask.From(Result | Task<Result>) / ToResultTask
 WithCancellation
-MapOk / MapOkAsync(TOk, CancellationToken, Task<TOut>)
-BindOk / BindOkAsync
+MapOk / MapOkAsync / BindOk / BindOkAsync
 MapErr / MapErrAsync / BindErr / BindErrAsync / TeeOk / TeeErr (+ async)
 ResultTask.Zip / Sequence / Traverse / Partition
 Select / SelectMany on ResultTask (async LINQ)
@@ -448,10 +454,10 @@ Result.TryAsync / SwitchAsync / TrySwitchAsync → ResultTask
 ### Option (async — `OptionTask<T>`)
 
 ```text
-OptionTask.From(Option | Task<Option>) / WithCancellation
-MapSome / MapSomeAsync / BindSome / BindSomeAsync / BindNone / Filter (+ async)
+OptionTask.From(Option | Task<Option>) / ToOptionTask / WithCancellation
+MapSome / MapSomeAsync / BindSome / BindSomeAsync / BindNone / BindNoneAsync / BindNoneValue / Filter (+ async)
 OptionTask.Zip / Sequence / Traverse
-Select / SelectMany / Where on OptionTask
+Select / SelectMany / Where on OptionTask (async LINQ)
 ```
 
 ### Option
@@ -464,20 +470,16 @@ MapSome / TeeSome / TeeNone / Filter / MapSomeValue
 BindSome / BindSomeNullable / BindSomeNullableValue / BindNone / BindNoneValue
 Flatten / Match / Expect(reason)
 RequireSome(error|factory) / ToOption / ToEither(value|factory) / ToNullable / ToNullableValue / Transpose
-AsTask / MapSomeAsync (sync on Task; async | CT-aware on Option and Task)
-BindSomeAsync (async | CT-aware) / BindNoneAsync (async | CT-aware)
-TeeSomeAsync (2) / TeeNoneAsync (2) / FilterAsync (sync | async | CT-aware)
-Select / SelectMany / Where (Option and Task sources)
+MapSomeAsync / BindSomeAsync / BindNoneAsync / TeeSomeAsync / TeeNoneAsync / FilterAsync
+Select / SelectMany / Where (Option and OptionTask)
 ```
 
-### Collection, terminals, parsing and the general union (1.1)
+### Collection, terminals, parsing and the general union
 
 ```text
 TryFirst / TryLast / TryFind / Choose / Execute / ExecuteNoValue   (OptionEnumerableExtensions)
 SuccessIf / FailureIf (value | factory)                          (Result)
-Result.Parse<T> / Result.TryParse<T>                                   (invariant culture, IParsable<T>)
-Switch / SwitchAsync / SwitchFirst / MatchFirst                  (ResultTerminalExtensions)
-FailIf / ThenEnsure                                              (ResultEnsureExtensions)
+Result.Parse<T> / Result.TryParse<T>                             (invariant culture, IParsable<T>)
 Either.Left / Either.Right / Match / MapLeft / MapRight / Swap / ToResult / ToOption
 Result<,>.ToEither / Option<>.ToEither (value | factory)
 ```
@@ -490,7 +492,6 @@ Every entry below keeps an identical `RopError` overload; the `TErr` form is add
 FromNullable<TOk,TErr>(value, errorFactory)            FromNullableValue<TOk,TErr>(value, errorFactory)
 SuccessIf<T,TErr>(condition, value, error|factory)     FailureIf<T,TErr>(condition, value, error|factory)
 RequireNotNull<T,TErr>(errorFactory)                   Either.ToResult<TErr>(errorFactory)
-ToSingleError<T,TErr>()                                ToSingleError<T,TErr>(combine)
 Try<T,TErr>(func, errorFactory, nullResultErrorFactory)
 Try<TErr>(action, errorFactory)
 TryAsync<T,TErr>(func, errorFactory, nullResultErrorFactory, ct)
@@ -509,7 +510,7 @@ Parse<T,TErr>(value, Func<ParseFailure,TErr>, code = "E_PARSE")
 - Wrapping a collection in `Option` — an empty collection is already empty.
 - Mixing `Option` and `Nullable<T>` inside one public signature — convert once at the boundary.
 - Branching on `Message` — branch on `Code`.
-- Using `Validate` where a short-circuit is required — use `BindOk`.
+- Using `Validation.Zip` where a short-circuit is required — use `BindOk`.
 - Mutating external state in `Tee*` and depending on its execution order — logging and metrics only.
 
 ## Targets, performance, and compatibility
@@ -519,8 +520,6 @@ Parse<T,TErr>(value, Func<ParseFailure,TErr>, code = "E_PARSE")
 - `Result<,>` and `Option<>` are `readonly struct`s with value equality; they are immutable and safe to share
   across threads. Combinators do not lock; user callbacks are the caller's responsibility.
 - Aggregations materialize once and expose `IReadOnlyList<T>` backed by a read-only wrapper.
-- Async mapper overloads use `OverloadResolutionPriority` so `x => Task<T>` binds to the asynchronous overload
-  without casts.
 
 ## Implementation notes
 
