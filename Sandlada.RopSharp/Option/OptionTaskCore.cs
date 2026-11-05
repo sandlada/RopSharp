@@ -39,6 +39,15 @@ internal static class OptionTaskCore
     }
 
     internal static async Task<Option<T>> BindNone<T>(
+        Task<Option<T>> source, Func<Option<T>> fallback, CancellationToken cancellationToken)
+    {
+        var option = await source.WaitAsync(cancellationToken).ConfigureAwait(false);
+        if (option.TryGetValue(out _)) return option;
+        cancellationToken.ThrowIfCancellationRequested();
+        return fallback();
+    }
+
+    internal static async Task<Option<T>> BindNoneAsync<T>(
         Task<Option<T>> source, Func<CancellationToken, Task<Option<T>>> fallback, CancellationToken cancellationToken)
     {
         var option = await source.WaitAsync(cancellationToken).ConfigureAwait(false);

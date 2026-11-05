@@ -87,17 +87,60 @@ public readonly partial struct OptionTask<T>
     /// <code><![CDATA[
     /// var city = await OptionTask.From(Option.FromNullable(OrderFixtures.CustomerWithoutAddress.Address))
     ///     .MapSome(static shipping => shipping.City)
-    ///     .BindNone(static _ => Task.FromResult(Option.Some("unknown")));
+    ///     .BindNoneAsync(static _ => Task.FromResult(Option.Some("unknown")));
     ///
     /// // Some("unknown") when the address was missing,
     /// // Some(city) when it was present - the fallback never runs on the present track.
     /// ]]></code>
     /// </remarks>
-    public OptionTask<T> BindNone(Func<CancellationToken, Task<Option<T>>> fallback)
+    public OptionTask<T> BindNoneAsync(Func<CancellationToken, Task<Option<T>>> fallback)
+    {
+        ArgumentNullException.ThrowIfNull(fallback);
+        ThrowIfUninitialized();
+        return new(OptionTaskCore.BindNoneAsync(_task!, fallback, _cancellationToken), TagReady, _cancellationToken);
+    }
+
+    /// <summary>Recovers on the empty track with a synchronous fallback option.</summary>
+    /// <remarks>
+    /// <code><![CDATA[
+    /// var city = await OptionTask.From(Option.None<string>())
+    ///     .BindNone(static () => Option.Some("unknown"));
+    ///
+    /// // Some("unknown") when empty, Some(city) when present.
+    /// ]]></code>
+    /// </remarks>
+    public OptionTask<T> BindNone(Func<Option<T>> fallback)
     {
         ArgumentNullException.ThrowIfNull(fallback);
         ThrowIfUninitialized();
         return new(OptionTaskCore.BindNone(_task!, fallback, _cancellationToken), TagReady, _cancellationToken);
+    }
+
+    /// <summary>Recovers on the empty track with a fallback value.</summary>
+    /// <remarks>
+    /// <code><![CDATA[
+    /// var city = await OptionTask.From(Option.None<string>())
+    ///     .BindNoneValue("unknown");
+    ///
+    /// // Some("unknown") when empty, Some(city) when present.
+    /// ]]></code>
+    /// </remarks>
+    public OptionTask<T> BindNoneValue(T fallback) =>
+        BindNone(() => Option.Some(fallback));
+
+    /// <summary>Recovers on the empty track with a fallback value factory.</summary>
+    /// <remarks>
+    /// <code><![CDATA[
+    /// var city = await OptionTask.From(Option.None<string>())
+    ///     .BindNoneValue(static () => "unknown");
+    ///
+    /// // Some("unknown") when empty, Some(city) when present.
+    /// ]]></code>
+    /// </remarks>
+    public OptionTask<T> BindNoneValue(Func<T> fallbackFactory)
+    {
+        ArgumentNullException.ThrowIfNull(fallbackFactory);
+        return BindNone(() => Option.Some(fallbackFactory()));
     }
 
     /// <summary>Keeps the value only when the predicate holds.</summary>
@@ -176,7 +219,7 @@ public readonly partial struct OptionTask<T>
     /// var city = await OptionTask.From(Option.FromNullable(OrderFixtures.CustomerWithoutAddress.Address))
     ///     .MapSome(static shipping => shipping.City)
     ///     .TeeNone(static () => Console.WriteLine("no address"))
-    ///     .BindNone(static _ => Task.FromResult(Option.Some("unknown")));
+    ///     .BindNoneAsync(static _ => Task.FromResult(Option.Some("unknown")));
     ///
     /// // Some("unknown") when the address was missing,
     /// // None when a value was already present - the fallback never runs on the present track.
@@ -195,7 +238,7 @@ public readonly partial struct OptionTask<T>
     /// var city = await OptionTask.From(Option.FromNullable(OrderFixtures.CustomerWithoutAddress.Address))
     ///     .MapSome(static shipping => shipping.City)
     ///     .TeeNoneAsync(static _ => Task.Run(() => Console.WriteLine("no address")))
-    ///     .BindNone(static _ => Task.FromResult(Option.Some("unknown")));
+    ///     .BindNoneAsync(static _ => Task.FromResult(Option.Some("unknown")));
     ///
     /// // Some("unknown") after the asynchronous empty-track log,
     /// // None when a value was present - TeeNoneAsync never runs on the present track.

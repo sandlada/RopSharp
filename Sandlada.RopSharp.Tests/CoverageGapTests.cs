@@ -314,7 +314,7 @@ public sealed class CoverageGapTests
         var bindSome = await TestSupport.CatchAsync(() =>
             OptionTask.From(Task.FromResult(Option.Some(1))).BindSomeAsync((_, _) => (Task<Option<int>>)null!));
         var bindNone = await TestSupport.CatchAsync(() =>
-            OptionTask.From(Task.FromResult(Option.None<int>())).BindNone(_ => null!));
+            OptionTask.From(Task.FromResult(Option.None<int>())).BindNoneAsync(_ => null!));
 
         await Assert.That(bindOk is InvalidOperationException).IsTrue();
         await Assert.That(bindErr is InvalidOperationException).IsTrue();
@@ -325,10 +325,10 @@ public sealed class CoverageGapTests
     [Test]
     public async Task BindNoneAsync_BothOverloads_HandleNoneAndSome()
     {
-        var noArgNone = await OptionTask.From(Task.FromResult(Option.None<int>())).BindNone(_ => Task.FromResult(Option.Some(5)));
-        var noArgSome = await OptionTask.From(Task.FromResult(Option.Some(1))).BindNone(_ => Task.FromResult(Option.Some(5)));
-        var ctNone = await OptionTask.From(Task.FromResult(Option.None<int>())).BindNone(_ => Task.FromResult(Option.Some(7)));
-        var ctSome = await OptionTask.From(Task.FromResult(Option.Some(1))).BindNone(_ => Task.FromResult(Option.Some(9)));
+        var noArgNone = await OptionTask.From(Task.FromResult(Option.None<int>())).BindNoneAsync(_ => Task.FromResult(Option.Some(5)));
+        var noArgSome = await OptionTask.From(Task.FromResult(Option.Some(1))).BindNoneAsync(_ => Task.FromResult(Option.Some(5)));
+        var ctNone = await OptionTask.From(Task.FromResult(Option.None<int>())).BindNoneAsync(_ => Task.FromResult(Option.Some(7)));
+        var ctSome = await OptionTask.From(Task.FromResult(Option.Some(1))).BindNoneAsync(_ => Task.FromResult(Option.Some(9)));
 
         await Assert.That(noArgNone.Expect("test")).IsEqualTo(5);
         await Assert.That(noArgSome.Expect("test")).IsEqualTo(1);

@@ -18,6 +18,31 @@ namespace Sandlada.RopSharp;
     Justification = "Zip overloads differ by arity; the optional token follows the ct-last convention.")]
 public static class ValidationTask
 {
+    /// <summary>Wraps a completed validation in a computation.</summary>
+    /// <remarks>
+    /// <code><![CDATA[
+    /// var validated = await ValidationTask.From(Validation.Success<Order, RopError>(OrderFixtures.Sample));
+    ///
+    /// // Success(order) when the source was Success,
+    /// // Failure([E_X]) when the source was Failure.
+    /// ]]></code>
+    /// </remarks>
+    public static ValidationTask<T, TErr> From<T, TErr>(Validation<T, TErr> validation) =>
+        ValidationTask<T, TErr>.From(validation);
+
+    /// <summary>Adopts a task that already carries a validation.</summary>
+    /// <remarks>
+    /// <code><![CDATA[
+    /// var validated = await ValidationTask.From(
+    ///     Task.FromResult(Validation.Success<Order, RopError>(OrderFixtures.Sample)));
+    ///
+    /// // Success(order) when the task completes with Success,
+    /// // Failure([E_X]) when the task completes with Failure.
+    /// ]]></code>
+    /// </remarks>
+    public static ValidationTask<T, TErr> From<T, TErr>(Task<Validation<T, TErr>> task) =>
+        ValidationTask<T, TErr>.From(task);
+
     /// <summary>Awaits two result computations and merges successes, accumulating every error.</summary>
     /// <remarks>
     /// <code><![CDATA[

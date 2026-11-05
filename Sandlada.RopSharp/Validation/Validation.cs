@@ -185,6 +185,71 @@ public readonly struct Validation<T, TErr> : IEquatable<Validation<T, TErr>>
     }
 
     /// <summary>
+    /// Projects a success value or the full list of errors to a unified value.
+    /// </summary>
+    /// <typeparam name="TResult">The unified return type.</typeparam>
+    /// <param name="ok">Maps a success value.</param>
+    /// <param name="errors">Maps the collected errors.</param>
+    /// <returns>The projection from the matching track.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="ok"/> or <paramref name="errors"/> is <see langword="null"/>.</exception>
+    /// <exception cref="InvalidOperationException">This instance is an uninitialized default.</exception>
+    /// <remarks>
+    /// <code><![CDATA[
+    /// var message = Validation.Success<Order, RopError>(OrderFixtures.Sample)
+    ///     .Match(
+    ///         ok: static order => $"Order {order.Id} placed",
+    ///         errors: static errs => $"Validation failed with {errs.Count} errors");
+    ///
+    /// // Success(order) projects to the ok branch,
+    /// // Failure([E_X]) projects to the errors branch.
+    /// ]]></code>
+    /// </remarks>
+    public TResult Match<TResult>(Func<T, TResult> ok, Func<IReadOnlyList<TErr>, TResult> errors)
+    {
+        ArgumentNullException.ThrowIfNull(ok);
+        ArgumentNullException.ThrowIfNull(errors);
+
+        if (TryGetSuccess(out var value))
+        {
+            return ok(value);
+        }
+
+        return errors(ErrorsUnsafe);
+    }
+
+    /// <summary>
+    /// Runs an action for a success or the full list of collected errors on the failure track.
+    /// </summary>
+    /// <param name="ok">The action for a success.</param>
+    /// <param name="errors">The action for all collected errors.</param>
+    /// <exception cref="ArgumentNullException"><paramref name="ok"/> or <paramref name="errors"/> is <see langword="null"/>.</exception>
+    /// <exception cref="InvalidOperationException">This instance is an uninitialized default.</exception>
+    /// <remarks>
+    /// <code><![CDATA[
+    /// Validation.Success<Order, RopError>(OrderFixtures.Sample)
+    ///     .Switch(
+    ///         ok: static order => Console.WriteLine(order.Id),
+    ///         errors: static errs => Console.WriteLine(errs.Count));
+    ///
+    /// // Success(order) invokes the ok action,
+    /// // Failure([E_X]) invokes the errors action.
+    /// ]]></code>
+    /// </remarks>
+    public void Switch(Action<T> ok, Action<IReadOnlyList<TErr>> errors)
+    {
+        ArgumentNullException.ThrowIfNull(ok);
+        ArgumentNullException.ThrowIfNull(errors);
+
+        if (TryGetSuccess(out var value))
+        {
+            ok(value);
+            return;
+        }
+
+        errors(ErrorsUnsafe);
+    }
+
+    /// <summary>
     /// Projects the success value or the first error on the failure track.
     /// </summary>
     /// <typeparam name="TResult">The projected type.</typeparam>

@@ -149,8 +149,8 @@ public sealed class OptionCombinatorTests
     [Test]
     public async Task BindNone_RecoversFromNone()
     {
-        var recovered = await OptionTask.From(Option.None<int>()).BindNone(_ => Task.FromResult(Option.Some(5)));
-        var stillNone = await OptionTask.From(Option.None<int>()).BindNone(_ => Task.FromResult(Option.None<int>()));
+        var recovered = await OptionTask.From(Option.None<int>()).BindNoneAsync(_ => Task.FromResult(Option.Some(5)));
+        var stillNone = await OptionTask.From(Option.None<int>()).BindNoneAsync(_ => Task.FromResult(Option.None<int>()));
 
         await Assert.That(recovered.Expect("test")).IsEqualTo(5);
         await Assert.That(stillNone.IsNone).IsTrue();

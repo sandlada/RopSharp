@@ -59,7 +59,6 @@ Sandlada.RopSharp.OptionNullableExtensions
 Sandlada.RopSharp.OptionNullableValueExtensions
 Sandlada.RopSharp.OptionTask
 Sandlada.RopSharp.OptionTask<T>
-Sandlada.RopSharp.OptionTask<T>.BindNone(System.Func<System.Threading.CancellationToken, System.Threading.Tasks.Task<Sandlada.RopSharp.Option<T>>!>! fallback) -> Sandlada.RopSharp.OptionTask<T>
 Sandlada.RopSharp.OptionTask<T>.BindSome<TOut>(System.Func<T, Sandlada.RopSharp.Option<TOut>>! binder) -> Sandlada.RopSharp.OptionTask<TOut>
 Sandlada.RopSharp.OptionTask<T>.BindSomeAsync<TOut>(System.Func<T, System.Threading.CancellationToken, System.Threading.Tasks.Task<Sandlada.RopSharp.Option<TOut>>!>! binder) -> Sandlada.RopSharp.OptionTask<TOut>
 Sandlada.RopSharp.OptionTask<T>.Equals(Sandlada.RopSharp.OptionTask<T> other) -> bool

@@ -71,7 +71,7 @@ public sealed class AsyncCancellationTests
     public async Task BindNoneAsync_WithNullFallbackResult_FaultsWithInvalidOperation()
     {
         var exception = await TestSupport.CatchAsync(() =>
-            OptionTask.From(Task.FromResult(Option.None<int>())).BindNone(_ => null!));
+            OptionTask.From(Task.FromResult(Option.None<int>())).BindNoneAsync(_ => null!));
 
         await Assert.That(exception is InvalidOperationException).IsTrue();
     }

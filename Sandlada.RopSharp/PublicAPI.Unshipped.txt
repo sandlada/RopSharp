@@ -1,1 +1,29 @@
 #nullable enable
+Sandlada.RopSharp.OptionTask<T>.BindNone(System.Func<Sandlada.RopSharp.Option<T>>! fallback) -> Sandlada.RopSharp.OptionTask<T>
+Sandlada.RopSharp.OptionTask<T>.BindNoneAsync(System.Func<System.Threading.CancellationToken, System.Threading.Tasks.Task<Sandlada.RopSharp.Option<T>>!>! fallback) -> Sandlada.RopSharp.OptionTask<T>
+Sandlada.RopSharp.OptionTask<T>.BindNoneValue(System.Func<T>! fallbackFactory) -> Sandlada.RopSharp.OptionTask<T>
+Sandlada.RopSharp.OptionTask<T>.BindNoneValue(T fallback) -> Sandlada.RopSharp.OptionTask<T>
+Sandlada.RopSharp.OptionTaskLinqExtensions
+Sandlada.RopSharp.Validation<T, TErr>.Match<TResult>(System.Func<T, TResult>! ok, System.Func<System.Collections.Generic.IReadOnlyList<TErr>!, TResult>! errors) -> TResult
+Sandlada.RopSharp.Validation<T, TErr>.Switch(System.Action<T>! ok, System.Action<System.Collections.Generic.IReadOnlyList<TErr>!>! errors) -> void
+Sandlada.RopSharp.ValidationTaskBridgeExtensions
+static Sandlada.RopSharp.OptionTaskBridgeExtensions.BindNoneAsync<T>(this Sandlada.RopSharp.Option<T> option, System.Func<System.Threading.CancellationToken, System.Threading.Tasks.Task<Sandlada.RopSharp.Option<T>>!>! fallback) -> Sandlada.RopSharp.OptionTask<T>
+static Sandlada.RopSharp.OptionTaskBridgeExtensions.FilterAsync<T>(this Sandlada.RopSharp.Option<T> option, System.Func<T, System.Threading.CancellationToken, System.Threading.Tasks.Task<bool>!>! predicate) -> Sandlada.RopSharp.OptionTask<T>
+static Sandlada.RopSharp.OptionTaskBridgeExtensions.MapSomeAsync<T, TOut>(this Sandlada.RopSharp.Option<T> option, System.Func<T, System.Threading.CancellationToken, System.Threading.Tasks.Task<TOut>!>! mapper) -> Sandlada.RopSharp.OptionTask<TOut>
+static Sandlada.RopSharp.OptionTaskBridgeExtensions.TeeNoneAsync<T>(this Sandlada.RopSharp.Option<T> option, System.Func<System.Threading.CancellationToken, System.Threading.Tasks.Task!>! action) -> Sandlada.RopSharp.OptionTask<T>
+static Sandlada.RopSharp.OptionTaskBridgeExtensions.TeeSomeAsync<T>(this Sandlada.RopSharp.Option<T> option, System.Func<T, System.Threading.CancellationToken, System.Threading.Tasks.Task!>! action) -> Sandlada.RopSharp.OptionTask<T>
+static Sandlada.RopSharp.OptionTaskLinqExtensions.Select<T, TOut>(this Sandlada.RopSharp.OptionTask<T> computation, System.Func<T, TOut>! selector) -> Sandlada.RopSharp.OptionTask<TOut>
+static Sandlada.RopSharp.OptionTaskLinqExtensions.SelectMany<T, TCol, TOut>(this Sandlada.RopSharp.OptionTask<T> computation, System.Func<T, Sandlada.RopSharp.Option<TCol>>! collectionSelector, System.Func<T, TCol, TOut>! resultSelector) -> Sandlada.RopSharp.OptionTask<TOut>
+static Sandlada.RopSharp.OptionTaskLinqExtensions.SelectMany<T, TCol, TOut>(this Sandlada.RopSharp.OptionTask<T> computation, System.Func<T, Sandlada.RopSharp.OptionTask<TCol>>! collectionSelector, System.Func<T, TCol, TOut>! resultSelector) -> Sandlada.RopSharp.OptionTask<TOut>
+static Sandlada.RopSharp.OptionTaskLinqExtensions.SelectMany<T, TOut>(this Sandlada.RopSharp.OptionTask<T> computation, System.Func<T, Sandlada.RopSharp.Option<TOut>>! binder) -> Sandlada.RopSharp.OptionTask<TOut>
+static Sandlada.RopSharp.OptionTaskLinqExtensions.SelectMany<T, TOut>(this Sandlada.RopSharp.OptionTask<T> computation, System.Func<T, Sandlada.RopSharp.OptionTask<TOut>>! binder) -> Sandlada.RopSharp.OptionTask<TOut>
+static Sandlada.RopSharp.OptionTaskLinqExtensions.Where<T>(this Sandlada.RopSharp.OptionTask<T> computation, System.Func<T, bool>! predicate) -> Sandlada.RopSharp.OptionTask<T>
+static Sandlada.RopSharp.ResultTaskBridgeExtensions.TeeErrAsync<TOk, TErr>(this Sandlada.RopSharp.Result<TOk, TErr> result, System.Func<TErr, System.Threading.CancellationToken, System.Threading.Tasks.Task!>! action) -> Sandlada.RopSharp.ResultTask<TOk, TErr>
+static Sandlada.RopSharp.ResultTaskBridgeExtensions.TeeOkAsync<TOk, TErr>(this Sandlada.RopSharp.Result<TOk, TErr> result, System.Func<TOk, System.Threading.CancellationToken, System.Threading.Tasks.Task!>! action) -> Sandlada.RopSharp.ResultTask<TOk, TErr>
+static Sandlada.RopSharp.ResultTaskLinqExtensions.SelectMany<TOk, TCol, TOut, TErr>(this Sandlada.RopSharp.ResultTask<TOk, TErr> computation, System.Func<TOk, Sandlada.RopSharp.ResultTask<TCol, TErr>>! collectionSelector, System.Func<TOk, TCol, TOut>! resultSelector) -> Sandlada.RopSharp.ResultTask<TOut, TErr>
+static Sandlada.RopSharp.ResultTaskLinqExtensions.SelectMany<TOk, TOut, TErr>(this Sandlada.RopSharp.ResultTask<TOk, TErr> computation, System.Func<TOk, Sandlada.RopSharp.ResultTask<TOut, TErr>>! binder) -> Sandlada.RopSharp.ResultTask<TOut, TErr>
+static Sandlada.RopSharp.ValidationTask.From<T, TErr>(Sandlada.RopSharp.Validation<T, TErr> validation) -> Sandlada.RopSharp.ValidationTask<T, TErr>
+static Sandlada.RopSharp.ValidationTask.From<T, TErr>(System.Threading.Tasks.Task<Sandlada.RopSharp.Validation<T, TErr>>! task) -> Sandlada.RopSharp.ValidationTask<T, TErr>
+static Sandlada.RopSharp.ValidationTaskBridgeExtensions.MapAsync<T, TErr, TOut>(this Sandlada.RopSharp.Validation<T, TErr> validation, System.Func<T, System.Threading.CancellationToken, System.Threading.Tasks.Task<TOut>!>! mapper) -> Sandlada.RopSharp.ValidationTask<TOut, TErr>
+static Sandlada.RopSharp.ValidationTaskBridgeExtensions.ToValidationTask<T, TErr>(this Sandlada.RopSharp.Validation<T, TErr> validation) -> Sandlada.RopSharp.ValidationTask<T, TErr>
+static Sandlada.RopSharp.ValidationTaskBridgeExtensions.ToValidationTask<T, TErr>(this System.Threading.Tasks.Task<Sandlada.RopSharp.Validation<T, TErr>>! task) -> Sandlada.RopSharp.ValidationTask<T, TErr>

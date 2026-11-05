@@ -104,4 +104,38 @@ public static class ResultTaskBridgeExtensions
         this Result<TOk, TErr> result,
         Func<TErr, CancellationToken, Task<Result<TOk, TErr>>> binder) =>
         ResultTask.From(result).BindErrAsync(binder);
+
+    /// <summary>Runs an asynchronous side effect on the success track.</summary>
+    /// <remarks>
+    /// <code><![CDATA[
+    /// var logged = false;
+    /// var receiptId = await Result.Try(() => OrderFixtures.Charge(OrderFixtures.Sample), "E_CHARGE")
+    ///     .TeeOkAsync((_, _) => { logged = true; return Task.CompletedTask; })
+    ///     .MapOk(static payment => payment.Id);
+    ///
+    /// // Ok("pay-ord-1001") when the charge succeeds,
+    /// // Err(E_CHARGE) when the charge fails.
+    /// ]]></code>
+    /// </remarks>
+    public static ResultTask<TOk, TErr> TeeOkAsync<TOk, TErr>(
+        this Result<TOk, TErr> result,
+        Func<TOk, CancellationToken, Task> action) =>
+        ResultTask.From(result).TeeOkAsync(action);
+
+    /// <summary>Runs an asynchronous side effect on the failure track.</summary>
+    /// <remarks>
+    /// <code><![CDATA[
+    /// var logged = false;
+    /// var receiptId = await Result.Try(() => OrderFixtures.Charge(OrderFixtures.Declined), "E_CHARGE")
+    ///     .TeeErrAsync((_, _) => { logged = true; return Task.CompletedTask; })
+    ///     .MapOk(static payment => payment.Id);
+    ///
+    /// // Err(E_CHARGE) when the charge fails,
+    /// // Ok(payment) when the charge succeeds.
+    /// ]]></code>
+    /// </remarks>
+    public static ResultTask<TOk, TErr> TeeErrAsync<TOk, TErr>(
+        this Result<TOk, TErr> result,
+        Func<TErr, CancellationToken, Task> action) =>
+        ResultTask.From(result).TeeErrAsync(action);
 }

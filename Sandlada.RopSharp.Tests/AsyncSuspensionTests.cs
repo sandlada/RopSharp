@@ -161,7 +161,7 @@ public sealed class AsyncSuspensionTests
     {
         var fallback = new TaskCompletionSource<Option<int>>(TaskCreationOptions.RunContinuationsAsynchronously);
 
-        var pending = OptionTask.From(Task.FromResult(Option.None<int>())).BindNone(_ => fallback.Task);
+        var pending = OptionTask.From(Task.FromResult(Option.None<int>())).BindNoneAsync(_ => fallback.Task);
 
         await Assert.That(pending.TaskUnsafe.IsCompleted).IsFalse();
         fallback.SetResult(Option.Some(3));

@@ -66,4 +66,62 @@ public static class ResultTaskLinqExtensions
         Func<TOk, Result<TCol, TErr>> collectionSelector,
         Func<TOk, TCol, TOut> resultSelector) =>
         computation.BindOk(first => collectionSelector(first).MapOk(second => resultSelector(first, second)));
+
+    /// <summary>Binds the success track to another asynchronous result computation.</summary>
+    /// <remarks>
+    /// <code><![CDATA[
+    /// var shipment = await Result.TryAsync(
+    ///         () => OrderFixtures.ChargeAsync(OrderFixtures.Sample),
+    ///         "E_CHARGE")
+    ///     .SelectMany(static payment =>
+    ///         Result.TryAsync(() => OrderFixtures.ShipAsync(OrderFixtures.Sample, payment), "E_SHIP"));
+    ///
+    /// // Ok(shipment) when both steps succeed,
+    /// // Err(E_CHARGE) or Err(E_SHIP) with the first failure.
+    /// ]]></code>
+    /// </remarks>
+    public static ResultTask<TOut, TErr> SelectMany<TOk, TOut, TErr>(
+        this ResultTask<TOk, TErr> computation,
+        Func<TOk, ResultTask<TOut, TErr>> binder)
+    {
+        ArgumentNullException.ThrowIfNull(binder);
+        computation.ThrowIfUninitialized();
+
+        return computation.BindOkAsync(async (first, ct) =>
+        {
+            var next = binder(first);
+            return await next.WithCancellation(ct);
+        });
+    }
+
+    /// <summary>Binds and projects success values from an asynchronous result computation.</summary>
+    /// <remarks>
+    /// <code><![CDATA[
+    /// var label = await Result.TryAsync(
+    ///         () => OrderFixtures.ChargeAsync(OrderFixtures.Sample),
+    ///         "E_CHARGE")
+    ///     .SelectMany(
+    ///         static payment => Result.TryAsync(() => OrderFixtures.ShipAsync(OrderFixtures.Sample, payment), "E_SHIP"),
+    ///         static (payment, shipment) => $"{payment.Id}:{shipment.TrackingNumber}");
+    ///
+    /// // Ok("pay-ord-1001:TRK-...") when both steps succeed,
+    /// // Err(E_CHARGE) or Err(E_SHIP) on the first failure.
+    /// ]]></code>
+    /// </remarks>
+    public static ResultTask<TOut, TErr> SelectMany<TOk, TCol, TOut, TErr>(
+        this ResultTask<TOk, TErr> computation,
+        Func<TOk, ResultTask<TCol, TErr>> collectionSelector,
+        Func<TOk, TCol, TOut> resultSelector)
+    {
+        ArgumentNullException.ThrowIfNull(collectionSelector);
+        ArgumentNullException.ThrowIfNull(resultSelector);
+        computation.ThrowIfUninitialized();
+
+        return computation.BindOkAsync(async (first, ct) =>
+        {
+            var next = collectionSelector(first);
+            var colResult = await next.WithCancellation(ct);
+            return colResult.MapOk(second => resultSelector(first, second));
+        });
+    }
 }

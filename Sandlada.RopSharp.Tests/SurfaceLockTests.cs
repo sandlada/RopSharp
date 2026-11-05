@@ -28,6 +28,7 @@ public sealed class SurfaceLockTests
         "Sandlada.RopSharp.OptionTask<T>",
         "Sandlada.RopSharp.OptionTaskAwaiter<T>",
         "Sandlada.RopSharp.OptionTaskBridgeExtensions",
+        "Sandlada.RopSharp.OptionTaskLinqExtensions",
         "Sandlada.RopSharp.ParseFailure",
         "Sandlada.RopSharp.Result",
         "Sandlada.RopSharp.Result<TOk, TErr>",
@@ -49,12 +50,14 @@ public sealed class SurfaceLockTests
         "Sandlada.RopSharp.ValidationTask",
         "Sandlada.RopSharp.ValidationTask<T, TErr>",
         "Sandlada.RopSharp.ValidationTaskAwaiter<T, TErr>",
+        "Sandlada.RopSharp.ValidationTaskBridgeExtensions",
     ];
 
     private static readonly HashSet<string> AllowedTaskBridgeExtensionNames =
     [
         nameof(ResultTaskBridgeExtensions.ToResultTask),
         nameof(OptionTaskBridgeExtensions.ToOptionTask),
+        nameof(ValidationTaskBridgeExtensions.ToValidationTask),
     ];
 
     [Test]

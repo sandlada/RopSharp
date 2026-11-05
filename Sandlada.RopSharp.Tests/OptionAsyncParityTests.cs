@@ -113,7 +113,7 @@ public sealed class OptionAsyncParityTests
     [Test]
     public async Task BindNoneAsync_FromSyncOption_Recovers()
     {
-        var option = await OptionTask.From(Option.None<int>()).BindNone(_ => Task.FromResult(Option.Some(7)));
+        var option = await OptionTask.From(Option.None<int>()).BindNoneAsync(_ => Task.FromResult(Option.Some(7)));
 
         await Assert.That(option.Expect("test")).IsEqualTo(7);
     }
@@ -123,7 +123,7 @@ public sealed class OptionAsyncParityTests
     {
         var called = false;
 
-        var option = await OptionTask.From(Option.Some(1)).BindNone(_ =>
+        var option = await OptionTask.From(Option.Some(1)).BindNoneAsync(_ =>
         {
             called = true;
             return Task.FromResult(Option.Some(9));
@@ -139,7 +139,7 @@ public sealed class OptionAsyncParityTests
         using var cts = new CancellationTokenSource();
 
         var option = await OptionTask.From(Option.None<int>())
-            .WithCancellation(cts.Token).BindNone(token => Task.FromResult(Option.Some(token == cts.Token ? 1 : 0)));
+            .WithCancellation(cts.Token).BindNoneAsync(token => Task.FromResult(Option.Some(token == cts.Token ? 1 : 0)));
 
         await Assert.That(option.Expect("test")).IsEqualTo(1);
     }
@@ -149,7 +149,7 @@ public sealed class OptionAsyncParityTests
     {
         var called = false;
 
-        var option = await OptionTask.From(Option.Some(5)).BindNone(token =>
+        var option = await OptionTask.From(Option.Some(5)).BindNoneAsync(token =>
         {
             called = true;
             return Task.FromResult(Option.Some(9));
@@ -375,7 +375,7 @@ public sealed class OptionAsyncParityTests
     public async Task BindNoneAsync_FromSyncOption_WithNullFallbackTask_FaultsWithInvalidOperation()
     {
         var exception = await TestSupport.CatchAsync(() =>
-            OptionTask.From(Option.None<int>()).BindNone(_ => null!));
+            OptionTask.From(Option.None<int>()).BindNoneAsync(_ => null!));
 
         await Assert.That(exception is InvalidOperationException).IsTrue();
     }

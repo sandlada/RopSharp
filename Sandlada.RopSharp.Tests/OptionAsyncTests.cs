@@ -87,7 +87,7 @@ public sealed class OptionAsyncTests
     [Test]
     public async Task BindNoneAsync_Recovers()
     {
-        var option = await OptionTask.From(Task.FromResult(Option.None<int>())).BindNone(_ => Task.FromResult(Option.Some(7)));
+        var option = await OptionTask.From(Task.FromResult(Option.None<int>())).BindNoneAsync(_ => Task.FromResult(Option.Some(7)));
 
         await Assert.That(option.Expect("test")).IsEqualTo(7);
     }
@@ -98,7 +98,7 @@ public sealed class OptionAsyncTests
         using var cts = new CancellationTokenSource();
 
         var option = await OptionTask.From(Task.FromResult(Option.None<int>()))
-            .WithCancellation(cts.Token).BindNone(token => Task.FromResult(Option.Some(token == cts.Token ? 1 : 0)));
+            .WithCancellation(cts.Token).BindNoneAsync(token => Task.FromResult(Option.Some(token == cts.Token ? 1 : 0)));
 
         await Assert.That(option.Expect("test")).IsEqualTo(1);
     }
@@ -108,7 +108,7 @@ public sealed class OptionAsyncTests
     {
         var called = false;
 
-        var option = await OptionTask.From(Task.FromResult(Option.Some(1))).BindNone(_ =>
+        var option = await OptionTask.From(Task.FromResult(Option.Some(1))).BindNoneAsync(_ =>
         {
             called = true;
             return Task.FromResult(Option.Some(9));
