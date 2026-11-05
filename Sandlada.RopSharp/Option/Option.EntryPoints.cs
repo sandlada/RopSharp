@@ -297,7 +297,7 @@ public static partial class Option
     public static Option<IReadOnlyList<T>> Sequence<T>(IEnumerable<Option<T>> options)
     {
         ArgumentNullException.ThrowIfNull(options);
-        var values = new List<T>();
+        var values = Result.CreateList<Option<T>, T>(options);
         foreach (var option in options)
         {
             if (!option.TryGetValue(out var value))
@@ -338,7 +338,7 @@ public static partial class Option
     {
         ArgumentNullException.ThrowIfNull(source);
         ArgumentNullException.ThrowIfNull(mapper);
-        var values = new List<TOut>();
+        var values = Result.CreateList<T, TOut>(source);
         foreach (var element in source)
         {
             if (!mapper(element).TryGetValue(out var value))

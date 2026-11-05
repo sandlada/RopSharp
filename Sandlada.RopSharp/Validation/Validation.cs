@@ -414,17 +414,35 @@ public readonly struct Validation<T, TErr> : IEquatable<Validation<T, TErr>>
     /// var bucket = validated.GetHashCode() % 16;
     ///
     /// // Success(order) hashes by its payload,
-    /// // Failure([E_X]) hashes by its error count - equal values land in the same bucket.
+    /// // Failure([E_X]) hashes by its collected errors - equal values land in the same bucket.
     /// ]]></code>
     /// </remarks>
-    public override int GetHashCode() =>
-        _tag switch
+    public override int GetHashCode()
+    {
+        switch (_tag)
         {
-            TagUninitialized => HashCode.Combine(TagUninitialized),
-            TagSuccess => HashCode.Combine(TagSuccess, _value),
-            TagFailure => HashCode.Combine(TagFailure, _errors.Count),
-            _ => HashCode.Combine(_tag),
-        };
+            case TagUninitialized:
+                return HashCode.Combine(TagUninitialized);
+            case TagSuccess:
+                return HashCode.Combine(TagSuccess, _value);
+            case TagFailure:
+                {
+                    var hash = new HashCode();
+                    hash.Add(TagFailure);
+                    if (_errors is not null)
+                    {
+                        for (var index = 0; index < _errors.Count; index++)
+                        {
+                            hash.Add(_errors[index]);
+                        }
+                    }
+
+                    return hash.ToHashCode();
+                }
+            default:
+                return HashCode.Combine(_tag);
+        }
+    }
 
     /// <inheritdoc />
     /// <remarks>

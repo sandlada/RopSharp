@@ -233,7 +233,7 @@ internal static class ResultTaskCore
         CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
-        var values = new List<T>();
+        var values = Result.CreateList<ResultTask<T, TErr>, T>(computations);
         foreach (var computation in computations)
         {
             cancellationToken.ThrowIfCancellationRequested();
@@ -262,7 +262,7 @@ internal static class ResultTaskCore
         CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
-        var values = new List<TOut>();
+        var values = Result.CreateList<T, TOut>(source);
         foreach (var element in source)
         {
             cancellationToken.ThrowIfCancellationRequested();

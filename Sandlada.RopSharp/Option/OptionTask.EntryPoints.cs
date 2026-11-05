@@ -143,13 +143,7 @@ public static class OptionTask
     {
         ArgumentNullException.ThrowIfNull(computations);
         cancellationToken.ThrowIfCancellationRequested();
-        var tasks = new List<Task<Option<T>>>();
-        foreach (var computation in computations)
-        {
-            computation.ThrowIfUninitialized();
-            tasks.Add(computation.TaskUnsafe);
-        }
-        return OptionTask<IReadOnlyList<T>>.From(OptionTaskCore.SequenceAsync(tasks, cancellationToken))
+        return OptionTask<IReadOnlyList<T>>.From(OptionTaskCore.SequenceAsync(computations, cancellationToken))
             .WithCancellation(cancellationToken);
     }
 

@@ -58,7 +58,7 @@ public static partial class Validation
         Result.RequireError(error);
         return new Validation<T, TErr>(
             default!,
-            Result.ToReadOnlyList(new List<TErr>(capacity: 1) { error }),
+            Array.AsReadOnly([error]),
             Validation<T, TErr>.TagFailure);
     }
 

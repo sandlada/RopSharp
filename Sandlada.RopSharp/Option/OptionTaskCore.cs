@@ -136,13 +136,15 @@ internal static class OptionTaskCore
     }
 
     internal static async Task<Option<IReadOnlyList<T>>> SequenceAsync<T>(
-        IEnumerable<Task<Option<T>>> tasks, CancellationToken cancellationToken)
+        IEnumerable<OptionTask<T>> computations, CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
-        var values = new List<T>();
-        foreach (var task in tasks)
+        var values = Result.CreateList<OptionTask<T>, T>(computations);
+        foreach (var computation in computations)
         {
             cancellationToken.ThrowIfCancellationRequested();
+            computation.ThrowIfUninitialized();
+            var task = computation.TaskUnsafe;
             if (task is null) throw new InvalidOperationException("The sequence contained a null task.");
             var option = await task.WaitAsync(cancellationToken).ConfigureAwait(false);
             if (!option.TryGetValue(out var value)) return Option.None<IReadOnlyList<T>>();
@@ -155,7 +157,7 @@ internal static class OptionTaskCore
         IEnumerable<T> source, Func<T, CancellationToken, Task<Option<TOut>>> mapper, CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
-        var values = new List<TOut>();
+        var values = Result.CreateList<T, TOut>(source);
         foreach (var element in source)
         {
             cancellationToken.ThrowIfCancellationRequested();

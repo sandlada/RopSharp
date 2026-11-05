@@ -24,14 +24,6 @@ internal static class ValidationTaskCore
         return Validation.Success<TOut, TErr>(mapped);
     }
 
-    private static async Task<IReadOnlyList<TErr>> CopyErrorsAsync<T, TErr>(
-        Validation<T, TErr> validation, CancellationToken cancellationToken)
-    {
-        await Task.Yield();
-        cancellationToken.ThrowIfCancellationRequested();
-        return validation.TryGetErrors(out var errors) ? errors : Array.Empty<TErr>();
-    }
-
     internal static async Task<Validation<TOut, TErr>> ZipAsync<T1, T2, TOut, TErr>(
         Task<Result<T1, TErr>> first, Task<Result<T2, TErr>> second, Func<T1, T2, TOut> merger, CancellationToken cancellationToken)
     {

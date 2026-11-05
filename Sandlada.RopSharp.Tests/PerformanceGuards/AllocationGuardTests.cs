@@ -9,6 +9,7 @@ namespace Sandlada.RopSharp.Tests.PerformanceGuards;
 /// CI allocation gate for the hot paths. Zero-byte checks are exact; bounded checks cap bytes per call.
 /// These run in every <c>dotnet test</c> and fail the build when a hot path starts allocating.
 /// </summary>
+[NotInParallel]
 public sealed class AllocationGuardTests
 {
     private const int BoundedIterations = 10_000;

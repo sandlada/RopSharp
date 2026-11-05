@@ -198,4 +198,45 @@ public sealed class AdditionalCoverageTests
 
         await TestSupport.AssertSequenceAsync((await pending).Expect("test"), 1, 2);
     }
+
+    [Test]
+    public async Task Validation_GetHashCode_DifferentiatesDifferentErrorsOfSameLength()
+    {
+        var val1 = Validation.Failure<int, RopError>(RopError.Create("E_FIRST", "first"));
+        var val2 = Validation.Failure<int, RopError>(RopError.Create("E_SECOND", "second"));
+
+        await Assert.That(val1.GetHashCode()).IsNotEqualTo(val2.GetHashCode());
+    }
+
+    [Test]
+    public async Task Validation_GetHashCode_IsEqualForEqualErrors()
+    {
+        var val1 = Validation.Failure<int, RopError>(RopError.Create("E_FIRST", "first"));
+        var val2 = Validation.Failure<int, RopError>(RopError.Create("E_FIRST", "first"));
+
+        await Assert.That(val1.GetHashCode()).IsEqualTo(val2.GetHashCode());
+    }
+
+    [Test]
+    public async Task OptionTask_Sequence_ShortCircuitsOnFirstNone()
+    {
+        var secondStarted = false;
+        var first = OptionTask.From(Option.None<int>());
+        OptionTask<int> Second()
+        {
+            secondStarted = true;
+            return OptionTask.From(Option.Some(2));
+        }
+
+        IEnumerable<OptionTask<int>> Generate()
+        {
+            yield return first;
+            yield return Second();
+        }
+
+        var sequence = await OptionTask.Sequence(Generate());
+
+        await Assert.That(sequence.IsNone).IsTrue();
+        await Assert.That(secondStarted).IsFalse();
+    }
 }

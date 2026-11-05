@@ -197,7 +197,7 @@ public static partial class Result
     {
         ArgumentNullException.ThrowIfNull(results);
 
-        var values = new List<T>();
+        var values = CreateList<Result<T, TErr>, T>(results);
         foreach (var result in results)
         {
             if (!result.TryGetOk(out var value))
@@ -239,7 +239,7 @@ public static partial class Result
         ArgumentNullException.ThrowIfNull(source);
         ArgumentNullException.ThrowIfNull(mapper);
 
-        var values = new List<TOut>();
+        var values = CreateList<T, TOut>(source);
         foreach (var element in source)
         {
             var result = mapper(element);
