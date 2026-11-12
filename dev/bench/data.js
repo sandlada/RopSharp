@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1794395911310,
+  "lastUpdate": 1794483392730,
   "repoUrl": "https://github.com/sandlada/RopSharp",
   "entries": {
     "RopSharp": [
@@ -7196,6 +7196,520 @@ window.BENCHMARK_DATA = {
             "value": 6237.708676656087,
             "unit": "ns",
             "range": "± 23.703620729412254"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "name": "Kai Orion",
+            "username": "kai-orion",
+            "email": "bre97.web@gmail.com"
+          },
+          "committer": {
+            "name": "Kai Orion",
+            "username": "kai-orion",
+            "email": "bre97.web@gmail.com"
+          },
+          "id": "ab7a655339db332a92bcacf1da8cc3cee2cd4f50",
+          "message": "docs: point PackageReleaseNotes at CHANGELOG without a version\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+          "timestamp": "2026-11-03T06:18:11Z",
+          "url": "https://github.com/sandlada/RopSharp/commit/ab7a655339db332a92bcacf1da8cc3cee2cd4f50"
+        },
+        "date": 1794483392118,
+        "tool": "benchmarkdotnet",
+        "benches": [
+          {
+            "name": "Sandlada.RopSharp.Benchmarks.AsyncBenchmarks.MapOkAsync_Completed",
+            "value": 57.03986303011576,
+            "unit": "ns",
+            "range": "± 0.35548653781854517"
+          },
+          {
+            "name": "Sandlada.RopSharp.Benchmarks.AsyncBenchmarks.MapOkAsync_Pending",
+            "value": 1902.9056193033855,
+            "unit": "ns",
+            "range": "± 74.56289494054282"
+          },
+          {
+            "name": "Sandlada.RopSharp.Benchmarks.AsyncBenchmarks.BindOkAsync_Completed",
+            "value": 60.45079851150513,
+            "unit": "ns",
+            "range": "± 0.6392511496784292"
+          },
+          {
+            "name": "Sandlada.RopSharp.Benchmarks.AsyncBenchmarks.BindOkAsync_Pending",
+            "value": 2040.867509206136,
+            "unit": "ns",
+            "range": "± 28.54049871665024"
+          },
+          {
+            "name": "Sandlada.RopSharp.Benchmarks.AsyncBenchmarks.MapErrAsync_OnErr",
+            "value": 86.30727597077687,
+            "unit": "ns",
+            "range": "± 0.7202911925104786"
+          },
+          {
+            "name": "Sandlada.RopSharp.Benchmarks.AsyncBenchmarks.MapOkAsync_OnErr",
+            "value": 54.93857981761297,
+            "unit": "ns",
+            "range": "± 0.334937846334532"
+          },
+          {
+            "name": "Sandlada.RopSharp.Benchmarks.CollectionBenchmarks.Values_AllSome(N: 16)",
+            "value": 36.012598395347595,
+            "unit": "ns",
+            "range": "± 0.09302374433791283"
+          },
+          {
+            "name": "Sandlada.RopSharp.Benchmarks.CollectionBenchmarks.Sequence_AllSome(N: 16)",
+            "value": 70.48885587851207,
+            "unit": "ns",
+            "range": "± 0.5825189096718955"
+          },
+          {
+            "name": "Sandlada.RopSharp.Benchmarks.CollectionBenchmarks.Sequence_HalfNone(N: 16)",
+            "value": 15.28791148463885,
+            "unit": "ns",
+            "range": "± 0.12601952782656797"
+          },
+          {
+            "name": "Sandlada.RopSharp.Benchmarks.CollectionBenchmarks.Traverse_AllSome(N: 16)",
+            "value": 87.4773308634758,
+            "unit": "ns",
+            "range": "± 0.4605625520757564"
+          },
+          {
+            "name": "Sandlada.RopSharp.Benchmarks.CollectionBenchmarks.ToSingleError_FromValidation(N: 16)",
+            "value": 54.13993491729101,
+            "unit": "ns",
+            "range": "± 0.19039977593459537"
+          },
+          {
+            "name": "Sandlada.RopSharp.Benchmarks.CollectionBenchmarks.Values_AllSome(N: 256)",
+            "value": 379.0030900637309,
+            "unit": "ns",
+            "range": "± 0.8380340118799396"
+          },
+          {
+            "name": "Sandlada.RopSharp.Benchmarks.CollectionBenchmarks.Sequence_AllSome(N: 256)",
+            "value": 668.1505533854166,
+            "unit": "ns",
+            "range": "± 3.559121095582733"
+          },
+          {
+            "name": "Sandlada.RopSharp.Benchmarks.CollectionBenchmarks.Sequence_HalfNone(N: 256)",
+            "value": 15.157968451579412,
+            "unit": "ns",
+            "range": "± 0.04394504121647083"
+          },
+          {
+            "name": "Sandlada.RopSharp.Benchmarks.CollectionBenchmarks.Traverse_AllSome(N: 256)",
+            "value": 581.1035114924113,
+            "unit": "ns",
+            "range": "± 3.430661879229238"
+          },
+          {
+            "name": "Sandlada.RopSharp.Benchmarks.CollectionBenchmarks.ToSingleError_FromValidation(N: 256)",
+            "value": 520.0780045191447,
+            "unit": "ns",
+            "range": "± 4.969248205764517"
+          },
+          {
+            "name": "Sandlada.RopSharp.Benchmarks.CollectionBenchmarks.Values_AllSome(N: 4096)",
+            "value": 5297.014737447103,
+            "unit": "ns",
+            "range": "± 39.59327582057144"
+          },
+          {
+            "name": "Sandlada.RopSharp.Benchmarks.CollectionBenchmarks.Sequence_AllSome(N: 4096)",
+            "value": 13553.191223144531,
+            "unit": "ns",
+            "range": "± 77.07000284425627"
+          },
+          {
+            "name": "Sandlada.RopSharp.Benchmarks.CollectionBenchmarks.Sequence_HalfNone(N: 4096)",
+            "value": 15.761842250823975,
+            "unit": "ns",
+            "range": "± 0.24554865453564947"
+          },
+          {
+            "name": "Sandlada.RopSharp.Benchmarks.CollectionBenchmarks.Traverse_AllSome(N: 4096)",
+            "value": 7306.86592356364,
+            "unit": "ns",
+            "range": "± 9.419487934448476"
+          },
+          {
+            "name": "Sandlada.RopSharp.Benchmarks.CollectionBenchmarks.ToSingleError_FromValidation(N: 4096)",
+            "value": 7080.015398661296,
+            "unit": "ns",
+            "range": "± 42.87420607000584"
+          },
+          {
+            "name": "Sandlada.RopSharp.Benchmarks.EitherBenchmarks.MapRight_OnRight",
+            "value": 0.8991411166886488,
+            "unit": "ns",
+            "range": "± 0.005773038193968922"
+          },
+          {
+            "name": "Sandlada.RopSharp.Benchmarks.EitherBenchmarks.MapRight_OnLeft",
+            "value": 0.682497094074885,
+            "unit": "ns",
+            "range": "± 0.0075491475200549244"
+          },
+          {
+            "name": "Sandlada.RopSharp.Benchmarks.EitherBenchmarks.Swap_OnRight",
+            "value": 0.3711984430750211,
+            "unit": "ns",
+            "range": "± 0.021194377806637705"
+          },
+          {
+            "name": "Sandlada.RopSharp.Benchmarks.EitherBenchmarks.Match_OnRight",
+            "value": 1.233971121410529,
+            "unit": "ns",
+            "range": "± 0.025737507212746896"
+          },
+          {
+            "name": "Sandlada.RopSharp.Benchmarks.EitherBenchmarks.ToResult_OnLeft",
+            "value": 9.396600981553396,
+            "unit": "ns",
+            "range": "± 0.131421708342512"
+          },
+          {
+            "name": "Sandlada.RopSharp.Benchmarks.EqualityBenchmarks.Result_Equals_SameValue",
+            "value": 2.6145262819925947,
+            "unit": "ns",
+            "range": "± 0.0019754047065401624"
+          },
+          {
+            "name": "Sandlada.RopSharp.Benchmarks.EqualityBenchmarks.Result_Equals_Different",
+            "value": 2.496938337961833,
+            "unit": "ns",
+            "range": "± 0.003142962341966784"
+          },
+          {
+            "name": "Sandlada.RopSharp.Benchmarks.EqualityBenchmarks.Result_GetHashCode",
+            "value": 2.8613341051737464,
+            "unit": "ns",
+            "range": "± 0.023265901490093603"
+          },
+          {
+            "name": "Sandlada.RopSharp.Benchmarks.EqualityBenchmarks.Option_Equals_SameValue",
+            "value": 0.9400276482899983,
+            "unit": "ns",
+            "range": "± 0.00045190058271245764"
+          },
+          {
+            "name": "Sandlada.RopSharp.Benchmarks.EqualityBenchmarks.Option_Equals_None",
+            "value": 0.6276159207026164,
+            "unit": "ns",
+            "range": "± 0.0003695611402927743"
+          },
+          {
+            "name": "Sandlada.RopSharp.Benchmarks.EqualityBenchmarks.Option_GetHashCode",
+            "value": 1.8048549245198569,
+            "unit": "ns",
+            "range": "± 0.001322218765116415"
+          },
+          {
+            "name": "Sandlada.RopSharp.Benchmarks.EqualityBenchmarks.Either_Equals_SameValue",
+            "value": 3.3089935328165687,
+            "unit": "ns",
+            "range": "± 0.012294174643036355"
+          },
+          {
+            "name": "Sandlada.RopSharp.Benchmarks.EqualityBenchmarks.Either_GetHashCode",
+            "value": 2.8573912353515625,
+            "unit": "ns",
+            "range": "± 0.017527240404374433"
+          },
+          {
+            "name": "Sandlada.RopSharp.Benchmarks.EqualityBenchmarks.Result_ToString",
+            "value": 51.594890693823494,
+            "unit": "ns",
+            "range": "± 0.07962682018482482"
+          },
+          {
+            "name": "Sandlada.RopSharp.Benchmarks.EqualityBenchmarks.Option_ToString",
+            "value": 0.6308951822916667,
+            "unit": "ns",
+            "range": "± 0.0035200109084431246"
+          },
+          {
+            "name": "Sandlada.RopSharp.Benchmarks.EqualityBenchmarks.Either_ToString",
+            "value": 40.623864591121674,
+            "unit": "ns",
+            "range": "± 0.1417643436077121"
+          },
+          {
+            "name": "Sandlada.RopSharp.Benchmarks.OptionBenchmarks.MapSome_OnSome",
+            "value": 0.9408883272806804,
+            "unit": "ns",
+            "range": "± 0.000782534153774986"
+          },
+          {
+            "name": "Sandlada.RopSharp.Benchmarks.OptionBenchmarks.BindSome_OnSome",
+            "value": 0.9430425621668498,
+            "unit": "ns",
+            "range": "± 0.0038331196661101205"
+          },
+          {
+            "name": "Sandlada.RopSharp.Benchmarks.OptionBenchmarks.MapSome_OnNone",
+            "value": 1.0113471202850342,
+            "unit": "ns",
+            "range": "± 0.008645390216937053"
+          },
+          {
+            "name": "Sandlada.RopSharp.Benchmarks.OptionBenchmarks.Filter_OnSome",
+            "value": 0.9495628337860108,
+            "unit": "ns",
+            "range": "± 0.007380642608266286"
+          },
+          {
+            "name": "Sandlada.RopSharp.Benchmarks.OptionBenchmarks.Match_OnSome",
+            "value": 0.9498117138544718,
+            "unit": "ns",
+            "range": "± 0.013819534490247275"
+          },
+          {
+            "name": "Sandlada.RopSharp.Benchmarks.ParsingBenchmarks.Parse_Int_Success",
+            "value": 14.22304113705953,
+            "unit": "ns",
+            "range": "± 0.02284886696041981"
+          },
+          {
+            "name": "Sandlada.RopSharp.Benchmarks.ParsingBenchmarks.Parse_Int_Failure",
+            "value": 183.36759114265442,
+            "unit": "ns",
+            "range": "± 1.8518929665398223"
+          },
+          {
+            "name": "Sandlada.RopSharp.Benchmarks.ParsingBenchmarks.Parse_Int_LongFailure",
+            "value": 863.933136622111,
+            "unit": "ns",
+            "range": "± 3.0901071717842057"
+          },
+          {
+            "name": "Sandlada.RopSharp.Benchmarks.ParsingBenchmarks.Parse_Long_Success",
+            "value": 21.9989948173364,
+            "unit": "ns",
+            "range": "± 0.1789273403366831"
+          },
+          {
+            "name": "Sandlada.RopSharp.Benchmarks.ParsingBenchmarks.TryParse_Int_Success",
+            "value": 12.799942150712013,
+            "unit": "ns",
+            "range": "± 0.10013157696968326"
+          },
+          {
+            "name": "Sandlada.RopSharp.Benchmarks.ParsingBenchmarks.TryParse_Int_Failure",
+            "value": 9.322648187478384,
+            "unit": "ns",
+            "range": "± 0.08809149884491894"
+          },
+          {
+            "name": "Sandlada.RopSharp.Benchmarks.ParsingBenchmarks.Parse_Guid_Success",
+            "value": 34.815994799137115,
+            "unit": "ns",
+            "range": "± 0.19804181053591022"
+          },
+          {
+            "name": "Sandlada.RopSharp.Benchmarks.ParsingBenchmarks.Parse_DateTime_Success",
+            "value": 194.7112488746643,
+            "unit": "ns",
+            "range": "± 0.036447199227226036"
+          },
+          {
+            "name": "Sandlada.RopSharp.Benchmarks.ResultBenchmarks.MapOk_OnOk",
+            "value": 1.9737262465059757,
+            "unit": "ns",
+            "range": "± 0.0029618194507034846"
+          },
+          {
+            "name": "Sandlada.RopSharp.Benchmarks.ResultBenchmarks.BindOk_OnOk",
+            "value": 2.120352347691854,
+            "unit": "ns",
+            "range": "± 0.030712783146281362"
+          },
+          {
+            "name": "Sandlada.RopSharp.Benchmarks.ResultBenchmarks.MapOk_OnErr",
+            "value": 1.0424759301046531,
+            "unit": "ns",
+            "range": "± 0.019635750249433162"
+          },
+          {
+            "name": "Sandlada.RopSharp.Benchmarks.ResultBenchmarks.MapErr_OnErr",
+            "value": 12.043559874097506,
+            "unit": "ns",
+            "range": "± 0.047179406499240434"
+          },
+          {
+            "name": "Sandlada.RopSharp.Benchmarks.ResultBenchmarks.Match_OnOk",
+            "value": 2.562001700202624,
+            "unit": "ns",
+            "range": "± 0.036897046784520944"
+          },
+          {
+            "name": "Sandlada.RopSharp.Benchmarks.ResultBenchmarks.Validate_Two",
+            "value": 3.089621009926001,
+            "unit": "ns",
+            "range": "± 0.018236744596345562"
+          },
+          {
+            "name": "Sandlada.RopSharp.Benchmarks.RopErrorBenchmarks.Combine_CopyOnly_LowerBound(N: 1)",
+            "value": 22.15024843811989,
+            "unit": "ns",
+            "range": "± 0.04138496510336006"
+          },
+          {
+            "name": "Sandlada.RopSharp.Benchmarks.RopErrorBenchmarks.Combine(N: 1)",
+            "value": 2.919308915734291,
+            "unit": "ns",
+            "range": "± 0.0026729483703203955"
+          },
+          {
+            "name": "Sandlada.RopSharp.Benchmarks.RopErrorBenchmarks.Combine_CopyOnly_LowerBound(N: 10)",
+            "value": 26.824946800867718,
+            "unit": "ns",
+            "range": "± 0.2398385399695009"
+          },
+          {
+            "name": "Sandlada.RopSharp.Benchmarks.RopErrorBenchmarks.Combine(N: 10)",
+            "value": 574.4199345906576,
+            "unit": "ns",
+            "range": "± 1.0218806884797453"
+          },
+          {
+            "name": "Sandlada.RopSharp.Benchmarks.RopErrorBenchmarks.Combine_CopyOnly_LowerBound(N: 100)",
+            "value": 66.17611543337505,
+            "unit": "ns",
+            "range": "± 0.5964320498362367"
+          },
+          {
+            "name": "Sandlada.RopSharp.Benchmarks.RopErrorBenchmarks.Combine(N: 100)",
+            "value": 4829.872281392415,
+            "unit": "ns",
+            "range": "± 46.99605158704351"
+          },
+          {
+            "name": "Sandlada.RopSharp.Benchmarks.RopErrorBenchmarks.Combine_CopyOnly_LowerBound(N: 1000)",
+            "value": 444.03373368581134,
+            "unit": "ns",
+            "range": "± 7.558252482690929"
+          },
+          {
+            "name": "Sandlada.RopSharp.Benchmarks.RopErrorBenchmarks.Combine(N: 1000)",
+            "value": 45765.664611816406,
+            "unit": "ns",
+            "range": "± 298.6239445233078"
+          },
+          {
+            "name": "Sandlada.RopSharp.Benchmarks.SequenceBenchmarks.Sequence_Manual_AllOk(N: 16)",
+            "value": 30.183841695388157,
+            "unit": "ns",
+            "range": "± 0.05325325081099768"
+          },
+          {
+            "name": "Sandlada.RopSharp.Benchmarks.SequenceBenchmarks.Sequence_AllOk(N: 16)",
+            "value": 74.83408772945404,
+            "unit": "ns",
+            "range": "± 0.20395418380683025"
+          },
+          {
+            "name": "Sandlada.RopSharp.Benchmarks.SequenceBenchmarks.Sequence_ErrorAtMiddle(N: 16)",
+            "value": 42.249364932378136,
+            "unit": "ns",
+            "range": "± 0.8464836222928263"
+          },
+          {
+            "name": "Sandlada.RopSharp.Benchmarks.SequenceBenchmarks.SequenceValidation_AllErr(N: 16)",
+            "value": 215.0324048201243,
+            "unit": "ns",
+            "range": "± 0.3578561155642132"
+          },
+          {
+            "name": "Sandlada.RopSharp.Benchmarks.SequenceBenchmarks.SequenceValidation_HalfErr(N: 16)",
+            "value": 97.08837314446767,
+            "unit": "ns",
+            "range": "± 0.5946074555588327"
+          },
+          {
+            "name": "Sandlada.RopSharp.Benchmarks.SequenceBenchmarks.Partition_Half(N: 16)",
+            "value": 102.68897630771,
+            "unit": "ns",
+            "range": "± 0.7898457240163465"
+          },
+          {
+            "name": "Sandlada.RopSharp.Benchmarks.SequenceBenchmarks.Sequence_Manual_AllOk(N: 256)",
+            "value": 319.07851298650104,
+            "unit": "ns",
+            "range": "± 1.998450337993135"
+          },
+          {
+            "name": "Sandlada.RopSharp.Benchmarks.SequenceBenchmarks.Sequence_AllOk(N: 256)",
+            "value": 625.5412238438925,
+            "unit": "ns",
+            "range": "± 0.6265860338906226"
+          },
+          {
+            "name": "Sandlada.RopSharp.Benchmarks.SequenceBenchmarks.Sequence_ErrorAtMiddle(N: 256)",
+            "value": 301.9016760190328,
+            "unit": "ns",
+            "range": "± 2.1446678935788257"
+          },
+          {
+            "name": "Sandlada.RopSharp.Benchmarks.SequenceBenchmarks.SequenceValidation_AllErr(N: 256)",
+            "value": 2200.3447291056314,
+            "unit": "ns",
+            "range": "± 10.216407283374291"
+          },
+          {
+            "name": "Sandlada.RopSharp.Benchmarks.SequenceBenchmarks.SequenceValidation_HalfErr(N: 256)",
+            "value": 852.5310039520264,
+            "unit": "ns",
+            "range": "± 7.445105315022502"
+          },
+          {
+            "name": "Sandlada.RopSharp.Benchmarks.SequenceBenchmarks.Partition_Half(N: 256)",
+            "value": 930.6503356297811,
+            "unit": "ns",
+            "range": "± 7.447042165547957"
+          },
+          {
+            "name": "Sandlada.RopSharp.Benchmarks.SequenceBenchmarks.Sequence_Manual_AllOk(N: 4096)",
+            "value": 4971.278048197429,
+            "unit": "ns",
+            "range": "± 48.50476179172482"
+          },
+          {
+            "name": "Sandlada.RopSharp.Benchmarks.SequenceBenchmarks.Sequence_AllOk(N: 4096)",
+            "value": 6818.771926879883,
+            "unit": "ns",
+            "range": "± 139.700202902039"
+          },
+          {
+            "name": "Sandlada.RopSharp.Benchmarks.SequenceBenchmarks.Sequence_ErrorAtMiddle(N: 4096)",
+            "value": 4145.59391784668,
+            "unit": "ns",
+            "range": "± 11.980388143619711"
+          },
+          {
+            "name": "Sandlada.RopSharp.Benchmarks.SequenceBenchmarks.SequenceValidation_AllErr(N: 4096)",
+            "value": 31953.78076171875,
+            "unit": "ns",
+            "range": "± 231.8103619720385"
+          },
+          {
+            "name": "Sandlada.RopSharp.Benchmarks.SequenceBenchmarks.SequenceValidation_HalfErr(N: 4096)",
+            "value": 12096.65668741862,
+            "unit": "ns",
+            "range": "± 192.78780701298544"
+          },
+          {
+            "name": "Sandlada.RopSharp.Benchmarks.SequenceBenchmarks.Partition_Half(N: 4096)",
+            "value": 7256.415400187175,
+            "unit": "ns",
+            "range": "± 39.952110691738575"
           }
         ]
       }
