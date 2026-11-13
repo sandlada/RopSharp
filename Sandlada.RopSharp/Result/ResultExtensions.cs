@@ -458,7 +458,7 @@ public static class ResultExtensions
     {
         ArgumentNullException.ThrowIfNull(fallbackFactory);
         return result.TryGetErr(out _)
-            ? Result.Ok<TOk, TErr>(fallbackFactory())
+            ? new Result<TOk, TErr>(ArgumentGuards.RequireNonNullReturn(fallbackFactory(), "fallback factory"), default!, Result<TOk, TErr>.TagOk)
             : result;
     }
 

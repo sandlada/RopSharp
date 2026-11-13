@@ -54,8 +54,11 @@ public static class ResultTaskBridgeExtensions
     /// </remarks>
     public static ResultTask<TOut, TErr> MapOkAsync<TOk, TOut, TErr>(
         this Result<TOk, TErr> result,
-        Func<TOk, CancellationToken, Task<TOut>> mapper) =>
-        ResultTask.From(result).MapOkAsync(mapper);
+        Func<TOk, CancellationToken, Task<TOut>> mapper)
+    {
+        ArgumentNullException.ThrowIfNull(mapper);
+        return ResultTask.From(result).MapOkAsync(mapper);
+    }
 
     /// <summary>Maps the error with an asynchronous mapper.</summary>
     /// <remarks>
@@ -70,8 +73,11 @@ public static class ResultTaskBridgeExtensions
     /// </remarks>
     public static ResultTask<TOk, TErr2> MapErrAsync<TOk, TErr, TErr2>(
         this Result<TOk, TErr> result,
-        Func<TErr, CancellationToken, Task<TErr2>> mapper) =>
-        ResultTask.From(result).MapErrAsync(mapper);
+        Func<TErr, CancellationToken, Task<TErr2>> mapper)
+    {
+        ArgumentNullException.ThrowIfNull(mapper);
+        return ResultTask.From(result).MapErrAsync(mapper);
+    }
 
     /// <summary>Chains an asynchronous binder on the success track.</summary>
     /// <remarks>
@@ -86,8 +92,11 @@ public static class ResultTaskBridgeExtensions
     /// </remarks>
     public static ResultTask<TOut, TErr> BindOkAsync<TOk, TOut, TErr>(
         this Result<TOk, TErr> result,
-        Func<TOk, CancellationToken, Task<Result<TOut, TErr>>> binder) =>
-        ResultTask.From(result).BindOkAsync(binder);
+        Func<TOk, CancellationToken, Task<Result<TOut, TErr>>> binder)
+    {
+        ArgumentNullException.ThrowIfNull(binder);
+        return ResultTask.From(result).BindOkAsync(binder);
+    }
 
     /// <summary>Recovers on the failure track with an asynchronous binder.</summary>
     /// <remarks>
@@ -102,8 +111,11 @@ public static class ResultTaskBridgeExtensions
     /// </remarks>
     public static ResultTask<TOk, TErr> BindErrAsync<TOk, TErr>(
         this Result<TOk, TErr> result,
-        Func<TErr, CancellationToken, Task<Result<TOk, TErr>>> binder) =>
-        ResultTask.From(result).BindErrAsync(binder);
+        Func<TErr, CancellationToken, Task<Result<TOk, TErr>>> binder)
+    {
+        ArgumentNullException.ThrowIfNull(binder);
+        return ResultTask.From(result).BindErrAsync(binder);
+    }
 
     /// <summary>Runs an asynchronous side effect on the success track.</summary>
     /// <remarks>
@@ -119,8 +131,11 @@ public static class ResultTaskBridgeExtensions
     /// </remarks>
     public static ResultTask<TOk, TErr> TeeOkAsync<TOk, TErr>(
         this Result<TOk, TErr> result,
-        Func<TOk, CancellationToken, Task> action) =>
-        ResultTask.From(result).TeeOkAsync(action);
+        Func<TOk, CancellationToken, Task> action)
+    {
+        ArgumentNullException.ThrowIfNull(action);
+        return ResultTask.From(result).TeeOkAsync(action);
+    }
 
     /// <summary>Runs an asynchronous side effect on the failure track.</summary>
     /// <remarks>
@@ -136,6 +151,9 @@ public static class ResultTaskBridgeExtensions
     /// </remarks>
     public static ResultTask<TOk, TErr> TeeErrAsync<TOk, TErr>(
         this Result<TOk, TErr> result,
-        Func<TErr, CancellationToken, Task> action) =>
-        ResultTask.From(result).TeeErrAsync(action);
+        Func<TErr, CancellationToken, Task> action)
+    {
+        ArgumentNullException.ThrowIfNull(action);
+        return ResultTask.From(result).TeeErrAsync(action);
+    }
 }

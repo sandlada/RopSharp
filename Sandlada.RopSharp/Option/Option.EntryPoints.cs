@@ -142,7 +142,9 @@ public static partial class Option
     public static Option<T> When<T>(bool condition, Func<T> valueFactory)
     {
         ArgumentNullException.ThrowIfNull(valueFactory);
-        return condition ? Some(valueFactory()) : None<T>();
+        return condition
+            ? new Option<T>(ArgumentGuards.RequireNonNullReturn(valueFactory(), "value factory"), isSome: true)
+            : None<T>();
     }
 
     /// <summary>
@@ -176,7 +178,7 @@ public static partial class Option
     {
         ArgumentNullException.ThrowIfNull(merger);
         return first.TryGetValue(out var a) && second.TryGetValue(out var b)
-            ? Some(merger(a, b))
+            ? new Option<TOut>(ArgumentGuards.RequireNonNullReturn(merger(a, b), "merger"), isSome: true)
             : None<TOut>();
     }
 
@@ -215,7 +217,7 @@ public static partial class Option
     {
         ArgumentNullException.ThrowIfNull(merger);
         return first.TryGetValue(out var a) && second.TryGetValue(out var b) && third.TryGetValue(out var c)
-            ? Some(merger(a, b, c))
+            ? new Option<TOut>(ArgumentGuards.RequireNonNullReturn(merger(a, b, c), "merger"), isSome: true)
             : None<TOut>();
     }
 

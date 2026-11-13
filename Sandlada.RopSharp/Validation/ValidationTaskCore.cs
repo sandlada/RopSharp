@@ -20,8 +20,10 @@ internal static class ValidationTaskCore
         }
 
         cancellationToken.ThrowIfCancellationRequested();
-        var mapped = await AsyncGuards.Require(mapper(value, cancellationToken), "mapper").ConfigureAwait(false);
-        return Validation.Success<TOut, TErr>(mapped);
+        var mapped = ArgumentGuards.RequireNonNullReturn(
+            await AsyncGuards.Require(mapper(value, cancellationToken), "mapper").ConfigureAwait(false),
+            "mapper");
+        return new Validation<TOut, TErr>(mapped, Array.Empty<TErr>(), Validation<TOut, TErr>.TagSuccess);
     }
 
     internal static async Task<Validation<TOut, TErr>> ZipAsync<T1, T2, TOut, TErr>(

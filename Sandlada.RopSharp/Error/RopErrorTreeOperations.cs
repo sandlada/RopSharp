@@ -130,7 +130,7 @@ internal static class RopErrorTreeOperations
 
             if (!path.Add(current))
             {
-                memo[current] = 0;
+                // Back-edge guard: leave memo unset until post-order exit so children read 0 without caching a placeholder.
                 continue;
             }
 

@@ -193,9 +193,9 @@ public readonly partial struct ResultTask<TOk, TErr>
         Func<TOk, CancellationToken, Task> ok,
         Func<TErr, CancellationToken, Task> err)
     {
-        ThrowIfUninitialized();
         ArgumentNullException.ThrowIfNull(ok);
         ArgumentNullException.ThrowIfNull(err);
+        ThrowIfUninitialized();
         return ResultTaskCore.SwitchAsync(_task!, ok, err, _cancellationToken);
     }
 }

@@ -201,8 +201,9 @@ public readonly struct Either<TLeft, TRight> : IEquatable<Either<TLeft, TRight>>
     {
         ArgumentNullException.ThrowIfNull(mapper);
         ThrowIfUninitialized();
+        SuccessTypeGuards.ThrowIfTaskLike<TLeftOut>("MapLeft");
         return _tag == TagLeft
-            ? Either.Left<TLeftOut, TRight>(mapper(_left))
+            ? new Either<TLeftOut, TRight>(ArgumentGuards.RequireNonNullReturn(mapper(_left), "mapper"), default!, TagLeft)
             : Either.Right<TLeftOut, TRight>(_right);
     }
 
@@ -229,9 +230,10 @@ public readonly struct Either<TLeft, TRight> : IEquatable<Either<TLeft, TRight>>
     {
         ArgumentNullException.ThrowIfNull(mapper);
         ThrowIfUninitialized();
+        SuccessTypeGuards.ThrowIfTaskLike<TRightOut>("MapRight");
         return _tag == TagLeft
             ? Either.Left<TLeft, TRightOut>(_left)
-            : Either.Right<TLeft, TRightOut>(mapper(_right));
+            : new Either<TLeft, TRightOut>(default!, ArgumentGuards.RequireNonNullReturn(mapper(_right), "mapper"), TagRight);
     }
 
     /// <summary>

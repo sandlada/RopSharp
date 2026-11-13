@@ -170,6 +170,7 @@ public static partial class Result
     public static Func<T, Result<TOut, TErr>> Switch<T, TOut, TErr>(Func<T, TOut> func)
     {
         ArgumentNullException.ThrowIfNull(func);
+        SuccessTypeGuards.ThrowIfTaskLike<TOut>("Switch");
         return value => Ok<TOut, TErr>(func(value));
     }
 
@@ -285,6 +286,7 @@ public static partial class Result
     {
         ArgumentNullException.ThrowIfNull(func);
         ArgumentNullException.ThrowIfNull(errorFactory);
+        SuccessTypeGuards.ThrowIfTaskLike<T>("Try");
 
         T value;
         try
@@ -305,7 +307,6 @@ public static partial class Result
             return Err<T, RopError>(NullResultError());
         }
 
-        SuccessTypeGuards.ThrowIfTaskLike<T>("Try");
         return Ok<T, RopError>(value);
     }
 
@@ -361,6 +362,7 @@ public static partial class Result
         ArgumentNullException.ThrowIfNull(func);
         ArgumentNullException.ThrowIfNull(errorFactory);
         ArgumentNullException.ThrowIfNull(nullResultErrorFactory);
+        SuccessTypeGuards.ThrowIfTaskLike<T>("Try");
 
         T value;
         try
@@ -381,7 +383,6 @@ public static partial class Result
             return Err<T, TErr>(MaterializeError(nullResultErrorFactory));
         }
 
-        SuccessTypeGuards.ThrowIfTaskLike<T>("Try");
         return Ok<T, TErr>(value);
     }
 

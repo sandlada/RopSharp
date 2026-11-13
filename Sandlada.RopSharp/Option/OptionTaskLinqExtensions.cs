@@ -55,8 +55,12 @@ public static class OptionTaskLinqExtensions
     public static OptionTask<TOut> SelectMany<T, TCol, TOut>(
         this OptionTask<T> computation,
         Func<T, Option<TCol>> collectionSelector,
-        Func<T, TCol, TOut> resultSelector) =>
-        computation.BindSome(first => collectionSelector(first).MapSome(second => resultSelector(first, second)));
+        Func<T, TCol, TOut> resultSelector)
+    {
+        ArgumentNullException.ThrowIfNull(collectionSelector);
+        ArgumentNullException.ThrowIfNull(resultSelector);
+        return computation.BindSome(first => collectionSelector(first).MapSome(second => resultSelector(first, second)));
+    }
 
     /// <summary>Binds the present track to another asynchronous option computation.</summary>
     /// <remarks>

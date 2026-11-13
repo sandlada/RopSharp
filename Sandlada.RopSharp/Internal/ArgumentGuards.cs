@@ -67,6 +67,23 @@ internal static class ArgumentGuards
         }
     }
 
+    /// <summary>
+    /// Ensures a caller-supplied factory or mapper did not return <see langword="null"/>.
+    /// </summary>
+    /// <typeparam name="T">The returned value type.</typeparam>
+    /// <param name="value">The value produced by the delegate.</param>
+    /// <param name="callbackRole">Human-readable role of the callback for diagnostic clarity.</param>
+    /// <returns>The verified non-null value.</returns>
+    internal static T RequireNonNullReturn<T>(T value, string callbackRole)
+    {
+        if (IsNull(value))
+        {
+            throw new InvalidOperationException($"The {callbackRole} must not return null.");
+        }
+
+        return value;
+    }
+
     private static class Nullability<T>
     {
         internal static readonly bool CanBeNull = default(T) is null;

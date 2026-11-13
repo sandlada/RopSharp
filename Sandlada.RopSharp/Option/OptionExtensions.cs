@@ -41,7 +41,9 @@ public static class OptionExtensions
     {
         ArgumentNullException.ThrowIfNull(mapper);
         SuccessTypeGuards.ThrowIfTaskLike<TOut>(nameof(mapper));
-        return option.TryGetValue(out var value) ? Option.Some(mapper(value)) : Option.None<TOut>();
+        return option.TryGetValue(out var value)
+            ? new Option<TOut>(ArgumentGuards.RequireNonNullReturn(mapper(value), "mapper"), isSome: true)
+            : Option.None<TOut>();
     }
 
     /// <summary>
@@ -249,7 +251,9 @@ public static class OptionExtensions
     public static Option<T> BindNoneValue<T>(this Option<T> option, Func<T> fallbackFactory)
     {
         ArgumentNullException.ThrowIfNull(fallbackFactory);
-        return option.IsNone ? Option.Some(fallbackFactory()) : option;
+        return option.IsNone
+            ? new Option<T>(ArgumentGuards.RequireNonNullReturn(fallbackFactory(), "fallback factory"), isSome: true)
+            : option;
     }
 
     /// <summary>

@@ -64,8 +64,12 @@ public static class ResultTaskLinqExtensions
     public static ResultTask<TOut, TErr> SelectMany<TOk, TCol, TOut, TErr>(
         this ResultTask<TOk, TErr> computation,
         Func<TOk, Result<TCol, TErr>> collectionSelector,
-        Func<TOk, TCol, TOut> resultSelector) =>
-        computation.BindOk(first => collectionSelector(first).MapOk(second => resultSelector(first, second)));
+        Func<TOk, TCol, TOut> resultSelector)
+    {
+        ArgumentNullException.ThrowIfNull(collectionSelector);
+        ArgumentNullException.ThrowIfNull(resultSelector);
+        return computation.BindOk(first => collectionSelector(first).MapOk(second => resultSelector(first, second)));
+    }
 
     /// <summary>Binds the success track to another asynchronous result computation.</summary>
     /// <remarks>

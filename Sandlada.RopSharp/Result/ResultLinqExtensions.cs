@@ -91,6 +91,10 @@ public static class ResultLinqExtensions
     public static Result<TOut, TErr> SelectMany<TOk, TCol, TOut, TErr>(
         this Result<TOk, TErr> result,
         Func<TOk, Result<TCol, TErr>> collectionSelector,
-        Func<TOk, TCol, TOut> resultSelector) =>
-        result.BindOk(first => collectionSelector(first).MapOk(second => resultSelector(first, second)));
+        Func<TOk, TCol, TOut> resultSelector)
+    {
+        ArgumentNullException.ThrowIfNull(collectionSelector);
+        ArgumentNullException.ThrowIfNull(resultSelector);
+        return result.BindOk(first => collectionSelector(first).MapOk(second => resultSelector(first, second)));
+    }
 }

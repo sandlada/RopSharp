@@ -137,11 +137,14 @@ public readonly struct Validation<T, TErr> : IEquatable<Validation<T, TErr>>
     {
         ArgumentNullException.ThrowIfNull(mapper);
         ThrowIfUninitialized();
-        SuccessTypeGuards.ThrowIfTaskLike<TOut>(nameof(mapper));
+        SuccessTypeGuards.ThrowIfTaskLike<TOut>("Map");
 
         return _tag == TagFailure
             ? new Validation<TOut, TErr>(default!, _errors, TagFailure)
-            : global::Sandlada.RopSharp.Validation.Success<TOut, TErr>(mapper(_value));
+            : new Validation<TOut, TErr>(
+                ArgumentGuards.RequireNonNullReturn(mapper(_value), "mapper"),
+                Array.Empty<TErr>(),
+                TagSuccess);
     }
 
     /// <summary>

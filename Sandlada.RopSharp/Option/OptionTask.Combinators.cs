@@ -125,8 +125,11 @@ public readonly partial struct OptionTask<T>
     /// // Some("unknown") when empty, Some(city) when present.
     /// ]]></code>
     /// </remarks>
-    public OptionTask<T> BindNoneValue(T fallback) =>
-        BindNone(() => Option.Some(fallback));
+    public OptionTask<T> BindNoneValue(T fallback)
+    {
+        ArgumentGuards.ThrowIfNull(fallback, nameof(fallback));
+        return BindNone(() => new Option<T>(fallback, isSome: true));
+    }
 
     /// <summary>Recovers on the empty track with a fallback value factory.</summary>
     /// <remarks>
@@ -140,7 +143,9 @@ public readonly partial struct OptionTask<T>
     public OptionTask<T> BindNoneValue(Func<T> fallbackFactory)
     {
         ArgumentNullException.ThrowIfNull(fallbackFactory);
-        return BindNone(() => Option.Some(fallbackFactory()));
+        return BindNone(() => new Option<T>(
+            ArgumentGuards.RequireNonNullReturn(fallbackFactory(), "fallback factory"),
+            isSome: true));
     }
 
     /// <summary>Keeps the value only when the predicate holds.</summary>

@@ -87,9 +87,13 @@ public static class OptionLinqExtensions
     public static Option<TOut> SelectMany<T, TCol, TOut>(
         this Option<T> option,
         Func<T, Option<TCol>> collectionSelector,
-        Func<T, TCol, TOut> resultSelector) =>
-        option.BindSome(first =>
+        Func<T, TCol, TOut> resultSelector)
+    {
+        ArgumentNullException.ThrowIfNull(collectionSelector);
+        ArgumentNullException.ThrowIfNull(resultSelector);
+        return option.BindSome(first =>
             collectionSelector(first).MapSome(second => resultSelector(first, second)));
+    }
 
     /// <summary>
     /// Filters a present value. Query-syntax equivalent of <c>where</c>.

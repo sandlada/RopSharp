@@ -157,7 +157,10 @@ public static partial class Validation
         }
 
         return errors is null
-            ? Success<TOut, TErr>(merger(a!, b!))
+            ? new Validation<TOut, TErr>(
+                ArgumentGuards.RequireNonNullReturn(merger(a!, b!), "merger"),
+                Array.Empty<TErr>(),
+                Validation<TOut, TErr>.TagSuccess)
             : new Validation<TOut, TErr>(default!, Result.ToReadOnlyList(errors), Validation<TOut, TErr>.TagFailure);
     }
 
@@ -199,7 +202,10 @@ public static partial class Validation
         }
 
         return errors is null
-            ? Success<TOut, TErr>(merger(a!, b!, c!))
+            ? new Validation<TOut, TErr>(
+                ArgumentGuards.RequireNonNullReturn(merger(a!, b!, c!), "merger"),
+                Array.Empty<TErr>(),
+                Validation<TOut, TErr>.TagSuccess)
             : new Validation<TOut, TErr>(default!, Result.ToReadOnlyList(errors), Validation<TOut, TErr>.TagFailure);
     }
 

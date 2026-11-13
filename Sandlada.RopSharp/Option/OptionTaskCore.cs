@@ -8,7 +8,7 @@ internal static class OptionTaskCore
         var option = await source.WaitAsync(cancellationToken).ConfigureAwait(false);
         if (!option.TryGetValue(out var value)) return Option.None<TOut>();
         cancellationToken.ThrowIfCancellationRequested();
-        return Option.Some(mapper(value));
+        return new Option<TOut>(ArgumentGuards.RequireNonNullReturn(mapper(value), "mapper"), isSome: true);
     }
 
     internal static async Task<Option<TOut>> MapSomeAsync<T, TOut>(
@@ -17,7 +17,8 @@ internal static class OptionTaskCore
         var option = await source.WaitAsync(cancellationToken).ConfigureAwait(false);
         if (!option.TryGetValue(out var value)) return Option.None<TOut>();
         cancellationToken.ThrowIfCancellationRequested();
-        return Option.Some(await AsyncGuards.Require(mapper(value, cancellationToken), "mapper").ConfigureAwait(false));
+        var mapped = await AsyncGuards.Require(mapper(value, cancellationToken), "mapper").ConfigureAwait(false);
+        return new Option<TOut>(ArgumentGuards.RequireNonNullReturn(mapped, "mapper"), isSome: true);
     }
 
     internal static async Task<Option<TOut>> BindSome<T, TOut>(

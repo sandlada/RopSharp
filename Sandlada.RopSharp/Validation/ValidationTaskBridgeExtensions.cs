@@ -55,6 +55,9 @@ public static class ValidationTaskBridgeExtensions
     /// </remarks>
     public static ValidationTask<TOut, TErr> MapAsync<T, TErr, TOut>(
         this Validation<T, TErr> validation,
-        Func<T, CancellationToken, Task<TOut>> mapper) =>
-        ValidationTask<T, TErr>.From(validation).MapAsync(mapper);
+        Func<T, CancellationToken, Task<TOut>> mapper)
+    {
+        ArgumentNullException.ThrowIfNull(mapper);
+        return ValidationTask<T, TErr>.From(validation).MapAsync(mapper);
+    }
 }
