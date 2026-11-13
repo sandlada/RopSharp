@@ -48,14 +48,14 @@ internal static class ValidationTaskCore
     }
 
     internal static async Task<Validation<IReadOnlyList<T>, TErr>> SequenceAsync<T, TErr>(
-        IEnumerable<Task<Result<T, TErr>>> tasks, CancellationToken cancellationToken)
+        IEnumerable<ResultTask<T, TErr>> computations, CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
-        var pending = Result.CreateList<Task<Result<T, TErr>>, Task<Result<T, TErr>>>(tasks);
-        foreach (var task in tasks)
+        var pending = Result.CreateList<ResultTask<T, TErr>, Task<Result<T, TErr>>>(computations);
+        foreach (var computation in computations)
         {
-            if (task is null) throw new InvalidOperationException("The sequence contained a null task.");
-            pending.Add(task);
+            cancellationToken.ThrowIfCancellationRequested();
+            pending.Add(computation.ObservedTask);
         }
 
         var all = Task.WhenAll(pending);

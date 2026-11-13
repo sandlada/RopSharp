@@ -237,14 +237,7 @@ internal static class ResultTaskCore
         foreach (var computation in computations)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            computation.ThrowIfUninitialized();
-            var task = computation.TaskUnsafe;
-            if (task is null)
-            {
-                throw new InvalidOperationException("The sequence contained a null task.");
-            }
-
-            var result = await task.WaitAsync(cancellationToken).ConfigureAwait(false);
+            var result = await computation.ObservedTask.WaitAsync(cancellationToken).ConfigureAwait(false);
             if (!result.TryGetOk(out var value))
             {
                 return Result.Err<IReadOnlyList<T>, TErr>(result.ErrUnsafe);
@@ -309,11 +302,11 @@ internal static class ResultTaskCore
         ArgumentNullException.ThrowIfNull(computations);
         cancellationToken.ThrowIfCancellationRequested();
 
-        var pending = new List<Task<Result<T, TErr>>>();
+        var pending = Result.CreateList<ResultTask<T, TErr>, Task<Result<T, TErr>>>(computations);
         foreach (var computation in computations)
         {
-            computation.ThrowIfUninitialized();
-            pending.Add(computation.TaskUnsafe);
+            cancellationToken.ThrowIfCancellationRequested();
+            pending.Add(computation.ObservedTask);
         }
 
         var results = await Task.WhenAll(pending).WaitAsync(cancellationToken).ConfigureAwait(false);

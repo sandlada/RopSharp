@@ -78,12 +78,13 @@ public static class OptionTaskLinqExtensions
         Func<T, OptionTask<TOut>> binder)
     {
         ArgumentNullException.ThrowIfNull(binder);
+        SuccessTypeGuards.ThrowIfTaskLike<TOut>("SelectMany");
         computation.ThrowIfUninitialized();
 
         return computation.BindSomeAsync(async (first, ct) =>
         {
             var next = binder(first);
-            return await next.WithCancellation(ct);
+            return await next.ObservedTask.WaitAsync(ct).ConfigureAwait(false);
         });
     }
 
@@ -106,12 +107,13 @@ public static class OptionTaskLinqExtensions
     {
         ArgumentNullException.ThrowIfNull(collectionSelector);
         ArgumentNullException.ThrowIfNull(resultSelector);
+        SuccessTypeGuards.ThrowIfTaskLike<TOut>("SelectMany");
         computation.ThrowIfUninitialized();
 
         return computation.BindSomeAsync(async (first, ct) =>
         {
             var next = collectionSelector(first);
-            var colOption = await next.WithCancellation(ct);
+            var colOption = await next.ObservedTask.WaitAsync(ct).ConfigureAwait(false);
             return colOption.MapSome(second => resultSelector(first, second));
         });
     }

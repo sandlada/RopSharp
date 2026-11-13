@@ -63,7 +63,7 @@ public static class OptionTask
         first.ThrowIfUninitialized();
         second.ThrowIfUninitialized();
         cancellationToken.ThrowIfCancellationRequested();
-        return OptionTask<TOut>.From(OptionTaskCore.CombineAsync(first.TaskUnsafe, second.TaskUnsafe, merger, cancellationToken))
+        return OptionTask<TOut>.From(OptionTaskCore.CombineAsync(first.ObservedTask, second.ObservedTask, merger, cancellationToken))
             .WithCancellation(cancellationToken);
     }
 
@@ -90,7 +90,7 @@ public static class OptionTask
         third.ThrowIfUninitialized();
         cancellationToken.ThrowIfCancellationRequested();
         return OptionTask<TOut>.From(
-                OptionTaskCore.CombineAsync(first.TaskUnsafe, second.TaskUnsafe, third.TaskUnsafe, merger, cancellationToken))
+                OptionTaskCore.CombineAsync(first.ObservedTask, second.ObservedTask, third.ObservedTask, merger, cancellationToken))
             .WithCancellation(cancellationToken);
     }
 

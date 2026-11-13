@@ -89,12 +89,13 @@ public static class ResultTaskLinqExtensions
         Func<TOk, ResultTask<TOut, TErr>> binder)
     {
         ArgumentNullException.ThrowIfNull(binder);
+        SuccessTypeGuards.ThrowIfTaskLike<TOut>("SelectMany");
         computation.ThrowIfUninitialized();
 
         return computation.BindOkAsync(async (first, ct) =>
         {
             var next = binder(first);
-            return await next.WithCancellation(ct);
+            return await next.ObservedTask.WaitAsync(ct).ConfigureAwait(false);
         });
     }
 
@@ -119,12 +120,13 @@ public static class ResultTaskLinqExtensions
     {
         ArgumentNullException.ThrowIfNull(collectionSelector);
         ArgumentNullException.ThrowIfNull(resultSelector);
+        SuccessTypeGuards.ThrowIfTaskLike<TOut>("SelectMany");
         computation.ThrowIfUninitialized();
 
         return computation.BindOkAsync(async (first, ct) =>
         {
             var next = collectionSelector(first);
-            var colResult = await next.WithCancellation(ct);
+            var colResult = await next.ObservedTask.WaitAsync(ct).ConfigureAwait(false);
             return colResult.MapOk(second => resultSelector(first, second));
         });
     }

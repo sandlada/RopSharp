@@ -61,6 +61,7 @@ public static partial class Result
     public static Func<T, ResultTask<TOut, TErr>> SwitchAsync<T, TOut, TErr>(Func<T, Task<TOut>> func)
     {
         ArgumentNullException.ThrowIfNull(func);
+        SuccessTypeGuards.ThrowIfTaskLike<TOut>("SwitchAsync");
         return value => ResultTask<TOut, TErr>.From(Switch(value));
 
         async Task<Result<TOut, TErr>> Switch(T value) =>
@@ -97,6 +98,7 @@ public static partial class Result
     {
         ArgumentNullException.ThrowIfNull(func);
         ArgumentNullException.ThrowIfNull(errorFactory);
+        SuccessTypeGuards.ThrowIfTaskLike<TOut>("TrySwitchAsync");
         return value => TryAsync(() => func(value), errorFactory);
     }
 
@@ -138,6 +140,7 @@ public static partial class Result
         ArgumentNullException.ThrowIfNull(func);
         ArgumentNullException.ThrowIfNull(errorFactory);
         ArgumentNullException.ThrowIfNull(nullResultErrorFactory);
+        SuccessTypeGuards.ThrowIfTaskLike<TOut>("TrySwitchAsync");
         return value => TryAsync(() => func(value), errorFactory, nullResultErrorFactory);
     }
 
@@ -173,50 +176,8 @@ public static partial class Result
     public static ResultTask<Unit, RopError> TryAsync(
         Func<Task> action,
         Func<Exception, RopError> errorFactory,
-        CancellationToken cancellationToken = default)
-    {
-        ArgumentNullException.ThrowIfNull(action);
-        ArgumentNullException.ThrowIfNull(errorFactory);
-        cancellationToken.ThrowIfCancellationRequested();
-        return ResultTask<Unit, RopError>.From(Run()).WithCancellation(cancellationToken);
-
-        async Task<Result<Unit, RopError>> Run()
-        {
-            Task pending;
-            try
-            {
-                pending = action();
-            }
-            catch (OperationCanceledException)
-            {
-                throw;
-            }
-            catch (Exception exception)
-            {
-                return Err<Unit, RopError>(MaterializeException(errorFactory, exception));
-            }
-
-            if (pending is null)
-            {
-                throw new InvalidOperationException("The boundary function returned a null task.");
-            }
-
-            try
-            {
-                await pending.WaitAsync(cancellationToken).ConfigureAwait(false);
-                return Ok<Unit, RopError>(Unit.Value);
-            }
-            catch (OperationCanceledException)
-            {
-                throw;
-            }
-            catch (Exception exception)
-            {
-                return Err<Unit, RopError>(MaterializeException(errorFactory, exception));
-            }
-
-        }
-    }
+        CancellationToken cancellationToken = default) =>
+        TryUnitAsyncCore(action, errorFactory, cancellationToken);
 
     /// <summary>
     /// Runs an asynchronous boundary action and converts a thrown exception into a caller-defined error, except
@@ -251,7 +212,17 @@ public static partial class Result
     public static ResultTask<Unit, TErr> TryAsync<TErr>(
         Func<Task> action,
         Func<Exception, TErr> errorFactory,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default) =>
+        TryUnitAsyncCore(action, errorFactory, cancellationToken);
+
+    [SuppressMessage(
+        "Design",
+        "CA1031:Do not catch general exception types",
+        Justification = "Result.TryAsync is the single asynchronous boundary where any non-cancellation exception becomes a domain error.")]
+    private static ResultTask<Unit, TErr> TryUnitAsyncCore<TErr>(
+        Func<Task> action,
+        Func<Exception, TErr> errorFactory,
+        CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(action);
         ArgumentNullException.ThrowIfNull(errorFactory);
@@ -281,7 +252,7 @@ public static partial class Result
 
             try
             {
-                await pending.WaitAsync(cancellationToken).ConfigureAwait(false);
+                await pending.ConfigureAwait(false);
                 return Ok<Unit, TErr>(Unit.Value);
             }
             catch (OperationCanceledException)
@@ -292,7 +263,6 @@ public static partial class Result
             {
                 return Err<Unit, TErr>(MaterializeException(errorFactory, exception));
             }
-
         }
     }
 
@@ -361,58 +331,8 @@ public static partial class Result
     public static ResultTask<T, RopError> TryAsync<T>(
         Func<Task<T>> func,
         Func<Exception, RopError> errorFactory,
-        CancellationToken cancellationToken = default)
-    {
-        ArgumentNullException.ThrowIfNull(func);
-        ArgumentNullException.ThrowIfNull(errorFactory);
-        cancellationToken.ThrowIfCancellationRequested();
-        return ResultTask<T, RopError>.From(Run()).WithCancellation(cancellationToken);
-
-        async Task<Result<T, RopError>> Run()
-        {
-            Task<T> pending;
-            try
-            {
-                pending = func();
-            }
-            catch (OperationCanceledException)
-            {
-                throw;
-            }
-            catch (Exception exception)
-            {
-                return Err<T, RopError>(MaterializeException(errorFactory, exception));
-            }
-
-            if (pending is null)
-            {
-                throw new InvalidOperationException("The boundary function returned a null task.");
-            }
-
-            T value;
-            try
-            {
-                value = await pending.WaitAsync(cancellationToken).ConfigureAwait(false);
-            }
-            catch (OperationCanceledException)
-            {
-                throw;
-            }
-            catch (Exception exception)
-            {
-                return Err<T, RopError>(MaterializeException(errorFactory, exception));
-            }
-
-            if (value is null)
-            {
-                return Err<T, RopError>(NullResultError());
-            }
-
-            SuccessTypeGuards.ThrowIfTaskLike<T>("TryAsync");
-            return Ok<T, RopError>(value);
-
-        }
-    }
+        CancellationToken cancellationToken = default) =>
+        TryValueAsyncCore(func, errorFactory, static () => NullResultError(), cancellationToken);
 
     /// <summary>
     /// Runs an asynchronous boundary function and converts a thrown exception into a caller-defined error, except
@@ -470,6 +390,23 @@ public static partial class Result
         ArgumentNullException.ThrowIfNull(func);
         ArgumentNullException.ThrowIfNull(errorFactory);
         ArgumentNullException.ThrowIfNull(nullResultErrorFactory);
+        return TryValueAsyncCore(func, errorFactory, nullResultErrorFactory, cancellationToken);
+    }
+
+    [SuppressMessage(
+        "Design",
+        "CA1031:Do not catch general exception types",
+        Justification = "Result.TryAsync is the single asynchronous boundary where any non-cancellation exception becomes a domain error.")]
+    private static ResultTask<T, TErr> TryValueAsyncCore<T, TErr>(
+        Func<Task<T>> func,
+        Func<Exception, TErr> errorFactory,
+        Func<TErr> nullResultErrorFactory,
+        CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(func);
+        ArgumentNullException.ThrowIfNull(errorFactory);
+        ArgumentNullException.ThrowIfNull(nullResultErrorFactory);
+        SuccessTypeGuards.ThrowIfTaskLike<T>("TryAsync");
         cancellationToken.ThrowIfCancellationRequested();
         return ResultTask<T, TErr>.From(Run()).WithCancellation(cancellationToken);
 
@@ -497,7 +434,7 @@ public static partial class Result
             T value;
             try
             {
-                value = await pending.WaitAsync(cancellationToken).ConfigureAwait(false);
+                value = await pending.ConfigureAwait(false);
             }
             catch (OperationCanceledException)
             {
@@ -513,9 +450,7 @@ public static partial class Result
                 return Err<T, TErr>(MaterializeError(nullResultErrorFactory));
             }
 
-            SuccessTypeGuards.ThrowIfTaskLike<T>("TryAsync");
             return Ok<T, TErr>(value);
-
         }
     }
 

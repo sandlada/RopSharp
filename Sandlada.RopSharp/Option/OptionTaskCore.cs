@@ -144,10 +144,7 @@ internal static class OptionTaskCore
         foreach (var computation in computations)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            computation.ThrowIfUninitialized();
-            var task = computation.TaskUnsafe;
-            if (task is null) throw new InvalidOperationException("The sequence contained a null task.");
-            var option = await task.WaitAsync(cancellationToken).ConfigureAwait(false);
+            var option = await computation.ObservedTask.WaitAsync(cancellationToken).ConfigureAwait(false);
             if (!option.TryGetValue(out var value)) return Option.None<IReadOnlyList<T>>();
             values.Add(value);
         }

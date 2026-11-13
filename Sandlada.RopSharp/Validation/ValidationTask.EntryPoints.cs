@@ -64,7 +64,7 @@ public static class ValidationTask
         second.ThrowIfUninitialized();
         cancellationToken.ThrowIfCancellationRequested();
         return ValidationTask<TOut, TErr>.From(
-                ValidationTaskCore.ZipAsync(first.TaskUnsafe, second.TaskUnsafe, merger, cancellationToken))
+                ValidationTaskCore.ZipAsync(first.ObservedTask, second.ObservedTask, merger, cancellationToken))
             .WithCancellation(cancellationToken);
     }
 
@@ -91,7 +91,7 @@ public static class ValidationTask
         third.ThrowIfUninitialized();
         cancellationToken.ThrowIfCancellationRequested();
         return ValidationTask<TOut, TErr>.From(
-                ValidationTaskCore.ZipAsync(first.TaskUnsafe, second.TaskUnsafe, third.TaskUnsafe, merger, cancellationToken))
+                ValidationTaskCore.ZipAsync(first.ObservedTask, second.ObservedTask, third.ObservedTask, merger, cancellationToken))
             .WithCancellation(cancellationToken);
     }
 
@@ -113,14 +113,7 @@ public static class ValidationTask
     {
         ArgumentNullException.ThrowIfNull(computations);
         cancellationToken.ThrowIfCancellationRequested();
-        var tasks = new List<Task<Result<T, TErr>>>();
-        foreach (var computation in computations)
-        {
-            computation.ThrowIfUninitialized();
-            tasks.Add(computation.TaskUnsafe);
-        }
-
-        return ValidationTask<IReadOnlyList<T>, TErr>.From(ValidationTaskCore.SequenceAsync(tasks, cancellationToken))
+        return ValidationTask<IReadOnlyList<T>, TErr>.From(ValidationTaskCore.SequenceAsync(computations, cancellationToken))
             .WithCancellation(cancellationToken);
     }
 

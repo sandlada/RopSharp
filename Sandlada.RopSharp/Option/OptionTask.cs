@@ -98,6 +98,15 @@ public readonly partial struct OptionTask<T> : IEquatable<OptionTask<T>>
     internal CancellationToken CancellationToken { get { ThrowIfUninitialized(); return _cancellationToken; } }
     internal Task<Option<T>> TaskUnsafe { get { ThrowIfUninitialized(); return _task!; } }
 
+    internal Task<Option<T>> ObservedTask
+    {
+        get
+        {
+            ThrowIfUninitialized();
+            return _cancellationToken.CanBeCanceled ? _task!.WaitAsync(_cancellationToken) : _task!;
+        }
+    }
+
     internal void ThrowIfUninitialized()
     {
         if (_tag == TagUninitialized)
@@ -189,7 +198,22 @@ public readonly partial struct OptionTask<T> : IEquatable<OptionTask<T>>
 public readonly struct OptionTaskAwaiter<T> : ICriticalNotifyCompletion
 {
     private readonly ConfiguredTaskAwaitable<Option<T>>.ConfiguredTaskAwaiter _awaiter;
-    internal OptionTaskAwaiter(ConfiguredTaskAwaitable<Option<T>>.ConfiguredTaskAwaiter awaiter) => _awaiter = awaiter;
+    private readonly bool _initialized;
+
+    internal OptionTaskAwaiter(ConfiguredTaskAwaitable<Option<T>>.ConfiguredTaskAwaiter awaiter)
+    {
+        _awaiter = awaiter;
+        _initialized = true;
+    }
+
+    private void ThrowIfUninitialized()
+    {
+        if (!_initialized)
+        {
+            throw new InvalidOperationException(
+                "The computation awaiter is an uninitialized default value; obtain awaiters from OptionTask.GetAwaiter.");
+        }
+    }
 
     /// <inheritdoc />
     /// <remarks>
@@ -201,7 +225,14 @@ public readonly struct OptionTaskAwaiter<T> : ICriticalNotifyCompletion
     /// // false while in flight - Some(address) or None when IsCompleted is true.
     /// ]]></code>
     /// </remarks>
-    public bool IsCompleted => _awaiter.IsCompleted;
+    public bool IsCompleted
+    {
+        get
+        {
+            ThrowIfUninitialized();
+            return _awaiter.IsCompleted;
+        }
+    }
 
     /// <summary>Returns the completed option value.</summary>
     /// <remarks>
@@ -213,7 +244,11 @@ public readonly struct OptionTaskAwaiter<T> : ICriticalNotifyCompletion
     /// // None when it completed empty - GetResult does not throw for None.
     /// ]]></code>
     /// </remarks>
-    public Option<T> GetResult() => _awaiter.GetResult();
+    public Option<T> GetResult()
+    {
+        ThrowIfUninitialized();
+        return _awaiter.GetResult();
+    }
 
     /// <inheritdoc />
     /// <remarks>
@@ -225,7 +260,11 @@ public readonly struct OptionTaskAwaiter<T> : ICriticalNotifyCompletion
     /// // for Some(address) or None without capturing the caller synchronization context.
     /// ]]></code>
     /// </remarks>
-    public void OnCompleted(Action continuation) => _awaiter.OnCompleted(continuation);
+    public void OnCompleted(Action continuation)
+    {
+        ThrowIfUninitialized();
+        _awaiter.OnCompleted(continuation);
+    }
 
     /// <inheritdoc />
     /// <remarks>
@@ -237,5 +276,9 @@ public readonly struct OptionTaskAwaiter<T> : ICriticalNotifyCompletion
     /// // for Some(address) or None mirroring ConfigureAwait(false) on the underlying task.
     /// ]]></code>
     /// </remarks>
-    public void UnsafeOnCompleted(Action continuation) => _awaiter.UnsafeOnCompleted(continuation);
+    public void UnsafeOnCompleted(Action continuation)
+    {
+        ThrowIfUninitialized();
+        _awaiter.UnsafeOnCompleted(continuation);
+    }
 }

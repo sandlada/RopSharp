@@ -104,6 +104,15 @@ public readonly partial struct ValidationTask<T, TErr> : IEquatable<ValidationTa
     internal CancellationToken CancellationToken { get { ThrowIfUninitialized(); return _cancellationToken; } }
     internal Task<Validation<T, TErr>> TaskUnsafe { get { ThrowIfUninitialized(); return _task!; } }
 
+    internal Task<Validation<T, TErr>> ObservedTask
+    {
+        get
+        {
+            ThrowIfUninitialized();
+            return _cancellationToken.CanBeCanceled ? _task!.WaitAsync(_cancellationToken) : _task!;
+        }
+    }
+
     internal void ThrowIfUninitialized()
     {
         if (_tag == TagUninitialized)
@@ -196,7 +205,22 @@ public readonly partial struct ValidationTask<T, TErr> : IEquatable<ValidationTa
 public readonly struct ValidationTaskAwaiter<T, TErr> : ICriticalNotifyCompletion
 {
     private readonly ConfiguredTaskAwaitable<Validation<T, TErr>>.ConfiguredTaskAwaiter _awaiter;
-    internal ValidationTaskAwaiter(ConfiguredTaskAwaitable<Validation<T, TErr>>.ConfiguredTaskAwaiter awaiter) => _awaiter = awaiter;
+    private readonly bool _initialized;
+
+    internal ValidationTaskAwaiter(ConfiguredTaskAwaitable<Validation<T, TErr>>.ConfiguredTaskAwaiter awaiter)
+    {
+        _awaiter = awaiter;
+        _initialized = true;
+    }
+
+    private void ThrowIfUninitialized()
+    {
+        if (!_initialized)
+        {
+            throw new InvalidOperationException(
+                "The computation awaiter is an uninitialized default value; obtain awaiters from ValidationTask.GetAwaiter.");
+        }
+    }
 
     /// <inheritdoc />
     /// <remarks>
@@ -208,7 +232,14 @@ public readonly struct ValidationTaskAwaiter<T, TErr> : ICriticalNotifyCompletio
     /// // false while in flight - Success(order) or Failure([E_X]) when IsCompleted is true.
     /// ]]></code>
     /// </remarks>
-    public bool IsCompleted => _awaiter.IsCompleted;
+    public bool IsCompleted
+    {
+        get
+        {
+            ThrowIfUninitialized();
+            return _awaiter.IsCompleted;
+        }
+    }
 
     /// <summary>Returns the completed validation value.</summary>
     /// <remarks>
@@ -220,7 +251,11 @@ public readonly struct ValidationTaskAwaiter<T, TErr> : ICriticalNotifyCompletio
     /// // Failure([E_X]) when it completed with errors.
     /// ]]></code>
     /// </remarks>
-    public Validation<T, TErr> GetResult() => _awaiter.GetResult();
+    public Validation<T, TErr> GetResult()
+    {
+        ThrowIfUninitialized();
+        return _awaiter.GetResult();
+    }
 
     /// <inheritdoc />
     /// <remarks>
@@ -232,7 +267,11 @@ public readonly struct ValidationTaskAwaiter<T, TErr> : ICriticalNotifyCompletio
     /// // for Success(order) or Failure([E_X]) without capturing the caller synchronization context.
     /// ]]></code>
     /// </remarks>
-    public void OnCompleted(Action continuation) => _awaiter.OnCompleted(continuation);
+    public void OnCompleted(Action continuation)
+    {
+        ThrowIfUninitialized();
+        _awaiter.OnCompleted(continuation);
+    }
 
     /// <inheritdoc />
     /// <remarks>
@@ -244,5 +283,9 @@ public readonly struct ValidationTaskAwaiter<T, TErr> : ICriticalNotifyCompletio
     /// // for Success(order) or Failure([E_X]) mirroring ConfigureAwait(false) on the underlying task.
     /// ]]></code>
     /// </remarks>
-    public void UnsafeOnCompleted(Action continuation) => _awaiter.UnsafeOnCompleted(continuation);
+    public void UnsafeOnCompleted(Action continuation)
+    {
+        ThrowIfUninitialized();
+        _awaiter.UnsafeOnCompleted(continuation);
+    }
 }

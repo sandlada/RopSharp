@@ -134,6 +134,15 @@ public readonly partial struct ResultTask<TOk, TErr> : IEquatable<ResultTask<TOk
         }
     }
 
+    internal Task<Result<TOk, TErr>> ObservedTask
+    {
+        get
+        {
+            ThrowIfUninitialized();
+            return _cancellationToken.CanBeCanceled ? _task!.WaitAsync(_cancellationToken) : _task!;
+        }
+    }
+
     internal void ThrowIfUninitialized()
     {
         if (_tag == TagUninitialized)
@@ -231,9 +240,22 @@ public readonly partial struct ResultTask<TOk, TErr> : IEquatable<ResultTask<TOk
 public readonly struct ResultTaskAwaiter<TOk, TErr> : ICriticalNotifyCompletion
 {
     private readonly ConfiguredTaskAwaitable<Result<TOk, TErr>>.ConfiguredTaskAwaiter _awaiter;
+    private readonly bool _initialized;
 
-    internal ResultTaskAwaiter(ConfiguredTaskAwaitable<Result<TOk, TErr>>.ConfiguredTaskAwaiter awaiter) =>
+    internal ResultTaskAwaiter(ConfiguredTaskAwaitable<Result<TOk, TErr>>.ConfiguredTaskAwaiter awaiter)
+    {
         _awaiter = awaiter;
+        _initialized = true;
+    }
+
+    private void ThrowIfUninitialized()
+    {
+        if (!_initialized)
+        {
+            throw new InvalidOperationException(
+                "The computation awaiter is an uninitialized default value; obtain awaiters from ResultTask.GetAwaiter.");
+        }
+    }
 
     /// <inheritdoc />
     /// <remarks>
@@ -248,7 +270,14 @@ public readonly struct ResultTaskAwaiter<TOk, TErr> : ICriticalNotifyCompletion
     /// // false while in flight - Ok(payment) or Err(E_CHARGE) when IsCompleted is true.
     /// ]]></code>
     /// </remarks>
-    public bool IsCompleted => _awaiter.IsCompleted;
+    public bool IsCompleted
+    {
+        get
+        {
+            ThrowIfUninitialized();
+            return _awaiter.IsCompleted;
+        }
+    }
 
     /// <summary>Returns the completed result without throwing for the error track.</summary>
     /// <remarks>
@@ -260,7 +289,11 @@ public readonly struct ResultTaskAwaiter<TOk, TErr> : ICriticalNotifyCompletion
     /// // Err(E_CHARGE) when it completed on the error track - GetResult never throws for Err.
     /// ]]></code>
     /// </remarks>
-    public Result<TOk, TErr> GetResult() => _awaiter.GetResult();
+    public Result<TOk, TErr> GetResult()
+    {
+        ThrowIfUninitialized();
+        return _awaiter.GetResult();
+    }
 
     /// <inheritdoc />
     /// <remarks>
@@ -275,7 +308,11 @@ public readonly struct ResultTaskAwaiter<TOk, TErr> : ICriticalNotifyCompletion
     /// // for Ok(payment) or Err(E_CHARGE) without capturing the caller synchronization context.
     /// ]]></code>
     /// </remarks>
-    public void OnCompleted(Action continuation) => _awaiter.OnCompleted(continuation);
+    public void OnCompleted(Action continuation)
+    {
+        ThrowIfUninitialized();
+        _awaiter.OnCompleted(continuation);
+    }
 
     /// <inheritdoc />
     /// <remarks>
@@ -290,5 +327,9 @@ public readonly struct ResultTaskAwaiter<TOk, TErr> : ICriticalNotifyCompletion
     /// // for Ok(payment) or Err(E_CHARGE) mirroring ConfigureAwait(false) on the underlying task.
     /// ]]></code>
     /// </remarks>
-    public void UnsafeOnCompleted(Action continuation) => _awaiter.UnsafeOnCompleted(continuation);
+    public void UnsafeOnCompleted(Action continuation)
+    {
+        ThrowIfUninitialized();
+        _awaiter.UnsafeOnCompleted(continuation);
+    }
 }

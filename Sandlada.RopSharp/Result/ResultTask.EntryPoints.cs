@@ -71,7 +71,7 @@ public static class ResultTask
         cancellationToken.ThrowIfCancellationRequested();
 
         return ResultTask<TOut, TErr>.From(
-                ResultTaskCore.CombineAsync(first.TaskUnsafe, second.TaskUnsafe, merger, cancellationToken))
+                ResultTaskCore.CombineAsync(first.ObservedTask, second.ObservedTask, merger, cancellationToken))
             .WithCancellation(cancellationToken);
     }
 
@@ -103,9 +103,9 @@ public static class ResultTask
 
         return ResultTask<TOut, TErr>.From(
                 ResultTaskCore.CombineAsync(
-                    first.TaskUnsafe,
-                    second.TaskUnsafe,
-                    third.TaskUnsafe,
+                    first.ObservedTask,
+                    second.ObservedTask,
+                    third.ObservedTask,
                     merger,
                     cancellationToken))
             .WithCancellation(cancellationToken);
