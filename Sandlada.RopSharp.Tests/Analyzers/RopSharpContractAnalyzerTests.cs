@@ -382,6 +382,212 @@ public sealed class RopSharpContractAnalyzerTests
         await Assert.That(diagnostics.Any(static d => d.Id == "ROP0004")).IsFalse();
     }
 
+    [Test]
+    public async Task ROP0001_DefaultOption_DoesNotReport()
+    {
+        const string source = """
+            using Sandlada.RopSharp;
+            internal static class C
+            {
+                private static void M()
+                {
+                    Option<int> a = default;
+                    var b = new Option<int>();
+                }
+            }
+            """;
+
+        var diagnostics = await GetDiagnosticsAsync(source);
+
+        await Assert.That(diagnostics.Any(static d => d.Id == "ROP0001")).IsFalse();
+    }
+
+    [Test]
+    public async Task ROP0002_DiscardedOption_ReportsDiagnostic()
+    {
+        const string source = """
+            using Sandlada.RopSharp;
+            internal static class C
+            {
+                private static void M()
+                {
+                    Option.Some(1);
+                    _ = Option.Some(2);
+                }
+            }
+            """;
+
+        var diagnostics = await GetDiagnosticsAsync(source);
+
+        await Assert.That(diagnostics.Count(static d => d.Id == "ROP0002")).IsEqualTo(2);
+    }
+
+    [Test]
+    public async Task ROP0002_DiscardedInsideLambdaAndLocalFunction_ReportsDiagnostic()
+    {
+        const string source = """
+            using System;
+            using Sandlada.RopSharp;
+            internal static class C
+            {
+                private static void Run(Action action) => action();
+
+                private static void M()
+                {
+                    Action a = () => Result.Ok(1);
+                    Action b = () => { Option.Some(2); };
+                    void Local() => Result.Ok(3);
+                    Run(() => Result.Ok(4));
+                    a();
+                    b();
+                    Local();
+                }
+            }
+            """;
+
+        var diagnostics = await GetDiagnosticsAsync(source);
+
+        await Assert.That(diagnostics.Count(static d => d.Id == "ROP0002")).IsEqualTo(4);
+    }
+
+    [Test]
+    public async Task ROP0002_DeconstructionDiscard_ReportsDiagnostic()
+    {
+        const string source = """
+            using Sandlada.RopSharp;
+            internal static class C
+            {
+                private static (Result<int, RopError>, Option<string>) GetPair() =>
+                    (Result.Ok(1), Option.Some("ok"));
+
+                private static void M()
+                {
+                    (_, var x) = (Result.Ok(1), 2);
+                    (var a, _) = (1, Option.Some(2));
+                    (_, _) = GetPair();
+                }
+            }
+            """;
+
+        var diagnostics = await GetDiagnosticsAsync(source);
+
+        await Assert.That(diagnostics.Count(static d => d.Id == "ROP0002")).IsEqualTo(4);
+    }
+
+    [Test]
+    public async Task ROP0003_ResultTaskAndOptionTaskSyncCombinators_ReportDiagnostic()
+    {
+        const string source = """
+            using System.Threading.Tasks;
+            using Sandlada.RopSharp;
+            internal static class C
+            {
+                private static void M()
+                {
+                    _ = ResultTask.From(Result.Ok(1)).MapOk(x => Task.FromResult(x + 1));
+                    _ = ResultTask.From(Result.Ok(1)).MapErr(_ => Task.FromResult("err"));
+                    _ = OptionTask.From(Option.Some(1)).MapSome(x => Task.FromResult(x + 1));
+                }
+            }
+            """;
+
+        var diagnostics = await GetDiagnosticsAsync(source);
+
+        await Assert.That(diagnostics.Count(static d => d.Id == "ROP0003")).IsEqualTo(3);
+    }
+
+    [Test]
+    public async Task ROP0003_ExpandedCombinatorsAsyncVoidAndLocalDelegate_ReportDiagnostic()
+    {
+        const string source = """
+            using System;
+            using System.Threading.Tasks;
+            using Sandlada.RopSharp;
+            internal static class C
+            {
+                private static void M()
+                {
+                    _ = Result.Ok(1).Select(x => Task.FromResult(x + 1));
+                    _ = Result.Ok(1).Match(x => Task.FromResult(x), _ => Task.FromResult(0));
+                    _ = Result.Try(() => Task.FromResult(1), "E_ERR");
+                    _ = Result.Ok(1).TeeOk(async _ => await Task.Yield());
+                    Func<int, Task<int>> f = x => Task.FromResult(x + 1);
+                    _ = Result.Ok(1).MapOk(f);
+                }
+            }
+            """;
+
+        var diagnostics = await GetDiagnosticsAsync(source);
+
+        await Assert.That(diagnostics.Count(static d => d.Id == "ROP0003")).IsEqualTo(6);
+    }
+
+    [Test]
+    public async Task ROP0003_AsyncCombinatorWithTaskDelegate_DoesNotReport()
+    {
+        const string source = """
+            using System.Threading.Tasks;
+            using Sandlada.RopSharp;
+            internal static class C
+            {
+                private static void M()
+                {
+                    _ = ResultTask.From(Result.Ok(1)).MapOkAsync(x => Task.FromResult(x + 1));
+                    _ = OptionTask.From(Option.Some(1)).MapSomeAsync(x => Task.FromResult(x + 1));
+                }
+            }
+            """;
+
+        var diagnostics = await GetDiagnosticsAsync(source);
+
+        await Assert.That(diagnostics.Any(static d => d.Id == "ROP0003")).IsFalse();
+    }
+
+    [Test]
+    public async Task ROP0004_ConstConcatAndNameofInvalidCodes_ReportDiagnostic()
+    {
+        const string source = """
+            using Sandlada.RopSharp;
+            internal static class C
+            {
+                private const string BadConst = "bad_code";
+
+                private static void M()
+                {
+                    _ = RopError.Create(BadConst, "msg");
+                    _ = RopError.Create("bad_" + "code", "msg");
+                    _ = RopError.Create(nameof(M), "msg");
+                }
+            }
+            """;
+
+        var diagnostics = await GetDiagnosticsAsync(source);
+
+        await Assert.That(diagnostics.Count(static d => d.Id == "ROP0004")).IsEqualTo(3);
+    }
+
+    [Test]
+    public async Task ROP0004_ValidConstCode_DoesNotReport()
+    {
+        const string source = """
+            using Sandlada.RopSharp;
+            internal static class C
+            {
+                private const string GoodConst = "E_VALID_CONST";
+
+                private static void M()
+                {
+                    _ = RopError.Create(GoodConst, "msg");
+                    _ = RopError.Create("E_PREFIX_" + "SUFFIX", "msg");
+                }
+            }
+            """;
+
+        var diagnostics = await GetDiagnosticsAsync(source);
+
+        await Assert.That(diagnostics.Any(static d => d.Id == "ROP0004")).IsFalse();
+    }
+
     private static async Task<IReadOnlyList<Diagnostic>> GetDiagnosticsAsync(string source)
     {
         var compilation = CSharpCompilation.Create(

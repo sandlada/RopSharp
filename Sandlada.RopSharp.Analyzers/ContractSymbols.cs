@@ -9,6 +9,7 @@ internal sealed class ContractSymbols
     internal const string Namespace = "Sandlada.RopSharp";
 
     internal INamedTypeSymbol? Result2 { get; }
+    internal INamedTypeSymbol? Option1 { get; }
     internal INamedTypeSymbol? Either2 { get; }
     internal INamedTypeSymbol? Validation2 { get; }
     internal INamedTypeSymbol? ResultTask2 { get; }
@@ -29,6 +30,7 @@ internal sealed class ContractSymbols
     {
         CompilationAssembly = compilation.Assembly;
         Result2 = compilation.GetTypeByMetadataName("Sandlada.RopSharp.Result`2");
+        Option1 = compilation.GetTypeByMetadataName("Sandlada.RopSharp.Option`1");
         Either2 = compilation.GetTypeByMetadataName("Sandlada.RopSharp.Either`2");
         Validation2 = compilation.GetTypeByMetadataName("Sandlada.RopSharp.Validation`2");
         ResultTask2 = compilation.GetTypeByMetadataName("Sandlada.RopSharp.ResultTask`2");
@@ -64,6 +66,12 @@ internal sealed class ContractSymbols
             || SymbolEqualityComparer.Default.Equals(original, ValidationTask2)
             || SymbolEqualityComparer.Default.Equals(original, ParseFailure);
     }
+
+    public bool IsOptionType(ITypeSymbol? type) =>
+        type is INamedTypeSymbol named && SymbolEqualityComparer.Default.Equals(named.OriginalDefinition, Option1);
+
+    public bool IsDiscardContractType(ITypeSymbol? type) =>
+        IsContractType(type) || IsOptionType(type);
 
     public bool IsTaskLike(ITypeSymbol? type)
     {
