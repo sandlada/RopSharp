@@ -41,7 +41,7 @@ public static partial class Result
     /// <para>
     /// This is the asynchronous counterpart of <see cref="Result.Switch{T,TOut,TErr}"/>; the name is intentionally the
     /// same operation with an awaited result. It is not the action terminal
-    /// <see cref="Result.SwitchAsync{T,TOut,TErr}(Func{T,Task{TOut}})"/>, which consumes an existing result.
+    /// <see cref="ResultTask{TOk,TErr}.SwitchAsync"/>, which consumes an existing result.
     /// </para>
     /// <para>
     /// The lifted function carries no token of its own; close over the caller's token inside
@@ -599,8 +599,7 @@ public static partial class Result
     /// </para>
     /// <para>
     /// Cancellation is checked before the function is invoked and while awaiting, so an already-completed task cannot
-    /// bypass a cancelled token. Argument validation surfaces through the returned task because the method is
-    /// asynchronous.
+    /// bypass a cancelled token. Null delegate arguments are validated eagerly on entry.
     /// </para>
     /// <code><![CDATA[
     /// var charged = await Result.TryAsync(

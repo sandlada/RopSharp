@@ -46,6 +46,7 @@ equality, contract analyzers in the package, and SourceLink to `https://github.c
 - Snapshotting in `Validation.Failure(IReadOnlyList<TErr>)` defensively copies input lists.
 - `Validation<T, TErr>.GetHashCode()` distributes hashes across all collected errors rather than only counting them.
 - Roslyn contract analyzer accuracy (`ROP0002`–`ROP0004`): catch discarded contract values inside lambdas/local functions, deconstruction discards (`(_, _) = ...`), and discarded `Option<T>` values; enforce `ROP0003` on `*Task` synchronous combinators, `async void` lambdas, local delegate variables, and conditional expressions; and evaluate `ConstantValue` in `ROP0004` (`const string`, constant folding, and `nameof`).
+- XML documentation accuracy on `Result.SwitchAsync`, `Result.TryAsync`, and `Either<TLeft, TRight>` exception contracts, plus `GlobalPropertiesToRemove` on analyzer `ProjectReference` entries so trimmed/AOT sample publishing succeeds without forwarding incompatible target-framework properties.
 
 ### Optimized
 

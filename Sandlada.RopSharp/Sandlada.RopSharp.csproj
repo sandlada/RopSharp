@@ -46,6 +46,7 @@
       <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
       <OutputItemType>Analyzer</OutputItemType>
       <SetTargetFramework>TargetFramework=netstandard2.0</SetTargetFramework>
+      <GlobalPropertiesToRemove>PublishTrimmed;PublishAot;SelfContained;RuntimeIdentifier</GlobalPropertiesToRemove>
     </ProjectReference>
   </ItemGroup>
 

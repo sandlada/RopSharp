@@ -155,6 +155,7 @@ public readonly struct Either<TLeft, TRight> : IEquatable<Either<TLeft, TRight>>
     /// <param name="right">Projects a right value.</param>
     /// <returns>The projected value.</returns>
     /// <exception cref="ArgumentNullException"><paramref name="left"/> or <paramref name="right"/> is <see langword="null"/>.</exception>
+    /// <exception cref="InvalidOperationException">This instance is an uninitialized default.</exception>
     /// <remarks>
     /// <para>
     /// <c>Match</c> is the total exit of an either: it handles both branches, so no payload is ever left
@@ -184,6 +185,8 @@ public readonly struct Either<TLeft, TRight> : IEquatable<Either<TLeft, TRight>>
     /// <typeparam name="TLeftOut">The mapped left type.</typeparam>
     /// <param name="mapper">Maps the left value. Not evaluated on the right branch.</param>
     /// <returns><c>Left(mapper(value))</c> or the original right value.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="mapper"/> is <see langword="null"/>.</exception>
+    /// <exception cref="InvalidOperationException">This instance is an uninitialized default, <paramref name="mapper"/> returned <see langword="null"/>, or <typeparamref name="TLeftOut"/> is a task-like type.</exception>
     /// <remarks>
     /// <para>
     /// The mapper runs on the left branch only, so it may assume the left payload. It is the way to reshape the
@@ -213,6 +216,8 @@ public readonly struct Either<TLeft, TRight> : IEquatable<Either<TLeft, TRight>>
     /// <typeparam name="TRightOut">The mapped right type.</typeparam>
     /// <param name="mapper">Maps the right value. Not evaluated on the left branch.</param>
     /// <returns><c>Right(mapper(value))</c> or the original left value.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="mapper"/> is <see langword="null"/>.</exception>
+    /// <exception cref="InvalidOperationException">This instance is an uninitialized default, <paramref name="mapper"/> returned <see langword="null"/>, or <typeparamref name="TRightOut"/> is a task-like type.</exception>
     /// <remarks>
     /// <para>
     /// The mapper runs on the right branch only, so it may assume the right payload. It is the way to reshape the
@@ -290,6 +295,7 @@ public readonly struct Either<TLeft, TRight> : IEquatable<Either<TLeft, TRight>>
     /// Swaps the branches.
     /// </summary>
     /// <returns><c>Right(value)</c> for a left value and <c>Left(value)</c> for a right value.</returns>
+    /// <exception cref="InvalidOperationException">This instance is an uninitialized default.</exception>
     /// <remarks>
     /// <para>
     /// <c>Swap</c> exchanges the two positions. It is the quickest way to reuse a union whose branches were
@@ -317,7 +323,7 @@ public readonly struct Either<TLeft, TRight> : IEquatable<Either<TLeft, TRight>>
     /// <param name="errorFactory">Builds the error from a left value. Evaluated only on the left branch.</param>
     /// <returns><c>Err(errorFactory(left))</c> or <c>Ok(right)</c>.</returns>
     /// <exception cref="ArgumentNullException"><paramref name="errorFactory"/> is <see langword="null"/>.</exception>
-    /// <exception cref="InvalidOperationException">The factory returned <see langword="null"/>.</exception>
+    /// <exception cref="InvalidOperationException">This instance is an uninitialized default, or the factory returned <see langword="null"/>.</exception>
     /// <remarks>
     /// <para>
     /// Both <c>ToResult</c> overloads reject a null error value the same way: with the library-wide
@@ -351,7 +357,7 @@ public readonly struct Either<TLeft, TRight> : IEquatable<Either<TLeft, TRight>>
     /// <param name="errorFactory">Builds the error from a left value. Evaluated only on the left branch.</param>
     /// <returns><c>Err(errorFactory(left))</c> or <c>Ok(right)</c>.</returns>
     /// <exception cref="ArgumentNullException"><paramref name="errorFactory"/> is <see langword="null"/>.</exception>
-    /// <exception cref="InvalidOperationException">The factory returned <see langword="null"/>.</exception>
+    /// <exception cref="InvalidOperationException">This instance is an uninitialized default, or the factory returned <see langword="null"/>.</exception>
     /// <remarks>
     /// <para>
     /// Use this overload when the caller's error system is not <see cref="RopError"/>. The <see cref="RopError"/>
@@ -378,6 +384,7 @@ public readonly struct Either<TLeft, TRight> : IEquatable<Either<TLeft, TRight>>
     /// Converts the right branch into a present value, discarding the left branch.
     /// </summary>
     /// <returns><c>Some(right)</c> on the right branch; <c>None</c> on the left branch.</returns>
+    /// <exception cref="InvalidOperationException">This instance is an uninitialized default.</exception>
     /// <remarks>
     /// <para>
     /// The left value is dropped and cannot be recovered. Use <see cref="ToResult"/> when the left value carries a
