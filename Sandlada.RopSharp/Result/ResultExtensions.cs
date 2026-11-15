@@ -343,6 +343,72 @@ public static class ResultExtensions
     }
 
     /// <summary>
+    /// Turns a success carrying a null nullable value type into a <see cref="RopError"/> failure.
+    /// </summary>
+    /// <typeparam name="T">The underlying value type.</typeparam>
+    /// <param name="result">The source result whose nullable value-type payload may be null.</param>
+    /// <param name="errorFactory">Builds the error when <see cref="Nullable{T}.HasValue"/> is <see langword="false"/>.</param>
+    /// <returns>The unwrapped value on <c>Ok</c>; otherwise <c>Err(errorFactory())</c>. Existing errors pass through.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="errorFactory"/> is <see langword="null"/>.</exception>
+    /// <exception cref="InvalidOperationException">The factory returned <see langword="null"/>.</exception>
+    /// <remarks>
+    /// <para>
+    /// This is the value-type counterpart of <c>RequireNotNull</c> for <see cref="Nullable{T}"/> payloads.
+    /// </para>
+    /// <code><![CDATA[
+    /// var count = Result.Ok<int?, RopError>(OrderFixtures.Sample.ItemCount)
+    ///     .RequireNotNullValue(() => RopError.Create("E_COUNT", "the item count is missing"))
+    ///     .MapOk(static n => n + 1);
+    ///
+    /// // Ok(4) when the nullable int had a value,
+    /// // Err(E_COUNT) when it was null - errors pass through unchanged.
+    /// ]]></code>
+    /// </remarks>
+    public static Result<T, RopError> RequireNotNullValue<T>(
+        this Result<T?, RopError> result,
+        Func<RopError> errorFactory)
+        where T : struct =>
+        RequireNotNullValue<T, RopError>(result, errorFactory);
+
+    /// <summary>
+    /// Turns a success carrying a null nullable value type into a failure with a caller-defined error type.
+    /// </summary>
+    /// <typeparam name="T">The underlying value type.</typeparam>
+    /// <typeparam name="TErr">The error value type.</typeparam>
+    /// <param name="result">The source result whose nullable value-type payload may be null.</param>
+    /// <param name="errorFactory">Builds the error when <see cref="Nullable{T}.HasValue"/> is <see langword="false"/>.</param>
+    /// <returns>The unwrapped value on <c>Ok</c>; otherwise <c>Err(errorFactory())</c>. Existing errors pass through.</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="errorFactory"/> is <see langword="null"/>.</exception>
+    /// <exception cref="InvalidOperationException">The factory returned <see langword="null"/>.</exception>
+    /// <remarks>
+    /// Use this overload when the caller's error system is not <see cref="RopError"/>. The factory is evaluated only
+    /// on the null-success branch.
+    /// <code><![CDATA[
+    /// var count = Result.Ok<int?, string>(OrderFixtures.Sample.ItemCount)
+    ///     .RequireNotNullValue(() => "the item count is missing")
+    ///     .MapOk(static n => n + 1);
+    ///
+    /// // Ok(4) when the nullable int had a value,
+    /// // Err(the item count is missing) when it was null - errors pass through unchanged.
+    /// ]]></code>
+    /// </remarks>
+    public static Result<T, TErr> RequireNotNullValue<T, TErr>(
+        this Result<T?, TErr> result,
+        Func<TErr> errorFactory)
+        where T : struct
+    {
+        ArgumentNullException.ThrowIfNull(errorFactory);
+        if (!result.TryGetOk(out var value))
+        {
+            return Result.Err<T, TErr>(result.ErrUnsafe);
+        }
+
+        return value.HasValue
+            ? Result.Ok<T, TErr>(value.Value)
+            : Result.Err<T, TErr>(Result.MaterializeError(errorFactory));
+    }
+
+    /// <summary>
     /// Expands a success value into a new result, leaving an error untouched.
     /// </summary>
     /// <typeparam name="TOk">The current success type.</typeparam>
@@ -466,8 +532,8 @@ public static class ResultExtensions
     /// Exits the result by projecting both tracks into a single value.
     /// </summary>
     /// <typeparam name="TOk">The success type.</typeparam>
+    /// <typeparam name="TResult">The projected type.</typeparam>
     /// <typeparam name="TErr">The error type.</typeparam>
-    /// <typeparam name="T">The projected type.</typeparam>
     /// <param name="result">The source result.</param>
     /// <param name="ok">Projects a success.</param>
     /// <param name="err">Projects a failure.</param>
@@ -485,10 +551,10 @@ public static class ResultExtensions
     /// // "failed E_CHARGE" for Err(E_CHARGE) - Match is the production exit.
     /// ]]></code>
     /// </remarks>
-    public static T Match<TOk, TErr, T>(
+    public static TResult Match<TOk, TResult, TErr>(
         this Result<TOk, TErr> result,
-        Func<TOk, T> ok,
-        Func<TErr, T> err)
+        Func<TOk, TResult> ok,
+        Func<TErr, TResult> err)
     {
         ArgumentNullException.ThrowIfNull(ok);
         ArgumentNullException.ThrowIfNull(err);
@@ -513,7 +579,7 @@ public static class ResultExtensions
     /// <remarks>
     /// <para>
     /// This is a boundary exit, not a domain failure channel. Expected failures stay on the Err track and should be
-    /// handled with <see cref="Match{TOk,TErr,T}"/> or the bind/map combinators.
+    /// handled with <see cref="Match{TOk,TResult,TErr}"/> or the bind/map combinators.
     /// </para>
     /// <code><![CDATA[
     /// var charged = Result.Try(() => OrderFixtures.Charge(OrderFixtures.Sample), "E_CHARGE");

@@ -75,7 +75,7 @@ public sealed class ValidationTraversalTests
     public async Task TraverseValidation_WithNullMapper_ThrowsArgumentNull()
     {
         var exception = TestSupport.Catch(() =>
-            Validation.Traverse<int, int, RopError>([1], null!));
+            Validation.Traverse<int, int, RopError>([1], (Func<int, Result<int, RopError>>)null!));
 
         await Assert.That(exception is ArgumentNullException).IsTrue();
     }
@@ -229,7 +229,9 @@ public sealed class ValidationTraversalTests
     public async Task TraverseValidationAsync_WithNullTask_ThrowsInvalidOperation()
     {
         var exception = await TestSupport.CatchAsync(() =>
-            ValidationTask.Traverse<int, int, RopError>([1], (_, _) => null!));
+            ValidationTask.Traverse<int, int, RopError>(
+                [1],
+                (Func<int, CancellationToken, Task<Result<int, RopError>>>)((_, _) => null!)));
 
         await Assert.That(exception is InvalidOperationException).IsTrue();
     }
@@ -313,7 +315,9 @@ public sealed class ValidationTraversalTests
     public async Task TraverseValidationAsync_WithCancellationAwareMapperAndNullTask_ThrowsInvalidOperation()
     {
         var exception = await TestSupport.CatchAsync(() =>
-            ValidationTask.Traverse<int, int, RopError>([1], (_, _) => null!));
+            ValidationTask.Traverse<int, int, RopError>(
+                [1],
+                (Func<int, CancellationToken, Task<Result<int, RopError>>>)((_, _) => null!)));
 
         await Assert.That(exception is InvalidOperationException).IsTrue();
     }

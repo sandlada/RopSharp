@@ -309,6 +309,46 @@ public static class OptionExtensions
     }
 
     /// <summary>
+    /// Runs one of two actions depending on whether the option contains a value.
+    /// </summary>
+    /// <typeparam name="T">The value type.</typeparam>
+    /// <param name="option">The source option.</param>
+    /// <param name="some">Runs with the contained value when <c>Some</c>.</param>
+    /// <param name="none">Runs when <c>None</c>.</param>
+    /// <exception cref="ArgumentNullException">
+    /// <paramref name="some"/> or <paramref name="none"/> is <see langword="null"/>.
+    /// </exception>
+    /// <remarks>
+    /// <c>Switch</c> is the void side-effecting counterpart of <see cref="Match{T,TResult}"/>: it handles both
+    /// tracks at a boundary without producing a return value.
+    /// <code><![CDATA[
+    /// Option.FromNullable(OrderFixtures.Sample.Customer.Address)
+    ///     .Switch(
+    ///         some: static shipping => Console.WriteLine(shipping.City),
+    ///         none: static () => Console.WriteLine("no shipping address"));
+    ///
+    /// // Prints "London" for Some(address),
+    /// // prints "no shipping address" for None.
+    /// ]]></code>
+    /// </remarks>
+    public static void Switch<T>(
+        this Option<T> option,
+        Action<T> some,
+        Action none)
+    {
+        ArgumentNullException.ThrowIfNull(some);
+        ArgumentNullException.ThrowIfNull(none);
+        if (option.TryGetValue(out var value))
+        {
+            some(value);
+        }
+        else
+        {
+            none();
+        }
+    }
+
+    /// <summary>
     /// Returns the contained value when the option is <c>Some</c>.
     /// </summary>
     /// <typeparam name="T">The value type.</typeparam>

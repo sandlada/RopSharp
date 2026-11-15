@@ -92,4 +92,253 @@ public readonly partial struct ResultTask<TOk, TErr>
             TagReady,
             _cancellationToken);
     }
+
+    /// <summary>Replaces the success value with a constant value, leaving an error untouched.</summary>
+    /// <remarks>
+    /// <code><![CDATA[
+    /// var receipt = await Result.TryAsync(
+    ///         () => OrderFixtures.ChargeAsync(OrderFixtures.Sample),
+    ///         "E_CHARGE")
+    ///     .MapOkValue(Unit.Value);
+    ///
+    /// // Ok(()) when the charge succeeded,
+    /// // Err(E_CHARGE) when it failed - the replacement value is never null.
+    /// ]]></code>
+    /// </remarks>
+    public ResultTask<TOut, TErr> MapOkValue<TOut>(TOut value)
+    {
+        ArgumentGuards.ThrowIfNull(value, nameof(value));
+        ThrowIfUninitialized();
+        SuccessTypeGuards.ThrowIfTaskLike<TOut>("MapOkValue");
+
+        return new(ResultTaskCore.MapOk<TOk, TOut, TErr>(_task!, _ => value, _cancellationToken), TagReady, _cancellationToken);
+    }
+
+    /// <summary>Turns a success into a failure when a predicate does not hold.</summary>
+    /// <remarks>
+    /// <code><![CDATA[
+    /// var checkedPayment = await Result.TryAsync(
+    ///         () => OrderFixtures.ChargeAsync(OrderFixtures.Sample),
+    ///         "E_CHARGE")
+    ///     .Ensure(static payment => payment.Amount > 0m, RopError.Create("E_AMOUNT", "amount must be positive"));
+    ///
+    /// // Ok(payment) when positive,
+    /// // Err(E_AMOUNT) when non-positive - the predicate never runs on Err.
+    /// ]]></code>
+    /// </remarks>
+    public ResultTask<TOk, TErr> Ensure(Func<TOk, bool> predicate, TErr error)
+    {
+        ArgumentNullException.ThrowIfNull(predicate);
+        ArgumentGuards.ThrowIfNull(error, nameof(error));
+        ThrowIfUninitialized();
+
+        return new(ResultTaskCore.Ensure(_task!, predicate, error, _cancellationToken), TagReady, _cancellationToken);
+    }
+
+    /// <summary>Turns a success into a failure when a predicate does not hold, building the error lazily.</summary>
+    /// <remarks>
+    /// <code><![CDATA[
+    /// var checkedPayment = await Result.TryAsync(
+    ///         () => OrderFixtures.ChargeAsync(OrderFixtures.Sample),
+    ///         "E_CHARGE")
+    ///     .Ensure(
+    ///         static payment => payment.Amount > 0m,
+    ///         static payment => RopError.Create("E_AMOUNT", $"invalid {payment.Amount}"));
+    ///
+    /// // Ok(payment) when positive,
+    /// // Err(E_AMOUNT) when the factory runs on failure.
+    /// ]]></code>
+    /// </remarks>
+    public ResultTask<TOk, TErr> Ensure(Func<TOk, bool> predicate, Func<TOk, TErr> errorFactory)
+    {
+        ArgumentNullException.ThrowIfNull(predicate);
+        ArgumentNullException.ThrowIfNull(errorFactory);
+        ThrowIfUninitialized();
+
+        return new(ResultTaskCore.Ensure(_task!, predicate, errorFactory, _cancellationToken), TagReady, _cancellationToken);
+    }
+
+    /// <summary>Turns a success into a failure when an asynchronous predicate does not hold.</summary>
+    /// <remarks>
+    /// <code><![CDATA[
+    /// var checkedPayment = await Result.TryAsync(
+    ///         () => OrderFixtures.ChargeAsync(OrderFixtures.Sample),
+    ///         "E_CHARGE")
+    ///     .EnsureAsync(
+    ///         static (payment, _) => Task.FromResult(payment.Amount > 0m),
+    ///         RopError.Create("E_AMOUNT", "amount must be positive"));
+    ///
+    /// // Ok(payment) when the asynchronous invariant holds,
+    /// // Err(E_AMOUNT) when it returns false.
+    /// ]]></code>
+    /// </remarks>
+    public ResultTask<TOk, TErr> EnsureAsync(Func<TOk, CancellationToken, Task<bool>> predicate, TErr error)
+    {
+        ArgumentNullException.ThrowIfNull(predicate);
+        ArgumentGuards.ThrowIfNull(error, nameof(error));
+        ThrowIfUninitialized();
+
+        return new(ResultTaskCore.EnsureAsync(_task!, predicate, error, _cancellationToken), TagReady, _cancellationToken);
+    }
+
+    /// <summary>Turns a success into a failure when an asynchronous predicate does not hold, building the error asynchronously.</summary>
+    /// <remarks>
+    /// <code><![CDATA[
+    /// var checkedPayment = await Result.TryAsync(
+    ///         () => OrderFixtures.ChargeAsync(OrderFixtures.Sample),
+    ///         "E_CHARGE")
+    ///     .EnsureAsync(
+    ///         static (payment, _) => Task.FromResult(payment.Amount > 0m),
+    ///         static (payment, _) => Task.FromResult(RopError.Create("E_AMOUNT", $"invalid {payment.Amount}")));
+    ///
+    /// // Ok(payment) when the asynchronous invariant holds,
+    /// // Err(E_AMOUNT) when the asynchronous error factory runs.
+    /// ]]></code>
+    /// </remarks>
+    public ResultTask<TOk, TErr> EnsureAsync(
+        Func<TOk, CancellationToken, Task<bool>> predicate,
+        Func<TOk, CancellationToken, Task<TErr>> errorFactory)
+    {
+        ArgumentNullException.ThrowIfNull(predicate);
+        ArgumentNullException.ThrowIfNull(errorFactory);
+        ThrowIfUninitialized();
+
+        return new(ResultTaskCore.EnsureAsync(_task!, predicate, errorFactory, _cancellationToken), TagReady, _cancellationToken);
+    }
+
+    /// <summary>Turns a success into a failure when a condition holds.</summary>
+    /// <remarks>
+    /// <code><![CDATA[
+    /// var checkedPayment = await Result.TryAsync(
+    ///         () => OrderFixtures.ChargeAsync(OrderFixtures.Sample),
+    ///         "E_CHARGE")
+    ///     .FailIf(static payment => payment.Amount <= 0m, RopError.Create("E_AMOUNT", "amount must be positive"));
+    ///
+    /// // Ok(payment) when the rejection predicate is false,
+    /// // Err(E_AMOUNT) when it holds.
+    /// ]]></code>
+    /// </remarks>
+    public ResultTask<TOk, TErr> FailIf(Func<TOk, bool> predicate, TErr error)
+    {
+        ArgumentNullException.ThrowIfNull(predicate);
+        ArgumentGuards.ThrowIfNull(error, nameof(error));
+        ThrowIfUninitialized();
+
+        return new(ResultTaskCore.FailIf(_task!, predicate, error, _cancellationToken), TagReady, _cancellationToken);
+    }
+
+    /// <summary>Turns a success into a failure when a condition holds, building the error lazily.</summary>
+    /// <remarks>
+    /// <code><![CDATA[
+    /// var checkedPayment = await Result.TryAsync(
+    ///         () => OrderFixtures.ChargeAsync(OrderFixtures.Sample),
+    ///         "E_CHARGE")
+    ///     .FailIf(
+    ///         static payment => payment.Amount <= 0m,
+    ///         static payment => RopError.Create("E_AMOUNT", $"invalid {payment.Amount}"));
+    ///
+    /// // Ok(payment) when the rejection predicate is false,
+    /// // Err(E_AMOUNT) when it holds.
+    /// ]]></code>
+    /// </remarks>
+    public ResultTask<TOk, TErr> FailIf(Func<TOk, bool> predicate, Func<TOk, TErr> errorFactory)
+    {
+        ArgumentNullException.ThrowIfNull(predicate);
+        ArgumentNullException.ThrowIfNull(errorFactory);
+        ThrowIfUninitialized();
+
+        return new(ResultTaskCore.FailIf(_task!, predicate, errorFactory, _cancellationToken), TagReady, _cancellationToken);
+    }
+
+    /// <summary>Turns a success into a failure when an asynchronous condition holds.</summary>
+    /// <remarks>
+    /// <code><![CDATA[
+    /// var checkedPayment = await Result.TryAsync(
+    ///         () => OrderFixtures.ChargeAsync(OrderFixtures.Sample),
+    ///         "E_CHARGE")
+    ///     .FailIfAsync(
+    ///         static (payment, _) => Task.FromResult(payment.Amount <= 0m),
+    ///         RopError.Create("E_AMOUNT", "amount must be positive"));
+    ///
+    /// // Ok(payment) when the asynchronous predicate returns false,
+    /// // Err(E_AMOUNT) when it returns true.
+    /// ]]></code>
+    /// </remarks>
+    public ResultTask<TOk, TErr> FailIfAsync(Func<TOk, CancellationToken, Task<bool>> predicate, TErr error)
+    {
+        ArgumentNullException.ThrowIfNull(predicate);
+        ArgumentGuards.ThrowIfNull(error, nameof(error));
+        ThrowIfUninitialized();
+
+        return new(ResultTaskCore.FailIfAsync(_task!, predicate, error, _cancellationToken), TagReady, _cancellationToken);
+    }
+
+    /// <summary>Turns a success into a failure when an asynchronous condition holds, building the error asynchronously.</summary>
+    /// <remarks>
+    /// <code><![CDATA[
+    /// var checkedPayment = await Result.TryAsync(
+    ///         () => OrderFixtures.ChargeAsync(OrderFixtures.Sample),
+    ///         "E_CHARGE")
+    ///     .FailIfAsync(
+    ///         static (payment, _) => Task.FromResult(payment.Amount <= 0m),
+    ///         static (payment, _) => Task.FromResult(RopError.Create("E_AMOUNT", $"invalid {payment.Amount}")));
+    ///
+    /// // Ok(payment) when the asynchronous predicate returns false,
+    /// // Err(E_AMOUNT) when it returns true.
+    /// ]]></code>
+    /// </remarks>
+    public ResultTask<TOk, TErr> FailIfAsync(
+        Func<TOk, CancellationToken, Task<bool>> predicate,
+        Func<TOk, CancellationToken, Task<TErr>> errorFactory)
+    {
+        ArgumentNullException.ThrowIfNull(predicate);
+        ArgumentNullException.ThrowIfNull(errorFactory);
+        ThrowIfUninitialized();
+
+        return new(ResultTaskCore.FailIfAsync(_task!, predicate, errorFactory, _cancellationToken), TagReady, _cancellationToken);
+    }
+
+    /// <summary>Runs a validating <see cref="Unit"/> check on the success track without altering the payload.</summary>
+    /// <remarks>
+    /// <code><![CDATA[
+    /// var checkedPayment = await Result.TryAsync(
+    ///         () => OrderFixtures.ChargeAsync(OrderFixtures.Sample),
+    ///         "E_CHARGE")
+    ///     .ThenEnsure(static payment => payment.Amount > 0m
+    ///         ? Result.Ok<Unit, RopError>(Unit.Value)
+    ///         : Result.Err<Unit, RopError>(RopError.Create("E_AMOUNT", "amount must be positive")));
+    ///
+    /// // Ok(payment) when the check succeeds,
+    /// // Err(E_AMOUNT) when it fails.
+    /// ]]></code>
+    /// </remarks>
+    public ResultTask<TOk, TErr> ThenEnsure(Func<TOk, Result<Unit, TErr>> ensure)
+    {
+        ArgumentNullException.ThrowIfNull(ensure);
+        ThrowIfUninitialized();
+
+        return new(ResultTaskCore.ThenEnsure(_task!, ensure, _cancellationToken), TagReady, _cancellationToken);
+    }
+
+    /// <summary>Runs an asynchronous validating <see cref="Unit"/> check on the success track without altering the payload.</summary>
+    /// <remarks>
+    /// <code><![CDATA[
+    /// var checkedPayment = await Result.TryAsync(
+    ///         () => OrderFixtures.ChargeAsync(OrderFixtures.Sample),
+    ///         "E_CHARGE")
+    ///     .ThenEnsureAsync(static (payment, _) => Task.FromResult(payment.Amount > 0m
+    ///         ? Result.Ok<Unit, RopError>(Unit.Value)
+    ///         : Result.Err<Unit, RopError>(RopError.Create("E_AMOUNT", "amount must be positive"))));
+    ///
+    /// // Ok(payment) when the asynchronous check succeeds,
+    /// // Err(E_AMOUNT) when it fails.
+    /// ]]></code>
+    /// </remarks>
+    public ResultTask<TOk, TErr> ThenEnsureAsync(Func<TOk, CancellationToken, Task<Result<Unit, TErr>>> ensure)
+    {
+        ArgumentNullException.ThrowIfNull(ensure);
+        ThrowIfUninitialized();
+
+        return new(ResultTaskCore.ThenEnsureAsync(_task!, ensure, _cancellationToken), TagReady, _cancellationToken);
+    }
 }

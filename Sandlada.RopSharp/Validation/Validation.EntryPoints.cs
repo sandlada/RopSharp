@@ -289,6 +289,238 @@ public static partial class Validation
             : new Validation<IReadOnlyList<TOut>, TErr>(default!, Result.ToReadOnlyList(errors), Validation<IReadOnlyList<TOut>, TErr>.TagFailure);
     }
 
+    /// <summary>Combines two results into a tuple validation, collecting every error.</summary>
+    /// <remarks>
+    /// <code><![CDATA[
+    /// var validated = Validation.Zip(
+    ///     Result.Ok<Order, RopError>(OrderFixtures.Sample),
+    ///     Result.Ok<decimal, RopError>(OrderFixtures.Sample.Total));
+    ///
+    /// // Success((order, 44.00m)) when both are Ok,
+    /// // Failure([...]) collects every error without short-circuiting.
+    /// ]]></code>
+    /// </remarks>
+    public static Validation<(T1 First, T2 Second), TErr> Zip<T1, T2, TErr>(
+        Result<T1, TErr> first,
+        Result<T2, TErr> second) =>
+        Zip(first, second, static (a, b) => (a, b));
+
+    /// <summary>Combines three results into a tuple validation, collecting every error.</summary>
+    /// <remarks>
+    /// <code><![CDATA[
+    /// var validated = Validation.Zip(
+    ///     Result.Ok<Order, RopError>(OrderFixtures.Sample),
+    ///     Result.Ok<decimal, RopError>(OrderFixtures.Sample.Total),
+    ///     Result.Ok<int, RopError>(OrderFixtures.Sample.Lines.Count));
+    ///
+    /// // Success((order, 44.00m, 2)) when all three are Ok,
+    /// // Failure([...]) collects every error without short-circuiting.
+    /// ]]></code>
+    /// </remarks>
+    public static Validation<(T1 First, T2 Second, T3 Third), TErr> Zip<T1, T2, T3, TErr>(
+        Result<T1, TErr> first,
+        Result<T2, TErr> second,
+        Result<T3, TErr> third) =>
+        Zip(first, second, third, static (a, b, c) => (a, b, c));
+
+    /// <summary>Combines two validations into one using a merger function, collecting all errors.</summary>
+    /// <remarks>
+    /// <code><![CDATA[
+    /// var validated = Validation.Zip(
+    ///     Validation.Success<Order, RopError>(OrderFixtures.Sample),
+    ///     Validation.Failure<decimal, RopError>(RopError.Create("E_AMOUNT", "the amount must be positive")),
+    ///     static (order, amount) => order.Id);
+    ///
+    /// // Success("ord-1001") when both validations succeeded,
+    /// // Failure([E_AMOUNT]) accumulates errors from both sides.
+    /// ]]></code>
+    /// </remarks>
+    public static Validation<TOut, TErr> Zip<T1, T2, TOut, TErr>(
+        Validation<T1, TErr> first,
+        Validation<T2, TErr> second,
+        Func<T1, T2, TOut> merger)
+    {
+        ArgumentNullException.ThrowIfNull(merger);
+
+        List<TErr>? errors = null;
+        var hasFirst = CollectValidation(first, ref errors, out var firstValue);
+        var hasSecond = CollectValidation(second, ref errors, out var secondValue);
+        if (hasFirst && hasSecond)
+        {
+            return Success<TOut, TErr>(merger(firstValue, secondValue));
+        }
+
+        return new Validation<TOut, TErr>(
+            default!,
+            Result.ToReadOnlyList(errors!),
+            Validation<TOut, TErr>.TagFailure);
+    }
+
+    /// <summary>Combines two validations into a tuple validation, collecting all errors.</summary>
+    /// <remarks>
+    /// <code><![CDATA[
+    /// var validated = Validation.Zip(
+    ///     Validation.Success<Order, RopError>(OrderFixtures.Sample),
+    ///     Validation.Success<decimal, RopError>(OrderFixtures.Sample.Total));
+    ///
+    /// // Success((order, 44.00m)) when both validations succeeded,
+    /// // Failure([...]) accumulates errors from both sides.
+    /// ]]></code>
+    /// </remarks>
+    public static Validation<(T1 First, T2 Second), TErr> Zip<T1, T2, TErr>(
+        Validation<T1, TErr> first,
+        Validation<T2, TErr> second) =>
+        Zip(first, second, static (a, b) => (a, b));
+
+    /// <summary>Combines three validations into one using a merger function, collecting all errors.</summary>
+    /// <remarks>
+    /// <code><![CDATA[
+    /// var validated = Validation.Zip(
+    ///     Validation.Success<Order, RopError>(OrderFixtures.Sample),
+    ///     Validation.Success<decimal, RopError>(OrderFixtures.Sample.Total),
+    ///     Validation.Failure<int, RopError>(RopError.Create("E_COUNT", "invalid count")),
+    ///     static (order, amount, count) => $"{order.Id}:{amount}:{count}");
+    ///
+    /// // Success("ord-1001:44:2") when all three succeeded,
+    /// // Failure([E_COUNT]) accumulates errors across all three inputs.
+    /// ]]></code>
+    /// </remarks>
+    public static Validation<TOut, TErr> Zip<T1, T2, T3, TOut, TErr>(
+        Validation<T1, TErr> first,
+        Validation<T2, TErr> second,
+        Validation<T3, TErr> third,
+        Func<T1, T2, T3, TOut> merger)
+    {
+        ArgumentNullException.ThrowIfNull(merger);
+
+        List<TErr>? errors = null;
+        var hasFirst = CollectValidation(first, ref errors, out var firstValue);
+        var hasSecond = CollectValidation(second, ref errors, out var secondValue);
+        var hasThird = CollectValidation(third, ref errors, out var thirdValue);
+        if (hasFirst && hasSecond && hasThird)
+        {
+            return Success<TOut, TErr>(merger(firstValue, secondValue, thirdValue));
+        }
+
+        return new Validation<TOut, TErr>(
+            default!,
+            Result.ToReadOnlyList(errors!),
+            Validation<TOut, TErr>.TagFailure);
+    }
+
+    /// <summary>Combines three validations into a tuple validation, collecting all errors.</summary>
+    /// <remarks>
+    /// <code><![CDATA[
+    /// var validated = Validation.Zip(
+    ///     Validation.Success<Order, RopError>(OrderFixtures.Sample),
+    ///     Validation.Success<decimal, RopError>(OrderFixtures.Sample.Total),
+    ///     Validation.Success<int, RopError>(OrderFixtures.Sample.Lines.Count));
+    ///
+    /// // Success((order, 44.00m, 2)) when all three succeeded,
+    /// // Failure([...]) accumulates errors across all three inputs.
+    /// ]]></code>
+    /// </remarks>
+    public static Validation<(T1 First, T2 Second, T3 Third), TErr> Zip<T1, T2, T3, TErr>(
+        Validation<T1, TErr> first,
+        Validation<T2, TErr> second,
+        Validation<T3, TErr> third) =>
+        Zip(first, second, third, static (a, b, c) => (a, b, c));
+
+    /// <summary>Evaluates every validation and collects all errors.</summary>
+    /// <remarks>
+    /// <code><![CDATA[
+    /// var validated = Validation.Sequence(new[]
+    /// {
+    ///     Validation.Success<int, RopError>(1),
+    ///     Validation.Failure<int, RopError>(RopError.Create("E_LINE", "invalid line")),
+    /// });
+    ///
+    /// // Success([1]) when every validation succeeded,
+    /// // Failure([E_LINE]) collects all errors across the sequence.
+    /// ]]></code>
+    /// </remarks>
+    public static Validation<IReadOnlyList<T>, TErr> Sequence<T, TErr>(
+        IEnumerable<Validation<T, TErr>> validations)
+    {
+        ArgumentNullException.ThrowIfNull(validations);
+
+        var values = Result.CreateList<Validation<T, TErr>, T>(validations);
+        List<TErr>? errors = null;
+        foreach (var validation in validations)
+        {
+            if (CollectValidation(validation, ref errors, out var value))
+            {
+                if (errors is null)
+                {
+                    values.Add(value);
+                }
+            }
+        }
+
+        return errors is null
+            ? Success<IReadOnlyList<T>, TErr>(Result.ToReadOnlyList(values))
+            : new Validation<IReadOnlyList<T>, TErr>(default!, Result.ToReadOnlyList(errors), Validation<IReadOnlyList<T>, TErr>.TagFailure);
+    }
+
+    /// <summary>Maps every element to a validation and collects all errors.</summary>
+    /// <remarks>
+    /// <code><![CDATA[
+    /// var validated = Validation.Traverse(
+    ///     new[] { 1, 2 },
+    ///     static value => Validation.Success<int, RopError>(value));
+    ///
+    /// // Success([1, 2]) when every mapper returned Success,
+    /// // Failure([...]) collects errors from every mapped element.
+    /// ]]></code>
+    /// </remarks>
+    public static Validation<IReadOnlyList<TOut>, TErr> Traverse<T, TOut, TErr>(
+        IEnumerable<T> source,
+        Func<T, Validation<TOut, TErr>> mapper)
+    {
+        ArgumentNullException.ThrowIfNull(source);
+        ArgumentNullException.ThrowIfNull(mapper);
+
+        var values = Result.CreateList<T, TOut>(source);
+        List<TErr>? errors = null;
+        foreach (var element in source)
+        {
+            if (CollectValidation(mapper(element), ref errors, out var value))
+            {
+                if (errors is null)
+                {
+                    values.Add(value);
+                }
+            }
+        }
+
+        return errors is null
+            ? Success<IReadOnlyList<TOut>, TErr>(Result.ToReadOnlyList(values))
+            : new Validation<IReadOnlyList<TOut>, TErr>(default!, Result.ToReadOnlyList(errors), Validation<IReadOnlyList<TOut>, TErr>.TagFailure);
+    }
+
+    private static bool CollectValidation<T, TErr>(
+        Validation<T, TErr> validation,
+        ref List<TErr>? errors,
+        out T value)
+    {
+        if (validation.TryGetSuccess(out var okValue))
+        {
+            value = okValue;
+            return true;
+        }
+
+        value = default!;
+
+        var itemErrors = validation.ErrorsUnsafe;
+        errors ??= new List<TErr>(capacity: itemErrors.Count);
+        for (var index = 0; index < itemErrors.Count; index++)
+        {
+            errors.Add(itemErrors[index]);
+        }
+
+        return false;
+    }
+
     private static List<T> AddError<T>(List<T>? errors, T error)
     {
         errors ??= new List<T>(capacity: 2);

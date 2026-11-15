@@ -2,6 +2,7 @@
 
 - **Status:** Accepted
 - **Date:** 2026-10-28
+- **Revised:** 2026-11-15. Added `CancellationToken`-passing delegate overloads to `Result.TryAsync`, `Result.SwitchAsync`, and `Result.TrySwitchAsync`, plus `ResultTask` parity combinators (`Ensure*`, `FailIf*`, `ThenEnsure*`, `MapOkValue`, `BindErrValue*`, `MatchAsync`, `ExpectAsync`, `RequireNotNull*`, `Flatten`).
 - **Supersedes:** none
 - **Related:** [ADR 0001](0001-core-design-decisions.md) (D2, D6, D8, D9),
   [ADR 0002](0002-api-gap-remediation.md) (D17, D18), [ADR 0004](0004-validation-traversal.md)

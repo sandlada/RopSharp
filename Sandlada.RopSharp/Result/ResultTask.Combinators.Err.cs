@@ -89,6 +89,63 @@ public readonly partial struct ResultTask<TOk, TErr>
         return new(ResultTaskCore.BindErrAsync<TOk, TErr>(_task!, binder, _cancellationToken), TagReady, _cancellationToken);
     }
 
+    /// <summary>Recovers on the failure track with a fallback value.</summary>
+    /// <remarks>
+    /// <code><![CDATA[
+    /// var payment = await Result.TryAsync(
+    ///         () => OrderFixtures.ChargeAsync(OrderFixtures.Declined),
+    ///         "E_CHARGE")
+    ///     .BindErrValue(OrderFixtures.Charge(OrderFixtures.Sample));
+    ///
+    /// // Ok(fallback) when the initial charge failed,
+    /// // Ok(payment) when it succeeded - BindErrValue never produces an Err.
+    /// ]]></code>
+    /// </remarks>
+    public ResultTask<TOk, TErr> BindErrValue(TOk fallback)
+    {
+        ArgumentGuards.ThrowIfNull(fallback, nameof(fallback));
+        return BindErr(_ => Result.Ok<TOk, TErr>(fallback));
+    }
+
+    /// <summary>Recovers on the failure track with a fallback value factory.</summary>
+    /// <remarks>
+    /// <code><![CDATA[
+    /// var payment = await Result.TryAsync(
+    ///         () => OrderFixtures.ChargeAsync(OrderFixtures.Declined),
+    ///         "E_CHARGE")
+    ///     .BindErrValue(static () => OrderFixtures.Charge(OrderFixtures.Sample));
+    ///
+    /// // Ok(fallback) when the initial charge failed,
+    /// // Ok(payment) when it succeeded - the factory runs only on the failure track.
+    /// ]]></code>
+    /// </remarks>
+    public ResultTask<TOk, TErr> BindErrValue(Func<TOk> fallbackFactory)
+    {
+        ArgumentNullException.ThrowIfNull(fallbackFactory);
+        return BindErr(_ => Result.Ok<TOk, TErr>(
+            ArgumentGuards.RequireNonNullReturn(fallbackFactory(), "fallback factory")));
+    }
+
+    /// <summary>Recovers on the failure track with an asynchronous fallback value factory.</summary>
+    /// <remarks>
+    /// <code><![CDATA[
+    /// var payment = await Result.TryAsync(
+    ///         () => OrderFixtures.ChargeAsync(OrderFixtures.Declined),
+    ///         "E_CHARGE")
+    ///     .BindErrValueAsync(static _ => OrderFixtures.ChargeAsync(OrderFixtures.Sample));
+    ///
+    /// // Ok(fallback) when the initial charge failed,
+    /// // Ok(payment) when it succeeded - the factory return value is never null.
+    /// ]]></code>
+    /// </remarks>
+    public ResultTask<TOk, TErr> BindErrValueAsync(Func<CancellationToken, Task<TOk>> fallbackFactory)
+    {
+        ArgumentNullException.ThrowIfNull(fallbackFactory);
+        ThrowIfUninitialized();
+
+        return new(ResultTaskCore.BindErrValueAsync(_task!, fallbackFactory, _cancellationToken), TagReady, _cancellationToken);
+    }
+
     /// <summary>Runs a side effect on the success track without changing the result.</summary>
     /// <remarks>
     /// <code><![CDATA[
@@ -197,5 +254,48 @@ public readonly partial struct ResultTask<TOk, TErr>
         ArgumentNullException.ThrowIfNull(err);
         ThrowIfUninitialized();
         return ResultTaskCore.SwitchAsync(_task!, ok, err, _cancellationToken);
+    }
+
+    /// <summary>Exits the computation asynchronously by projecting both tracks into a single value.</summary>
+    /// <remarks>
+    /// <code><![CDATA[
+    /// var text = await Result.TryAsync(
+    ///         () => OrderFixtures.ChargeAsync(OrderFixtures.Sample),
+    ///         "E_CHARGE")
+    ///     .MatchAsync(
+    ///         ok: static (payment, _) => Task.FromResult($"captured {payment.Id}"),
+    ///         err: static (error, _) => Task.FromResult($"failed {error.Code}"));
+    ///
+    /// // "captured pay-ord-1001" for Ok(payment),
+    /// // "failed E_CHARGE" for Err(E_CHARGE).
+    /// ]]></code>
+    /// </remarks>
+    public Task<TResult> MatchAsync<TResult>(
+        Func<TOk, CancellationToken, Task<TResult>> ok,
+        Func<TErr, CancellationToken, Task<TResult>> err)
+    {
+        ArgumentNullException.ThrowIfNull(ok);
+        ArgumentNullException.ThrowIfNull(err);
+        ThrowIfUninitialized();
+        return ResultTaskCore.MatchAsync(_task!, ok, err, _cancellationToken);
+    }
+
+    /// <summary>Awaits the computation and returns the success value, or throws on failure.</summary>
+    /// <remarks>
+    /// <code><![CDATA[
+    /// var payment = await Result.TryAsync(
+    ///         () => OrderFixtures.ChargeAsync(OrderFixtures.Sample),
+    ///         "E_CHARGE")
+    ///     .ExpectAsync("integration test asserts the charge succeeded");
+    ///
+    /// // Ok(payment) returns payment,
+    /// // Err(E_CHARGE) throws InvalidOperationException with the reason.
+    /// ]]></code>
+    /// </remarks>
+    public Task<TOk> ExpectAsync(string reason)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(reason);
+        ThrowIfUninitialized();
+        return ResultTaskCore.ExpectAsync(_task!, reason, _cancellationToken);
     }
 }

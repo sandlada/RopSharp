@@ -2,7 +2,7 @@ namespace Sandlada.RopSharp;
 
 /// <summary>
 /// Action-based terminals for <see cref="Result{TOk,TErr}"/>. Use these when both tracks end in a side effect
-/// instead of a projected value; use <see cref="ResultExtensions.Match{TOk,TErr,T}"/> when a value is required.
+/// instead of a projected value; use <see cref="ResultExtensions.Match{TOk,TResult,TErr}"/> when a value is required.
 /// </summary>
 /// <remarks>
 /// <code><![CDATA[

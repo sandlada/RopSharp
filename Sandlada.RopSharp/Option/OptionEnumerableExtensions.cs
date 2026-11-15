@@ -219,7 +219,8 @@ public static class OptionEnumerableExtensions
     /// <exception cref="ArgumentNullException"><paramref name="source"/> is <see langword="null"/>.</exception>
     /// <remarks>
     /// <c>Choose</c> keeps the present values and drops the empty ones. The result is a list, so it is never
-    /// <see langword="null"/> and never empty-by-accident.
+    /// <see langword="null"/> and never empty-by-accident. It is the fluent extension-method counterpart to
+    /// <see cref="Option.Values{T}(IEnumerable{Option{T}})"/>; both are intentionally kept alongside one another.
     /// <code><![CDATA[
     /// var skus = new[] { Option.Some("SKU-1"), Option.None<string>(), Option.Some("SKU-2") }
     ///     .Choose();

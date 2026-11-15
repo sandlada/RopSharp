@@ -37,7 +37,7 @@ public static partial class Result
     /// <returns><c>Ok(merger(a, b))</c>, or the first <c>Err</c>.</returns>
     /// <remarks>
     /// Monadic (short-circuiting) semantics: the merger is not evaluated when either input failed, and only the
-    /// first error is returned. Use <see cref="Validation.Zip{T1,T2,TOut,TErr}"/> when every error must be collected.
+    /// first error is returned. Use <see cref="Validation.Zip{T1,T2,TOut,TErr}(Result{T1,TErr},Result{T2,TErr},Func{T1,T2,TOut})"/> when every error must be collected.
     /// <code><![CDATA[
     /// var placed = Result.Combine(
     ///         Result.Ok<Order, RopError>(OrderFixtures.Sample),

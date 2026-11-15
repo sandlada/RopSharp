@@ -2,6 +2,7 @@
 
 - **Status:** Accepted
 - **Date:** 2026-10-27
+- **Revised:** 2026-11-15. Added `OptionExtensions.Switch`, `ResultExtensions.RequireNotNullValue`, and documented the intentional coexistence of `Option.Values<T>` and `OptionEnumerableExtensions.Choose<T>`.
 - **Supersedes:** none
 - **Related:** [ADR 0001](0001-core-design-decisions.md)
 
@@ -22,7 +23,9 @@ covered by TUnit tests and the public API baseline; retained rejections carry a 
 
 `OptionEnumerableExtensions` adds `TryFirst`, `TryLast`, `TryFind`, `Choose`, `Execute` and `ExecuteNoValue`.
 They do not introduce a second collection abstraction: probes return `Option<T>`, `Choose` materializes an
-`IReadOnlyList<T>` exactly once, and the side-effect helpers run on exactly one track.
+`IReadOnlyList<T>` exactly once, and the side-effect helpers run on exactly one track. `Option.Values<T>` and
+`OptionEnumerableExtensions.Choose<T>` are intentionally kept alongside one another as static-entry vs fluent-extension
+counterparts.
 
 **Consequence:** callers no longer need `FirstOrDefault`/`null` or manual `foreach` filtering at the optional
 boundary.

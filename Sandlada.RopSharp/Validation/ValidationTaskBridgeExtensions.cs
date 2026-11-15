@@ -53,7 +53,7 @@ public static class ValidationTaskBridgeExtensions
     /// // Failure([E_X]) when the source was Failure.
     /// ]]></code>
     /// </remarks>
-    public static ValidationTask<TOut, TErr> MapAsync<T, TErr, TOut>(
+    public static ValidationTask<TOut, TErr> MapAsync<T, TOut, TErr>(
         this Validation<T, TErr> validation,
         Func<T, CancellationToken, Task<TOut>> mapper)
     {

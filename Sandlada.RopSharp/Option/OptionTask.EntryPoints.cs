@@ -168,4 +168,17 @@ public static class OptionTask
         return OptionTask<IReadOnlyList<TOut>>.From(OptionTaskCore.TraverseAsync(source, mapper, cancellationToken))
             .WithCancellation(cancellationToken);
     }
+
+    /// <summary>Flattens a nested <see cref="Option{T}"/> inside an <see cref="OptionTask{T}"/>.</summary>
+    /// <remarks>
+    /// <code><![CDATA[
+    /// var city = await OptionTask.From(Option.Some(Option.Some("London")))
+    ///     .Flatten();
+    ///
+    /// // Some("London") when both outer and inner options are present,
+    /// // None when either layer is empty.
+    /// ]]></code>
+    /// </remarks>
+    public static OptionTask<T> Flatten<T>(this OptionTask<Option<T>> computation) =>
+        computation.BindSome(static inner => inner);
 }

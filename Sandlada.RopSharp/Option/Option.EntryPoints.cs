@@ -363,6 +363,8 @@ public static partial class Option
     /// <remarks>
     /// Unlike <see cref="Sequence{T}(IEnumerable{Option{T}})"/>, this operation never produces <c>None</c>: the
     /// missing values are simply skipped. It is the right tool when a missing line must not cancel the whole batch.
+    /// <see cref="OptionEnumerableExtensions.Choose{T}(IEnumerable{Option{T}})"/> provides the fluent extension-method
+    /// equivalent of <c>Values</c>; both are intentionally kept alongside one another for pipeline style parity.
     /// <code><![CDATA[
     /// var cities = Option.Values(
     /// [

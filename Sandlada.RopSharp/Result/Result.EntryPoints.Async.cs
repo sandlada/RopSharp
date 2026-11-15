@@ -41,7 +41,7 @@ public static partial class Result
     /// <para>
     /// This is the asynchronous counterpart of <see cref="Result.Switch{T,TOut,TErr}"/>; the name is intentionally the
     /// same operation with an awaited result. It is not the action terminal
-    /// <see cref="Result.SwitchAsync{T,TOut,TErr}"/>, which consumes an existing result.
+    /// <see cref="Result.SwitchAsync{T,TOut,TErr}(Func{T,Task{TOut}})"/>, which consumes an existing result.
     /// </para>
     /// <para>
     /// The lifted function carries no token of its own; close over the caller's token inside
@@ -66,6 +66,43 @@ public static partial class Result
 
         async Task<Result<TOut, TErr>> Switch(T value) =>
             Ok<TOut, TErr>(await AsyncGuards.Require(func(value), "func").ConfigureAwait(false));
+    }
+
+    /// <summary>
+    /// Lifts a cancellation-aware asynchronous function into a function returning a task-wrapped
+    /// <see cref="Result{TOk,TErr}"/> on the success track.
+    /// </summary>
+    /// <typeparam name="T">The input type.</typeparam>
+    /// <typeparam name="TOut">The output type.</typeparam>
+    /// <typeparam name="TErr">The error value type.</typeparam>
+    /// <param name="func">The asynchronous function to lift. Receives the input and token. Exceptions are not caught.</param>
+    /// <param name="cancellationToken">An optional cancellation token passed to <paramref name="func"/> and attached to the result.</param>
+    /// <returns>A function that awaits <paramref name="func"/> and always returns <c>Ok</c> on success.</returns>
+    /// <remarks>
+    /// <code><![CDATA[
+    /// Func<Order, ResultTask<Payment, RopError>> charge = Result.SwitchAsync<Order, Payment, RopError>(
+    ///     static (order, _) => OrderFixtures.ChargeAsync(order));
+    /// var receipt = await charge(OrderFixtures.Sample)
+    ///     .MapOkAsync(static (payment, _) => Task.FromResult(payment.Id));
+    ///
+    /// // Ok("pay-ord-1001") when the task completed,
+    /// // Err(E_ORDER) is the other track - the lifted function passes the cancellation token through.
+    /// ]]></code>
+    /// </remarks>
+    public static Func<T, ResultTask<TOut, TErr>> SwitchAsync<T, TOut, TErr>(
+        Func<T, CancellationToken, Task<TOut>> func,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(func);
+        SuccessTypeGuards.ThrowIfTaskLike<TOut>("SwitchAsync");
+        return value =>
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            return ResultTask<TOut, TErr>.From(Switch(value)).WithCancellation(cancellationToken);
+
+            async Task<Result<TOut, TErr>> Switch(T input) =>
+                Ok<TOut, TErr>(await AsyncGuards.Require(func(input, cancellationToken), "func").ConfigureAwait(false));
+        };
     }
 
     /// <summary>
@@ -100,6 +137,40 @@ public static partial class Result
         ArgumentNullException.ThrowIfNull(errorFactory);
         SuccessTypeGuards.ThrowIfTaskLike<TOut>("TrySwitchAsync");
         return value => TryAsync(() => func(value), errorFactory);
+    }
+
+    /// <summary>
+    /// Lifts a cancellation-aware asynchronous function into a function returning a task-wrapped
+    /// <see cref="Result{TOk,TErr}"/>, converting thrown exceptions into errors except for
+    /// <see cref="OperationCanceledException"/>.
+    /// </summary>
+    /// <typeparam name="T">The input type.</typeparam>
+    /// <typeparam name="TOut">The output type.</typeparam>
+    /// <param name="func">The asynchronous function to lift. Receives the input and cancellation token.</param>
+    /// <param name="errorFactory">Maps a caught exception to an error. Must return a non-null error.</param>
+    /// <param name="cancellationToken">An optional cancellation token passed to <paramref name="func"/>.</param>
+    /// <returns>A function that never throws for expected failures.</returns>
+    /// <remarks>
+    /// <code><![CDATA[
+    /// Func<Order, ResultTask<Payment, RopError>> charge = Result.TrySwitchAsync<Order, Payment>(
+    ///     static (order, _) => OrderFixtures.ChargeAsync(order),
+    ///     static exception => RopError.Create("E_CHARGE", exception.Message));
+    /// var receipt = await charge(OrderFixtures.Sample)
+    ///     .MapOkAsync(static (payment, _) => Task.FromResult(payment.Id));
+    ///
+    /// // Ok("pay-ord-1001") when the provider answered,
+    /// // Err(E_CHARGE) when the task faulted.
+    /// ]]></code>
+    /// </remarks>
+    public static Func<T, ResultTask<TOut, RopError>> TrySwitchAsync<T, TOut>(
+        Func<T, CancellationToken, Task<TOut>> func,
+        Func<Exception, RopError> errorFactory,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(func);
+        ArgumentNullException.ThrowIfNull(errorFactory);
+        SuccessTypeGuards.ThrowIfTaskLike<TOut>("TrySwitchAsync");
+        return value => TryAsync(ct => func(value, ct), errorFactory, cancellationToken);
     }
 
     /// <summary>
@@ -145,6 +216,47 @@ public static partial class Result
     }
 
     /// <summary>
+    /// Lifts a cancellation-aware asynchronous function into a function returning a task-wrapped
+    /// <see cref="Result{TOk,TErr}"/> with a caller-defined error type, converting thrown exceptions except for
+    /// <see cref="OperationCanceledException"/>.
+    /// </summary>
+    /// <typeparam name="T">The input type.</typeparam>
+    /// <typeparam name="TOut">The output type.</typeparam>
+    /// <typeparam name="TErr">The error value type.</typeparam>
+    /// <param name="func">The asynchronous function to lift. Receives the input and cancellation token.</param>
+    /// <param name="errorFactory">Maps a caught exception to an error. Must return a non-null error.</param>
+    /// <param name="nullResultErrorFactory">
+    /// Builds the error used when <paramref name="func"/> resolves to <see langword="null"/>. Must return a non-null error.
+    /// </param>
+    /// <param name="cancellationToken">An optional cancellation token passed to <paramref name="func"/>.</param>
+    /// <returns>A function that never throws for expected failures.</returns>
+    /// <remarks>
+    /// <code><![CDATA[
+    /// Func<Order, ResultTask<Payment, string>> charge = Result.TrySwitchAsync<Order, Payment, string>(
+    ///     static (order, _) => OrderFixtures.ChargeAsync(order),
+    ///     static exception => exception.Message,
+    ///     static () => "the provider returned no payment");
+    /// var receipt = await charge(OrderFixtures.Sample)
+    ///     .MapOkAsync(static (payment, _) => Task.FromResult(payment.Id));
+    ///
+    /// // Ok("pay-ord-1001") when the provider answered,
+    /// // Err(the provider returned no payment) when it returned null.
+    /// ]]></code>
+    /// </remarks>
+    public static Func<T, ResultTask<TOut, TErr>> TrySwitchAsync<T, TOut, TErr>(
+        Func<T, CancellationToken, Task<TOut>> func,
+        Func<Exception, TErr> errorFactory,
+        Func<TErr> nullResultErrorFactory,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(func);
+        ArgumentNullException.ThrowIfNull(errorFactory);
+        ArgumentNullException.ThrowIfNull(nullResultErrorFactory);
+        SuccessTypeGuards.ThrowIfTaskLike<TOut>("TrySwitchAsync");
+        return value => TryAsync(ct => func(value, ct), errorFactory, nullResultErrorFactory, cancellationToken);
+    }
+
+    /// <summary>
     /// Runs an asynchronous boundary function and converts a thrown exception into an error, except
     /// <see cref="OperationCanceledException"/> which is always rethrown.</summary>
     /// <param name="action">The asynchronous boundary action to execute.</param>
@@ -175,6 +287,37 @@ public static partial class Result
         Justification = "Result.TryAsync is the single asynchronous boundary where any non-cancellation exception becomes a domain error.")]
     public static ResultTask<Unit, RopError> TryAsync(
         Func<Task> action,
+        Func<Exception, RopError> errorFactory,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(action);
+        return TryUnitAsyncCore(_ => action(), errorFactory, cancellationToken);
+    }
+
+    /// <summary>
+    /// Runs a cancellation-aware asynchronous boundary action and converts a thrown exception into an error, except
+    /// <see cref="OperationCanceledException"/> which is always rethrown.
+    /// </summary>
+    /// <param name="action">The asynchronous boundary action to execute. Receives the cancellation token.</param>
+    /// <param name="errorFactory">Maps a caught exception to an error. Must return a non-null error.</param>
+    /// <param name="cancellationToken">An optional cancellation token passed to <paramref name="action"/>.</param>
+    /// <returns><c>Ok(Unit.Value)</c> when the action completes; otherwise <c>Err(errorFactory(exception))</c>.</returns>
+    /// <remarks>
+    /// <code><![CDATA[
+    /// var shipped = await Result.TryAsync(
+    ///     static _ => OrderFixtures.ShipAsync(OrderFixtures.Sample, OrderFixtures.Charge(OrderFixtures.Sample)),
+    ///     static exception => RopError.Create("E_SHIP", exception.Message));
+    ///
+    /// // Ok(()) when the parcel was handed over,
+    /// // Err(E_SHIP) when the task faulted.
+    /// ]]></code>
+    /// </remarks>
+    [SuppressMessage(
+        "Design",
+        "CA1031:Do not catch general exception types",
+        Justification = "Result.TryAsync is the single asynchronous boundary where any non-cancellation exception becomes a domain error.")]
+    public static ResultTask<Unit, RopError> TryAsync(
+        Func<CancellationToken, Task> action,
         Func<Exception, RopError> errorFactory,
         CancellationToken cancellationToken = default) =>
         TryUnitAsyncCore(action, errorFactory, cancellationToken);
@@ -212,6 +355,39 @@ public static partial class Result
     public static ResultTask<Unit, TErr> TryAsync<TErr>(
         Func<Task> action,
         Func<Exception, TErr> errorFactory,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(action);
+        return TryUnitAsyncCore(_ => action(), errorFactory, cancellationToken);
+    }
+
+    /// <summary>
+    /// Runs a cancellation-aware asynchronous boundary action and converts a thrown exception into a caller-defined
+    /// error, except <see cref="OperationCanceledException"/> which is always rethrown.
+    /// </summary>
+    /// <typeparam name="TErr">The error value type.</typeparam>
+    /// <param name="action">The asynchronous boundary action to execute. Receives the cancellation token.</param>
+    /// <param name="errorFactory">Maps a caught exception to an error. Must return a non-null error.</param>
+    /// <param name="cancellationToken">An optional cancellation token passed to <paramref name="action"/>.</param>
+    /// <returns><c>Ok(Unit.Value)</c> when the action completes; otherwise <c>Err(errorFactory(exception))</c>.</returns>
+    /// <remarks>
+    /// <code><![CDATA[
+    /// var shipped = await Result.TryAsync(
+    ///         static _ => OrderFixtures.ShipAsync(OrderFixtures.Sample, OrderFixtures.Charge(OrderFixtures.Sample)),
+    ///         static exception => exception.Message)
+    ///     .MapOkAsync(static (_, _) => Task.FromResult(Unit.Value));
+    ///
+    /// // Ok(()) when the parcel was handed over,
+    /// // Err(message) when the task faulted.
+    /// ]]></code>
+    /// </remarks>
+    [SuppressMessage(
+        "Design",
+        "CA1031:Do not catch general exception types",
+        Justification = "Result.TryAsync is the single asynchronous boundary where any non-cancellation exception becomes a domain error.")]
+    public static ResultTask<Unit, TErr> TryAsync<TErr>(
+        Func<CancellationToken, Task> action,
+        Func<Exception, TErr> errorFactory,
         CancellationToken cancellationToken = default) =>
         TryUnitAsyncCore(action, errorFactory, cancellationToken);
 
@@ -220,7 +396,7 @@ public static partial class Result
         "CA1031:Do not catch general exception types",
         Justification = "Result.TryAsync is the single asynchronous boundary where any non-cancellation exception becomes a domain error.")]
     private static ResultTask<Unit, TErr> TryUnitAsyncCore<TErr>(
-        Func<Task> action,
+        Func<CancellationToken, Task> action,
         Func<Exception, TErr> errorFactory,
         CancellationToken cancellationToken)
     {
@@ -234,7 +410,7 @@ public static partial class Result
             Task pending;
             try
             {
-                pending = action();
+                pending = action(cancellationToken);
             }
             catch (OperationCanceledException)
             {
@@ -296,6 +472,34 @@ public static partial class Result
     }
 
     /// <summary>
+    /// Runs a cancellation-aware asynchronous boundary action and converts a thrown exception into an error with
+    /// the given <paramref name="code"/>, except <see cref="OperationCanceledException"/> which is always rethrown.
+    /// </summary>
+    /// <param name="action">The asynchronous boundary action to execute. Receives the cancellation token.</param>
+    /// <param name="code">The error code to attach to captured exceptions.</param>
+    /// <param name="cancellationToken">An optional cancellation token passed to <paramref name="action"/>.</param>
+    /// <returns><c>Ok(Unit.Value)</c> or <c>Err</c>.</returns>
+    /// <remarks>
+    /// <code><![CDATA[
+    /// var shipped = await Result.TryAsync(
+    ///         static _ => OrderFixtures.ShipAsync(OrderFixtures.Sample, OrderFixtures.Charge(OrderFixtures.Sample)),
+    ///         "E_SHIP")
+    ///     .MapOkAsync(static (_, _) => Task.FromResult(Unit.Value));
+    ///
+    /// // Ok(()) when the parcel was handed over,
+    /// // Err(E_SHIP) when the task faulted.
+    /// ]]></code>
+    /// </remarks>
+    public static ResultTask<Unit, RopError> TryAsync(
+        Func<CancellationToken, Task> action,
+        string code,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(code);
+        return TryAsync(action, exception => RopError.FromException(exception, code), cancellationToken);
+    }
+
+    /// <summary>
     /// Runs an asynchronous boundary function and converts a thrown exception into an error, except
     /// <see cref="OperationCanceledException"/> which is always rethrown.
     /// </summary>
@@ -330,6 +534,38 @@ public static partial class Result
         Justification = "Result.TryAsync is the single asynchronous boundary where any non-cancellation exception becomes a domain error.")]
     public static ResultTask<T, RopError> TryAsync<T>(
         Func<Task<T>> func,
+        Func<Exception, RopError> errorFactory,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(func);
+        return TryValueAsyncCore(_ => func(), errorFactory, static () => NullResultError(), cancellationToken);
+    }
+
+    /// <summary>
+    /// Runs a cancellation-aware asynchronous boundary function and converts a thrown exception into an error,
+    /// except <see cref="OperationCanceledException"/> which is always rethrown.
+    /// </summary>
+    /// <typeparam name="T">The produced value type.</typeparam>
+    /// <param name="func">The boundary function to execute. Receives the cancellation token.</param>
+    /// <param name="errorFactory">Maps a caught exception to an error. Must return a non-null error.</param>
+    /// <param name="cancellationToken">An optional cancellation token passed to <paramref name="func"/>.</param>
+    /// <returns><c>Ok(value)</c>, <c>Err(errorFactory(exception))</c>, or <c>Err(E_NULL_RESULT)</c>.</returns>
+    /// <remarks>
+    /// <code><![CDATA[
+    /// var payment = await Result.TryAsync(
+    ///     static _ => OrderFixtures.ChargeAsync(OrderFixtures.Sample),
+    ///     static exception => RopError.Create("E_PAYMENT", exception.Message));
+    ///
+    /// // Ok(payment) when the provider answered,
+    /// // Err(E_PAYMENT) when the task faulted.
+    /// ]]></code>
+    /// </remarks>
+    [SuppressMessage(
+        "Design",
+        "CA1031:Do not catch general exception types",
+        Justification = "Result.TryAsync is the single asynchronous boundary where any non-cancellation exception becomes a domain error.")]
+    public static ResultTask<T, RopError> TryAsync<T>(
+        Func<CancellationToken, Task<T>> func,
         Func<Exception, RopError> errorFactory,
         CancellationToken cancellationToken = default) =>
         TryValueAsyncCore(func, errorFactory, static () => NullResultError(), cancellationToken);
@@ -390,15 +626,49 @@ public static partial class Result
         ArgumentNullException.ThrowIfNull(func);
         ArgumentNullException.ThrowIfNull(errorFactory);
         ArgumentNullException.ThrowIfNull(nullResultErrorFactory);
-        return TryValueAsyncCore(func, errorFactory, nullResultErrorFactory, cancellationToken);
+        return TryValueAsyncCore(_ => func(), errorFactory, nullResultErrorFactory, cancellationToken);
     }
+
+    /// <summary>
+    /// Runs a cancellation-aware asynchronous boundary function and converts a thrown exception into a
+    /// caller-defined error, except <see cref="OperationCanceledException"/> which is always rethrown.
+    /// </summary>
+    /// <typeparam name="T">The produced value type.</typeparam>
+    /// <typeparam name="TErr">The error value type.</typeparam>
+    /// <param name="func">The boundary function to execute. Receives the cancellation token.</param>
+    /// <param name="errorFactory">Maps a caught exception to an error. Must return a non-null error.</param>
+    /// <param name="nullResultErrorFactory">Builds the error used when <paramref name="func"/> resolves to <see langword="null"/>.</param>
+    /// <param name="cancellationToken">An optional cancellation token passed to <paramref name="func"/>.</param>
+    /// <returns><c>Ok(value)</c>, <c>Err(errorFactory(exception))</c>, or <c>Err(nullResultErrorFactory())</c>.</returns>
+    /// <remarks>
+    /// <code><![CDATA[
+    /// var payment = await Result.TryAsync(
+    ///         static _ => OrderFixtures.ChargeAsync(OrderFixtures.Sample),
+    ///         static exception => exception.Message,
+    ///         static () => "the provider returned no payment")
+    ///     .MapOk(static p => p.Id);
+    ///
+    /// // Ok(payment) when the provider answered,
+    /// // Err(the provider returned no payment) when it returned null.
+    /// ]]></code>
+    /// </remarks>
+    [SuppressMessage(
+        "Design",
+        "CA1031:Do not catch general exception types",
+        Justification = "Result.TryAsync is the single asynchronous boundary where any non-cancellation exception becomes a domain error.")]
+    public static ResultTask<T, TErr> TryAsync<T, TErr>(
+        Func<CancellationToken, Task<T>> func,
+        Func<Exception, TErr> errorFactory,
+        Func<TErr> nullResultErrorFactory,
+        CancellationToken cancellationToken = default) =>
+        TryValueAsyncCore(func, errorFactory, nullResultErrorFactory, cancellationToken);
 
     [SuppressMessage(
         "Design",
         "CA1031:Do not catch general exception types",
         Justification = "Result.TryAsync is the single asynchronous boundary where any non-cancellation exception becomes a domain error.")]
     private static ResultTask<T, TErr> TryValueAsyncCore<T, TErr>(
-        Func<Task<T>> func,
+        Func<CancellationToken, Task<T>> func,
         Func<Exception, TErr> errorFactory,
         Func<TErr> nullResultErrorFactory,
         CancellationToken cancellationToken)
@@ -415,7 +685,7 @@ public static partial class Result
             Task<T> pending;
             try
             {
-                pending = func();
+                pending = func(cancellationToken);
             }
             catch (OperationCanceledException)
             {
@@ -477,6 +747,35 @@ public static partial class Result
     /// </remarks>
     public static ResultTask<T, RopError> TryAsync<T>(
         Func<Task<T>> func,
+        string code,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(code);
+        return TryAsync(func, exception => RopError.FromException(exception, code), cancellationToken);
+    }
+
+    /// <summary>
+    /// Runs a cancellation-aware asynchronous boundary function and converts a thrown exception into an error with
+    /// the given <paramref name="code"/>.
+    /// </summary>
+    /// <typeparam name="T">The produced value type.</typeparam>
+    /// <param name="func">The boundary function to execute. Receives the cancellation token.</param>
+    /// <param name="code">The error code to attach to captured exceptions.</param>
+    /// <param name="cancellationToken">An optional cancellation token passed to <paramref name="func"/>.</param>
+    /// <returns><c>Ok(value)</c> or <c>Err</c>.</returns>
+    /// <remarks>
+    /// <code><![CDATA[
+    /// var payment = await Result.TryAsync(
+    ///         static _ => OrderFixtures.ChargeAsync(OrderFixtures.Sample),
+    ///         "E_PAYMENT")
+    ///     .MapOk(static p => p.Id);
+    ///
+    /// // Ok(payment) when the provider answered,
+    /// // Err(E_PAYMENT) when the task faulted.
+    /// ]]></code>
+    /// </remarks>
+    public static ResultTask<T, RopError> TryAsync<T>(
+        Func<CancellationToken, Task<T>> func,
         string code,
         CancellationToken cancellationToken = default)
     {

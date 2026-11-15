@@ -57,6 +57,50 @@ internal static class OptionTaskCore
         return await AsyncGuards.Require(fallback(cancellationToken), "fallback").ConfigureAwait(false);
     }
 
+    internal static async Task<Option<T>> BindNoneValueAsync<T>(
+        Task<Option<T>> source, Func<CancellationToken, Task<T>> fallbackFactory, CancellationToken cancellationToken)
+    {
+        var option = await source.WaitAsync(cancellationToken).ConfigureAwait(false);
+        if (option.TryGetValue(out _)) return option;
+        cancellationToken.ThrowIfCancellationRequested();
+        var fallback = await AsyncGuards.Require(fallbackFactory(cancellationToken), "fallback factory").ConfigureAwait(false);
+        return new Option<T>(ArgumentGuards.RequireNonNullReturn(fallback, "fallback factory"), isSome: true);
+    }
+
+    internal static async Task<TResult> MatchAsync<T, TResult>(
+        Task<Option<T>> source,
+        Func<T, CancellationToken, Task<TResult>> some,
+        Func<CancellationToken, Task<TResult>> none,
+        CancellationToken cancellationToken)
+    {
+        var option = await source.WaitAsync(cancellationToken).ConfigureAwait(false);
+        cancellationToken.ThrowIfCancellationRequested();
+        return option.TryGetValue(out var value)
+            ? await AsyncGuards.Require(some(value, cancellationToken), "some").ConfigureAwait(false)
+            : await AsyncGuards.Require(none(cancellationToken), "none").ConfigureAwait(false);
+    }
+
+    internal static async Task SwitchAsync<T>(
+        Task<Option<T>> source,
+        Func<T, CancellationToken, Task> some,
+        Func<CancellationToken, Task> none,
+        CancellationToken cancellationToken)
+    {
+        var option = await source.WaitAsync(cancellationToken).ConfigureAwait(false);
+        cancellationToken.ThrowIfCancellationRequested();
+        var pending = option.TryGetValue(out var value)
+            ? AsyncGuards.Require(some(value, cancellationToken), "some")
+            : AsyncGuards.Require(none(cancellationToken), "none");
+        await pending.ConfigureAwait(false);
+    }
+
+    internal static async Task<T> ExpectAsync<T>(
+        Task<Option<T>> source, string reason, CancellationToken cancellationToken)
+    {
+        var option = await source.WaitAsync(cancellationToken).ConfigureAwait(false);
+        return option.Expect(reason);
+    }
+
     internal static async Task<Option<T>> Filter<T>(
         Task<Option<T>> source, Func<T, bool> predicate, CancellationToken cancellationToken)
     {

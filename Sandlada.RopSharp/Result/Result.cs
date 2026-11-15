@@ -22,7 +22,7 @@ namespace Sandlada.RopSharp;
 /// <para>
 /// A result is a value in a pipeline, not a value in isolation. It is created at a boundary, reshaped by the
 /// success track, recovered or reported by the failure track, and finally consumed by a terminal such as
-/// <see cref="ResultExtensions.Match{TOk,TErr,T}(Result{TOk,TErr},Func{TOk,T},Func{TErr,T})"/>.
+/// <see cref="ResultExtensions.Match{TOk,TResult,TErr}(Result{TOk,TErr},Func{TOk,TResult},Func{TErr,TResult})"/>.
 /// </para>
 /// <code><![CDATA[
 /// var placed = Result.Ok(OrderFixtures.Sample)

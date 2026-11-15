@@ -28,6 +28,28 @@ internal static class NewApiScenario
         Console.WriteLine($"   either: {either.Match(left => left, right => right.ToString())}");
 
         var last = new[] { Option.Some(1), Option.None<int>(), Option.Some(3) }.Choose().TryLast();
-        Console.WriteLine($"   option last: {last.Match(value => value.ToString(), () => "none")}");
+        last.Switch(
+            value => Console.WriteLine($"   option last: {value}"),
+            () => Console.WriteLine("   option last: none"));
+
+        var totalText = await Result.TryAsync(
+                static async ct =>
+                {
+                    await Task.Yield();
+                    ct.ThrowIfCancellationRequested();
+                    return 42;
+                },
+                "E_CALC")
+            .Ensure(static n => n > 0, RopError.Create("E_RANGE", "must be positive"))
+            .MatchAsync(
+                ok: static (n, _) => Task.FromResult($"ok:{n}"),
+                err: static (e, _) => Task.FromResult($"err:{e.Code}"));
+        Console.WriteLine($"   async match: {totalText}");
+
+        var pair = await ValidationTask.Zip(
+                ValidationTask.From(Validation.Success<int, RopError>(1)),
+                ValidationTask.From(Validation.Success<string, RopError>("a")))
+            .Collapse(RopError.Combine);
+        Console.WriteLine($"   validation tuple: {pair.Match(static v => $"{v.First}:{v.Second}", static e => e.Code)}");
     }
 }

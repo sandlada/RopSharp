@@ -313,4 +313,209 @@ internal static class ResultTaskCore
         var split = Result.Partition(results);
         return Result.Ok<(IReadOnlyList<T> Oks, IReadOnlyList<TErr> Errs), TErr>(split);
     }
+
+    internal static async Task<Result<TOk, TErr>> Ensure<TOk, TErr>(
+        Task<Result<TOk, TErr>> source,
+        Func<TOk, bool> predicate,
+        TErr error,
+        CancellationToken cancellationToken)
+    {
+        var result = await source.WaitAsync(cancellationToken).ConfigureAwait(false);
+        cancellationToken.ThrowIfCancellationRequested();
+        return result.Ensure(predicate, error);
+    }
+
+    internal static async Task<Result<TOk, TErr>> Ensure<TOk, TErr>(
+        Task<Result<TOk, TErr>> source,
+        Func<TOk, bool> predicate,
+        Func<TOk, TErr> errorFactory,
+        CancellationToken cancellationToken)
+    {
+        var result = await source.WaitAsync(cancellationToken).ConfigureAwait(false);
+        cancellationToken.ThrowIfCancellationRequested();
+        return result.Ensure(predicate, errorFactory);
+    }
+
+    internal static async Task<Result<TOk, TErr>> FailIf<TOk, TErr>(
+        Task<Result<TOk, TErr>> source,
+        Func<TOk, bool> predicate,
+        TErr error,
+        CancellationToken cancellationToken)
+    {
+        var result = await source.WaitAsync(cancellationToken).ConfigureAwait(false);
+        cancellationToken.ThrowIfCancellationRequested();
+        return result.FailIf(predicate, error);
+    }
+
+    internal static async Task<Result<TOk, TErr>> FailIf<TOk, TErr>(
+        Task<Result<TOk, TErr>> source,
+        Func<TOk, bool> predicate,
+        Func<TOk, TErr> errorFactory,
+        CancellationToken cancellationToken)
+    {
+        var result = await source.WaitAsync(cancellationToken).ConfigureAwait(false);
+        cancellationToken.ThrowIfCancellationRequested();
+        return result.FailIf(predicate, errorFactory);
+    }
+
+    internal static Task<Result<TOk, TErr>> EnsureAsync<TOk, TErr>(
+        Task<Result<TOk, TErr>> source,
+        Func<TOk, CancellationToken, Task<bool>> predicate,
+        TErr error,
+        CancellationToken cancellationToken) =>
+        CheckPredicateAsync(source, predicate, expected: true, error, cancellationToken);
+
+    internal static Task<Result<TOk, TErr>> EnsureAsync<TOk, TErr>(
+        Task<Result<TOk, TErr>> source,
+        Func<TOk, CancellationToken, Task<bool>> predicate,
+        Func<TOk, CancellationToken, Task<TErr>> errorFactory,
+        CancellationToken cancellationToken) =>
+        CheckPredicateAsync(source, predicate, expected: true, errorFactory, cancellationToken);
+
+    internal static Task<Result<TOk, TErr>> FailIfAsync<TOk, TErr>(
+        Task<Result<TOk, TErr>> source,
+        Func<TOk, CancellationToken, Task<bool>> predicate,
+        TErr error,
+        CancellationToken cancellationToken) =>
+        CheckPredicateAsync(source, predicate, expected: false, error, cancellationToken);
+
+    internal static Task<Result<TOk, TErr>> FailIfAsync<TOk, TErr>(
+        Task<Result<TOk, TErr>> source,
+        Func<TOk, CancellationToken, Task<bool>> predicate,
+        Func<TOk, CancellationToken, Task<TErr>> errorFactory,
+        CancellationToken cancellationToken) =>
+        CheckPredicateAsync(source, predicate, expected: false, errorFactory, cancellationToken);
+
+    private static async Task<Result<TOk, TErr>> CheckPredicateAsync<TOk, TErr>(
+        Task<Result<TOk, TErr>> source,
+        Func<TOk, CancellationToken, Task<bool>> predicate,
+        bool expected,
+        TErr error,
+        CancellationToken cancellationToken)
+    {
+        var result = await source.WaitAsync(cancellationToken).ConfigureAwait(false);
+        if (!result.TryGetOk(out var value))
+        {
+            result.ThrowIfUninitialized();
+            return result;
+        }
+
+        cancellationToken.ThrowIfCancellationRequested();
+        var matched = await AsyncGuards.Require(predicate(value, cancellationToken), "predicate").ConfigureAwait(false);
+        return matched == expected ? result : Result.Err<TOk, TErr>(error);
+    }
+
+    private static async Task<Result<TOk, TErr>> CheckPredicateAsync<TOk, TErr>(
+        Task<Result<TOk, TErr>> source,
+        Func<TOk, CancellationToken, Task<bool>> predicate,
+        bool expected,
+        Func<TOk, CancellationToken, Task<TErr>> errorFactory,
+        CancellationToken cancellationToken)
+    {
+        var result = await source.WaitAsync(cancellationToken).ConfigureAwait(false);
+        if (!result.TryGetOk(out var value))
+        {
+            result.ThrowIfUninitialized();
+            return result;
+        }
+
+        cancellationToken.ThrowIfCancellationRequested();
+        var matched = await AsyncGuards.Require(predicate(value, cancellationToken), "predicate").ConfigureAwait(false);
+        if (matched == expected)
+        {
+            return result;
+        }
+
+        cancellationToken.ThrowIfCancellationRequested();
+        var error = await AsyncGuards.Require(errorFactory(value, cancellationToken), "errorFactory").ConfigureAwait(false);
+        return Result.Err<TOk, TErr>(Result.RequireError(error));
+    }
+
+    internal static async Task<Result<TOk, TErr>> ThenEnsure<TOk, TErr>(
+        Task<Result<TOk, TErr>> source,
+        Func<TOk, Result<Unit, TErr>> ensure,
+        CancellationToken cancellationToken)
+    {
+        var result = await source.WaitAsync(cancellationToken).ConfigureAwait(false);
+        cancellationToken.ThrowIfCancellationRequested();
+        return result.ThenEnsure(ensure);
+    }
+
+    internal static async Task<Result<TOk, TErr>> ThenEnsureAsync<TOk, TErr>(
+        Task<Result<TOk, TErr>> source,
+        Func<TOk, CancellationToken, Task<Result<Unit, TErr>>> ensure,
+        CancellationToken cancellationToken)
+    {
+        var result = await source.WaitAsync(cancellationToken).ConfigureAwait(false);
+        if (!result.TryGetOk(out var value))
+        {
+            result.ThrowIfUninitialized();
+            return result;
+        }
+
+        cancellationToken.ThrowIfCancellationRequested();
+        var check = await AsyncGuards.Require(ensure(value, cancellationToken), "ensure").ConfigureAwait(false);
+        return check.TryGetErr(out var error) ? Result.Err<TOk, TErr>(error) : result;
+    }
+
+    internal static async Task<Result<TOk, TErr>> BindErrValueAsync<TOk, TErr>(
+        Task<Result<TOk, TErr>> source,
+        Func<CancellationToken, Task<TOk>> fallbackFactory,
+        CancellationToken cancellationToken)
+    {
+        var result = await source.WaitAsync(cancellationToken).ConfigureAwait(false);
+        if (!result.TryGetErr(out _))
+        {
+            result.ThrowIfUninitialized();
+            return result;
+        }
+
+        cancellationToken.ThrowIfCancellationRequested();
+        var fallback = await AsyncGuards.Require(fallbackFactory(cancellationToken), "fallback factory").ConfigureAwait(false);
+        return Result.Ok<TOk, TErr>(ArgumentGuards.RequireNonNullReturn(fallback, "fallback factory"));
+    }
+
+    internal static async Task<Result<T, TErr>> RequireNotNull<T, TErr>(
+        Task<Result<T?, TErr>> source,
+        Func<TErr> errorFactory,
+        CancellationToken cancellationToken)
+        where T : class
+    {
+        var result = await source.WaitAsync(cancellationToken).ConfigureAwait(false);
+        cancellationToken.ThrowIfCancellationRequested();
+        return result.RequireNotNull(errorFactory);
+    }
+
+    internal static async Task<Result<T, TErr>> RequireNotNullValue<T, TErr>(
+        Task<Result<T?, TErr>> source,
+        Func<TErr> errorFactory,
+        CancellationToken cancellationToken)
+        where T : struct
+    {
+        var result = await source.WaitAsync(cancellationToken).ConfigureAwait(false);
+        cancellationToken.ThrowIfCancellationRequested();
+        return result.RequireNotNullValue(errorFactory);
+    }
+
+    internal static async Task<TResult> MatchAsync<TOk, TResult, TErr>(
+        Task<Result<TOk, TErr>> source,
+        Func<TOk, CancellationToken, Task<TResult>> ok,
+        Func<TErr, CancellationToken, Task<TResult>> err,
+        CancellationToken cancellationToken)
+    {
+        var result = await source.WaitAsync(cancellationToken).ConfigureAwait(false);
+        cancellationToken.ThrowIfCancellationRequested();
+        return result.TryGetOk(out var value)
+            ? await AsyncGuards.Require(ok(value, cancellationToken), "ok").ConfigureAwait(false)
+            : await AsyncGuards.Require(err(result.ErrUnsafe, cancellationToken), "err").ConfigureAwait(false);
+    }
+
+    internal static async Task<TOk> ExpectAsync<TOk, TErr>(
+        Task<Result<TOk, TErr>> source,
+        string reason,
+        CancellationToken cancellationToken)
+    {
+        var result = await source.WaitAsync(cancellationToken).ConfigureAwait(false);
+        return result.Expect(reason);
+    }
 }

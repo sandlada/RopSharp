@@ -92,7 +92,7 @@ public sealed class M4RegressionTests
         await Assert.That(TestSupport.Catch(() => uninitR.TeeOkAsync(null!)) is ArgumentNullException).IsTrue();
         await Assert.That(TestSupport.Catch(() => uninitR.TeeErrAsync(null!)) is ArgumentNullException).IsTrue();
 
-        await Assert.That(TestSupport.Catch(() => uninitV.MapAsync<int, RopError, int>(null!)) is ArgumentNullException).IsTrue();
+        await Assert.That(TestSupport.Catch(() => uninitV.MapAsync<int, int, RopError>(null!)) is ArgumentNullException).IsTrue();
     }
 
     [Test]

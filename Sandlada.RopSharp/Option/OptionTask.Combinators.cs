@@ -47,6 +47,24 @@ public readonly partial struct OptionTask<T>
         return new(OptionTaskCore.MapSomeAsync(_task!, mapper, _cancellationToken), TagReady, _cancellationToken);
     }
 
+    /// <summary>Replaces the contained value with a constant value on the present track.</summary>
+    /// <remarks>
+    /// <code><![CDATA[
+    /// var label = await OptionTask.From(Option.Some(OrderFixtures.Sample.Customer))
+    ///     .MapSomeValue("preferred");
+    ///
+    /// // Some("preferred") when present,
+    /// // None when empty - the replacement value is never null.
+    /// ]]></code>
+    /// </remarks>
+    public OptionTask<TOut> MapSomeValue<TOut>(TOut value)
+    {
+        ArgumentGuards.ThrowIfNull(value, nameof(value));
+        ThrowIfUninitialized();
+        SuccessTypeGuards.ThrowIfTaskLike<TOut>("MapSomeValue");
+        return new(OptionTaskCore.MapSome(_task!, _ => value, _cancellationToken), TagReady, _cancellationToken);
+    }
+
     /// <summary>Chains another option-producing step on the present track.</summary>
     /// <remarks>
     /// <code><![CDATA[
@@ -146,6 +164,22 @@ public readonly partial struct OptionTask<T>
         return BindNone(() => new Option<T>(
             ArgumentGuards.RequireNonNullReturn(fallbackFactory(), "fallback factory"),
             isSome: true));
+    }
+
+    /// <summary>Recovers on the empty track with an asynchronous fallback value factory.</summary>
+    /// <remarks>
+    /// <code><![CDATA[
+    /// var city = await OptionTask.From(Option.None<string>())
+    ///     .BindNoneValueAsync(static _ => Task.FromResult("unknown"));
+    ///
+    /// // Some("unknown") when empty, Some(city) when present - the factory return value is never null.
+    /// ]]></code>
+    /// </remarks>
+    public OptionTask<T> BindNoneValueAsync(Func<CancellationToken, Task<T>> fallbackFactory)
+    {
+        ArgumentNullException.ThrowIfNull(fallbackFactory);
+        ThrowIfUninitialized();
+        return new(OptionTaskCore.BindNoneValueAsync(_task!, fallbackFactory, _cancellationToken), TagReady, _cancellationToken);
     }
 
     /// <summary>Keeps the value only when the predicate holds.</summary>
@@ -254,5 +288,66 @@ public readonly partial struct OptionTask<T>
         ArgumentNullException.ThrowIfNull(action);
         ThrowIfUninitialized();
         return new(OptionTaskCore.TeeNoneAsync(_task!, action, _cancellationToken), TagReady, _cancellationToken);
+    }
+
+    /// <summary>Exits the computation asynchronously by projecting both tracks into a single value.</summary>
+    /// <remarks>
+    /// <code><![CDATA[
+    /// var label = await OptionTask.From(Option.FromNullable(OrderFixtures.Sample.Customer.Address))
+    ///     .MatchAsync(
+    ///         some: static (shipping, _) => Task.FromResult($"ships to {shipping.City}"),
+    ///         none: static _ => Task.FromResult("no shipping address"));
+    ///
+    /// // "ships to London" for Some(address),
+    /// // "no shipping address" for None.
+    /// ]]></code>
+    /// </remarks>
+    public Task<TResult> MatchAsync<TResult>(
+        Func<T, CancellationToken, Task<TResult>> some,
+        Func<CancellationToken, Task<TResult>> none)
+    {
+        ArgumentNullException.ThrowIfNull(some);
+        ArgumentNullException.ThrowIfNull(none);
+        ThrowIfUninitialized();
+        return OptionTaskCore.MatchAsync(_task!, some, none, _cancellationToken);
+    }
+
+    /// <summary>Runs one of two asynchronous actions depending on the completed option track.</summary>
+    /// <remarks>
+    /// <code><![CDATA[
+    /// await OptionTask.From(Option.FromNullable(OrderFixtures.Sample.Customer.Address))
+    ///     .SwitchAsync(
+    ///         some: static (shipping, _) => Task.Run(() => Console.WriteLine(shipping.City)),
+    ///         none: static _ => Task.Run(() => Console.WriteLine("no shipping address")));
+    ///
+    /// // Some(address) runs the some handler,
+    /// // None runs the none handler once the option task settles.
+    /// ]]></code>
+    /// </remarks>
+    public Task SwitchAsync(
+        Func<T, CancellationToken, Task> some,
+        Func<CancellationToken, Task> none)
+    {
+        ArgumentNullException.ThrowIfNull(some);
+        ArgumentNullException.ThrowIfNull(none);
+        ThrowIfUninitialized();
+        return OptionTaskCore.SwitchAsync(_task!, some, none, _cancellationToken);
+    }
+
+    /// <summary>Awaits the computation and returns the contained value, or throws when <c>None</c>.</summary>
+    /// <remarks>
+    /// <code><![CDATA[
+    /// var address = await OptionTask.From(Option.FromNullable(OrderFixtures.Sample.Customer.Address))
+    ///     .ExpectAsync("checkout requires a saved address");
+    ///
+    /// // Returns the address for Some(address),
+    /// // throws InvalidOperationException with the reason when None.
+    /// ]]></code>
+    /// </remarks>
+    public Task<T> ExpectAsync(string reason)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(reason);
+        ThrowIfUninitialized();
+        return OptionTaskCore.ExpectAsync(_task!, reason, _cancellationToken);
     }
 }

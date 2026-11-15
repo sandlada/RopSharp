@@ -318,6 +318,13 @@
   </Suppression>
   <Suppression>
     <DiagnosticId>CP0002</DiagnosticId>
+    <Target>M:Sandlada.RopSharp.ResultExtensions.Match``3(Sandlada.RopSharp.Result{``0,``1},System.Func{``0,``2},System.Func{``1,``2})</Target>
+    <Left>lib/net10.0/Sandlada.RopSharp.dll</Left>
+    <Right>lib/net10.0/Sandlada.RopSharp.dll</Right>
+    <IsBaselineSuppression>true</IsBaselineSuppression>
+  </Suppression>
+  <Suppression>
+    <DiagnosticId>CP0002</DiagnosticId>
     <Target>M:Sandlada.RopSharp.ResultExtensions.OkOrThrow``2(Sandlada.RopSharp.Result{``0,``1})</Target>
     <Left>lib/net10.0/Sandlada.RopSharp.dll</Left>
     <Right>lib/net10.0/Sandlada.RopSharp.dll</Right>
@@ -641,6 +648,13 @@
   <Suppression>
     <DiagnosticId>CP0002</DiagnosticId>
     <Target>M:Sandlada.RopSharp.ResultExtensions.ErrOrThrow``2(Sandlada.RopSharp.Result{``0,``1})</Target>
+    <Left>lib/net11.0/Sandlada.RopSharp.dll</Left>
+    <Right>lib/net11.0/Sandlada.RopSharp.dll</Right>
+    <IsBaselineSuppression>true</IsBaselineSuppression>
+  </Suppression>
+  <Suppression>
+    <DiagnosticId>CP0002</DiagnosticId>
+    <Target>M:Sandlada.RopSharp.ResultExtensions.Match``3(Sandlada.RopSharp.Result{``0,``1},System.Func{``0,``2},System.Func{``1,``2})</Target>
     <Left>lib/net11.0/Sandlada.RopSharp.dll</Left>
     <Right>lib/net11.0/Sandlada.RopSharp.dll</Right>
     <IsBaselineSuppression>true</IsBaselineSuppression>

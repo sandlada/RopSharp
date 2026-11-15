@@ -29,6 +29,12 @@ equality, contract analyzers in the package, and SourceLink to `https://github.c
 - `OptionTaskBridgeExtensions` (`MapSomeAsync`, `BindNoneAsync`, `FilterAsync`, `TeeSomeAsync`, `TeeNoneAsync`) and `ResultTaskBridgeExtensions` (`TeeOkAsync`, `TeeErrAsync`).
 - `ValidationTask.From` static factories and `ValidationTaskBridgeExtensions` (`ToValidationTask`, `MapAsync`).
 - `Validation<T, TErr>.Match` and `Switch` terminal combinators exposing the full error list.
+- Full sync/async combinator parity across `*Task` computations:
+  - `ResultTask<TOk, TErr>`: `MatchAsync`, `ExpectAsync`, `Ensure`/`EnsureAsync`, `FailIf`/`FailIfAsync`, `ThenEnsure`/`ThenEnsureAsync`, `MapOkValue`, `BindErrValue`/`BindErrValueAsync`, plus `ResultTask.RequireNotNull`, `ResultTask.RequireNotNullValue`, and `ResultTask.Flatten`.
+  - `OptionTask<T>`: `MatchAsync`, `SwitchAsync`, `ExpectAsync`, `MapSomeValue`, `BindNoneValueAsync`, and `OptionTask.Flatten`.
+  - `ValidationTask<T, TErr>`: `Collapse`, `MatchAsync`, `MatchFirstAsync`, `SwitchAsync`, `SwitchFirstAsync`, `ExpectAsync`.
+- `Validation` & `ValidationTask` self-aggregation (`Zip`, `Sequence`, `Traverse`) and tuple-returning `Zip` overloads.
+- `OptionExtensions.Switch`, `ResultExtensions.RequireNotNullValue`, and `CancellationToken`-aware delegate overloads for `Result.TryAsync`, `Result.SwitchAsync`, and `Result.TrySwitchAsync`.
 - NuGet SourceLink and repository metadata pointing at `https://github.com/sandlada/RopSharp`.
 
 ### Fixed
@@ -74,6 +80,7 @@ equality, contract analyzers in the package, and SourceLink to `https://github.c
   of the public aggregation surface.
 - `RopError` structural equality and `Try` boundaries: equality includes `InnerErrors` (cycle-safe); `Flatten()`;
   `Result.Try` / `Result.TryAsync` reject task-like success types (ADR 0005 D38, ADR 0006 D43).
+- Generic type parameter order unified with `TErr` last on `ResultExtensions.Match<TOk, TResult, TErr>` and `ValidationTaskBridgeExtensions.MapAsync<T, TOut, TErr>`.
 
 ### Migration
 

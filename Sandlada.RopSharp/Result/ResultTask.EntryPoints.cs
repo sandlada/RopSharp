@@ -220,4 +220,68 @@ public static class ResultTask
                 ResultTaskCore.PartitionAsync(computations, cancellationToken))
             .WithCancellation(cancellationToken);
     }
+
+    /// <summary>Turns a nullable reference payload on <see cref="ResultTask{TOk,TErr}"/> into a failure when null.</summary>
+    /// <remarks>
+    /// <code><![CDATA[
+    /// var city = await Result.Ok<Address?, RopError>(OrderFixtures.Sample.Customer.Address)
+    ///     .MapOkAsync(static (address, _) => Task.FromResult<Address?>(address))
+    ///     .RequireNotNull(static () => RopError.Create("E_NO_ADDRESS", "no shipping address"));
+    ///
+    /// // Ok(address) when non-null,
+    /// // Err(E_NO_ADDRESS) when null - non-null values flow onward cleanly.
+    /// ]]></code>
+    /// </remarks>
+    public static ResultTask<T, TErr> RequireNotNull<T, TErr>(
+        this ResultTask<T?, TErr> computation,
+        Func<TErr> errorFactory)
+        where T : class
+    {
+        ArgumentNullException.ThrowIfNull(errorFactory);
+        computation.ThrowIfUninitialized();
+
+        return ResultTask<T, TErr>.From(
+                ResultTaskCore.RequireNotNull(computation.TaskUnsafe, errorFactory, computation.CancellationToken))
+            .WithCancellation(computation.CancellationToken);
+    }
+
+    /// <summary>Turns a nullable value-type payload on <see cref="ResultTask{TOk,TErr}"/> into a failure when null.</summary>
+    /// <remarks>
+    /// <code><![CDATA[
+    /// int? couponId = 42;
+    /// var validated = await ResultTask.From(Result.Ok<int?, RopError>(couponId))
+    ///     .RequireNotNullValue(static () => RopError.Create("E_NO_COUPON", "no coupon"));
+    ///
+    /// // Ok(42) when HasValue is true,
+    /// // Err(E_NO_COUPON) when null - unwraps Nullable<T> safely on the async track.
+    /// ]]></code>
+    /// </remarks>
+    public static ResultTask<T, TErr> RequireNotNullValue<T, TErr>(
+        this ResultTask<T?, TErr> computation,
+        Func<TErr> errorFactory)
+        where T : struct
+    {
+        ArgumentNullException.ThrowIfNull(errorFactory);
+        computation.ThrowIfUninitialized();
+
+        return ResultTask<T, TErr>.From(
+                ResultTaskCore.RequireNotNullValue(computation.TaskUnsafe, errorFactory, computation.CancellationToken))
+            .WithCancellation(computation.CancellationToken);
+    }
+
+    /// <summary>Flattens a nested <see cref="Result{TOk,TErr}"/> inside a <see cref="ResultTask{TOk,TErr}"/>.</summary>
+    /// <remarks>
+    /// <code><![CDATA[
+    /// var payment = await ResultTask.From(
+    ///         Result.Ok<Result<Payment, RopError>, RopError>(
+    ///             Result.Try(() => OrderFixtures.Charge(OrderFixtures.Sample), "E_CHARGE")))
+    ///     .Flatten();
+    ///
+    /// // Ok(payment) when both outer and inner results succeed,
+    /// // Err(error) when either layer failed.
+    /// ]]></code>
+    /// </remarks>
+    public static ResultTask<TOk, TErr> Flatten<TOk, TErr>(
+        this ResultTask<Result<TOk, TErr>, TErr> computation) =>
+        computation.BindOk(static inner => inner);
 }
