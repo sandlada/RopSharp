@@ -30,7 +30,7 @@ jobs:
         run: dotnet format RopSharp.sln --verify-no-changes --no-restore
 
       - name: Build
-        run: dotnet build -c Release --no-restore
+        run: dotnet build -c Release --no-restore -m:1
 
       - name: Test
         run: dotnet test -c Release --no-build
@@ -82,7 +82,7 @@ jobs:
       - name: Publish native image
         run: >
           dotnet publish Sandlada.RopSharp.Sample/Sandlada.RopSharp.Sample.csproj
-          -c Release -r win-x64 -p:PublishAot=true
+          -c Release -r win-x64 -p:EnableAot=true
           -o artifacts/aot
 
       - name: Run native image

@@ -8,6 +8,7 @@
     <RootNamespace>Sandlada.RopSharp.Sample</RootNamespace>
     <AssemblyName>Sandlada.RopSharp.Sample</AssemblyName>
     <InvariantGlobalization>true</InvariantGlobalization>
+    <PublishAot Condition="'$(EnableAot)' == 'true'">true</PublishAot>
   </PropertyGroup>
 
   <ItemGroup>
