@@ -22,7 +22,6 @@ jobs:
         uses: actions/setup-dotnet@v4
         with:
           global-json-file: global.json
-          dotnet-quality: preview
 
       - name: Restore (locked)
         run: dotnet restore --locked-mode
@@ -76,7 +75,6 @@ jobs:
         uses: actions/setup-dotnet@v4
         with:
           global-json-file: global.json
-          dotnet-quality: preview
 
       - name: Restore (locked)
         run: dotnet restore --locked-mode
